@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.vigneshtechnologies.circular",
+      "sha256_cert_fingerprints": [
+        "D3:38:68:43:D6:7D:3F:D6:C6:87:82:E9:9A:E9:FE:BD:7E:FD:97:00:1C:6E:45:A3:83:5B:3E:C4:59:15:7C:48"
+      ]
+    }
+  }
+]

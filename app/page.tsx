@@ -1,0 +1,200 @@
+'use client'
+
+import React, { useState, useEffect } from 'react'
+import Image from 'next/image'
+import { useAuth } from '@/context/AuthContext'
+import { AuthPortal } from '@/components/auth/AuthPortal'
+import { AppShell } from '@/components/layout/AppShell'
+import { PostCard } from '@/components/feed/PostCard'
+import { CategoryFilterBar } from '@/components/feed/CategoryFilterBar'
+import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
+import { PostComposerModal } from '@/components/feed/PostComposerModal'
+import { StoriesBar } from '@/components/feed/StoriesBar'
+import { ref, onValue, off, query, orderByChild, limitToLast } from 'firebase/database'
+import { db } from '@/lib/firebase'
+import { Post } from '@/lib/types'
+import { Sparkles, MapPin, PlusCircle } from 'lucide-react'
+
+export default function CircularRootPage() {
+  const { user, userProfile, loading } = useAuth()
+  const [posts, setPosts] = useState<Post[]>([])
+  const [selectedCategory, setSelectedCategory] = useState('All')
+  const [searchQuery, setSearchQuery] = useState('')
+  const [feedLoading, setFeedLoading] = useState(true)
+  const [isComposerOpen, setIsComposerOpen] = useState(false)
+  const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
+
+  // Listen to realtime posts
+  useEffect(() => {
+    if (!user) return
+
+    setFeedLoading(true)
+    const postsQuery = query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(50))
+
+    const callback = (snap: any) => {
+      if (snap.exists()) {
+        const list: Post[] = []
+        snap.forEach((child: any) => {
+          list.push({ id: child.key, ...child.val() })
+        })
+        setPosts(list.reverse())
+      } else {
+        setPosts([])
+      }
+      setFeedLoading(false)
+    }
+
+    onValue(postsQuery, callback)
+    return () => off(postsQuery)
+  }, [user])
+
+  // If initial auth is checking, show splash
+  if (loading) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-navy text-white">
+        <div className="relative size-20 overflow-hidden rounded-3xl bg-white/10 p-2 ring-2 ring-primary shadow-2xl animate-pulse">
+          <Image
+            src="/circular-logo.png"
+            alt="Circular Logo"
+            fill
+            className="object-cover"
+            priority
+          />
+        </div>
+        <h1 className="mt-4 text-2xl font-black tracking-tight">Circular</h1>
+        <p className="mt-1 text-xs text-slate-400">Loading your local community...</p>
+      </div>
+    )
+  }
+
+  // If guest, show Authentication Portal
+  if (!user) {
+    return <AuthPortal />
+  }
+
+  // Filter posts
+  const filteredPosts = posts.filter((p) => {
+    const matchesCat = selectedCategory === 'All' || p.category?.toLowerCase() === selectedCategory.toLowerCase()
+    const matchesSearch =
+      !searchQuery.trim() ||
+      p.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      p.area?.toLowerCase().includes(searchQuery.toLowerCase())
+    return matchesCat && matchesSearch
+  })
+
+  return (
+    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+      {/* Top Header in Center Feed */}
+      <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+              <MapPin className="size-5" />
+            </div>
+            <div>
+              <h1 className="text-base font-extrabold text-navy">Home Feed</h1>
+              <div className="text-[11px] font-semibold text-muted-foreground">
+                Showing posts in <span className="text-primary">{userProfile?.area || 'Rajapalayam'}</span>
+              </div>
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsComposerOpen(true)}
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-primary/90 active:scale-95"
+          >
+            <PlusCircle className="size-4" />
+            <span>Post</span>
+          </button>
+        </div>
+
+        {/* Category Filter Bar */}
+        <div className="mt-3">
+          <CategoryFilterBar
+            selectedCategory={selectedCategory}
+            onSelectCategory={setSelectedCategory}
+          />
+        </div>
+      </header>
+
+      {/* Main Feed Container */}
+      <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-5">
+        {/* Local Stories / Statuses Bar */}
+        <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
+          <StoriesBar />
+        </div>
+
+        {/* Quick Post Prompt Card */}
+        <div
+          onClick={() => setIsComposerOpen(true)}
+          className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-primary/40 hover:bg-muted/40"
+        >
+          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
+            <Image
+              src={userProfile?.photoURL || '/circular-logo.png'}
+              alt="Avatar"
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div className="flex-1 rounded-xl bg-muted/60 px-4 py-2.5 text-xs text-muted-foreground">
+            Share what's happening around you...
+          </div>
+          <button
+            type="button"
+            className="rounded-xl bg-primary/10 px-3 py-2 text-xs font-bold text-primary"
+          >
+            Post
+          </button>
+        </div>
+
+        {/* Posts List */}
+        {feedLoading ? (
+          <div className="space-y-4 py-8 text-center text-xs text-muted-foreground">
+            <div className="mx-auto size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+            <p>Loading local community feed...</p>
+          </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Sparkles className="size-6" />
+            </div>
+            <h3 className="mt-3 text-base font-bold text-navy">No posts in this category</h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              Be the first to share an update with your neighborhood!
+            </p>
+            <button
+              type="button"
+              onClick={() => setIsComposerOpen(true)}
+              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow"
+            >
+              <PlusCircle className="size-4" />
+              <span>Create Post</span>
+            </button>
+          </div>
+        ) : (
+          filteredPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onOpenComments={(pId) => setActiveCommentsPostId(pId)}
+            />
+          ))
+        )}
+      </div>
+
+      {/* Modals */}
+      <PostComposerModal
+        isOpen={isComposerOpen}
+        onClose={() => setIsComposerOpen(false)}
+      />
+
+      <PostCommentsDrawer
+        postId={activeCommentsPostId}
+        onClose={() => setActiveCommentsPostId(null)}
+      />
+    </AppShell>
+  )
+}
