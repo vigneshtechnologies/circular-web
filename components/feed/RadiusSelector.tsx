@@ -1,8 +1,10 @@
 'use client'
 
 import React, { useState, useRef, useEffect } from 'react'
-import { CIRCULAR_RADIUS_OPTIONS, CircularRadiusOption, DEFAULT_RADIUS_KM } from '@/lib/locationUtils'
+import { CircularRadiusOption, DEFAULT_RADIUS_KM } from '@/lib/locationUtils'
 import { Navigation, ChevronDown, Check, MapPinOff } from 'lucide-react'
+
+const EXACT_RADIUS_OPTIONS: CircularRadiusOption[] = [1, 3, 5, 10, 25]
 
 interface RadiusSelectorProps {
   selectedRadius: CircularRadiusOption
@@ -66,24 +68,24 @@ export function RadiusSelector({
           )}
 
           <div className="space-y-0.5">
-            {CIRCULAR_RADIUS_OPTIONS.map((r) => {
-              const isSelected = selectedRadius === r
+            {EXACT_RADIUS_OPTIONS.map((r) => {
+              const isSelected = Number(selectedRadius) === Number(r)
               return (
                 <button
-                  key={r}
+                  key={`radius-opt-${r}`}
                   type="button"
                   onClick={() => {
                     onSelectRadius(r)
                     setIsOpen(false)
                   }}
-                  className={`flex w-full items-center justify-between rounded-xl px-2.5 py-1.5 text-xs font-semibold transition-colors ${
+                  className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                     isSelected
-                      ? 'bg-primary text-white font-bold'
-                      : 'text-foreground hover:bg-muted'
+                      ? 'bg-blue-600 text-white font-bold shadow-sm'
+                      : 'text-foreground hover:bg-muted font-medium'
                   }`}
                 >
                   <span>{r} km</span>
-                  {isSelected && <Check className="size-3.5" />}
+                  {isSelected && <Check className="size-3.5 text-white stroke-[2.5]" />}
                 </button>
               )
             })}

@@ -30,7 +30,7 @@ interface PostComposerModalProps {
 }
 
 export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerModalProps) {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, publicProfiles } = useAuth()
   const [text, setText] = useState('')
   const [category, setCategory] = useState<string>('General')
   const [area, setArea] = useState('')
@@ -188,7 +188,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
       if (!postId) throw new Error('Could not create post record')
 
       const finalArea = area.trim() || userProfile?.area || userProfile?.city || ''
-      const authorAvatar = getUserAvatar(userProfile) || user.photoURL || ''
+      const authorAvatar = getUserAvatar(userProfile, publicProfiles) || user.photoURL || ''
 
       const now = Date.now()
       const postPayload: Record<string, any> = {
@@ -238,7 +238,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
     }
   }
 
-  const authorAvatar = getUserAvatar(userProfile) || '/circular-logo.png'
+  const authorAvatar = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
   const displayPostingArea = area.trim() || userProfile?.area || userProfile?.city || 'your community'
 
   return (

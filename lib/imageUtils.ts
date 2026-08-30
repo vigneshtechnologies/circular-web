@@ -3,41 +3,74 @@
  * Mirrors the mobile app logic from imageResolution.ts and locationUtils.ts.
  */
 
-export function getUserAvatar(user: any): string {
+export function getUserAvatar(user: any, publicProfiles?: Record<string, any>): string {
   if (!user) return ''
   if (typeof user === 'string') return user.trim()
-  return (
-    user.profileImage ||
-    user.avatar ||
-    user.photoUrl ||
-    user.photoURL ||
-    user.imageUrl ||
-    user.logoUrl ||
-    user.image ||
-    ''
-  ).trim()
+
+  // 1. Check publicProfiles map if userId is available
+  const uid = user.userId || user.uid || user.id || ''
+  if (uid && publicProfiles && publicProfiles[uid]) {
+    const prof = publicProfiles[uid]
+    const pImg =
+      prof.profileImage ||
+      prof.avatar ||
+      prof.photoURL ||
+      prof.photoUrl ||
+      prof.imageUrl ||
+      prof.profilePhoto ||
+      prof.profilePic ||
+      ''
+    if (typeof pImg === 'string' && pImg.trim().length > 0) {
+      return pImg.trim()
+    }
+  }
+
+  // 2. Direct user object fields
+  const candidates = [
+    user.profileImage,
+    user.avatar,
+    user.photoUrl,
+    user.photoURL,
+    user.imageUrl,
+    user.profilePhoto,
+    user.profilePic,
+    user.photo,
+    user.logoUrl,
+    user.image,
+  ]
+
+  for (const c of candidates) {
+    if (typeof c === 'string' && c.trim().length > 0) {
+      return c.trim()
+    }
+  }
+
+  return ''
 }
 
 export function getBusinessPhoto(
   business: any,
-  photosRecord?: Record<string, any>
+  photosRecord?: Record<string, any>,
+  publicProfiles?: Record<string, any>
 ): string {
   if (!business) return ''
   if (typeof business === 'string') return business.trim()
 
-  // 1. Direct explicit image fields
-  const direct =
-    business.imageUrl ||
-    business.photoUrl ||
-    business.photoURL ||
-    business.profileImage ||
-    business.logo ||
-    business.logoUrl ||
-    business.coverImage ||
-    ''
+  // 1. Direct explicit image fields on business
+  const directCandidates = [
+    business.imageUrl,
+    business.photoUrl,
+    business.photoURL,
+    business.profileImage,
+    business.logo,
+    business.logoUrl,
+    business.coverImage,
+  ]
 
-  if (typeof direct === 'string' && direct.trim().length > 0) {
-    return direct.trim()
+  for (const c of directCandidates) {
+    if (typeof c === 'string' && c.trim().length > 0) {
+      return c.trim()
+    }
   }
 
   // 2. Photos array if present
@@ -62,6 +95,19 @@ export function getBusinessPhoto(
         const photo = first?.imageUrl || first?.url || first?.photoUrl || first?.photoURL || ''
         if (typeof photo === 'string' && photo.trim().length > 0) return photo.trim()
       }
+    }
+  }
+
+  // 4. Owner publicProfile image fallback
+  const ownerId = business.ownerId || business.userId || business.id || ''
+  if (ownerId && publicProfiles && publicProfiles[ownerId]) {
+    const ownerImg =
+      publicProfiles[ownerId].profileImage ||
+      publicProfiles[ownerId].avatar ||
+      publicProfiles[ownerId].photoURL ||
+      ''
+    if (typeof ownerImg === 'string' && ownerImg.trim().length > 0) {
+      return ownerImg.trim()
     }
   }
 

@@ -31,7 +31,7 @@ interface SidebarNavProps {
 
 export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
   const pathname = usePathname()
-  const { user, userProfile, isAdmin, logout } = useAuth()
+  const { user, userProfile, publicProfiles, isAdmin, logout } = useAuth()
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
 
@@ -98,7 +98,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
     navItems.push({ href: '/admin', label: 'Admin Panel', icon: Shield })
   }
 
-  const avatar = getUserAvatar(userProfile) || '/circular-logo.png'
+  const avatar = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
 
   return (
     <aside className="sticky top-0 flex h-screen w-64 flex-col justify-between border-r border-border bg-card p-4">

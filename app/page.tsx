@@ -28,7 +28,7 @@ const INITIAL_PAGE_SIZE = 30
 const NEXT_PAGE_SIZE = 30
 
 export default function CircularRootPage() {
-  const { user, userProfile, loading } = useAuth()
+  const { user, userProfile, publicProfiles, loading } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [selectedRadius, setSelectedRadius] = useState<CircularRadiusOption>(DEFAULT_RADIUS_KM)
@@ -256,7 +256,7 @@ export default function CircularRootPage() {
     return false
   })
 
-  const authorAvatar = getUserAvatar(userProfile) || '/circular-logo.png'
+  const authorAvatar = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
 
   return (
     <AppShell currentArea={currentArea}>

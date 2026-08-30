@@ -19,7 +19,7 @@ interface UserStatus {
 }
 
 export function StoriesBar() {
-  const { userProfile } = useAuth()
+  const { userProfile, publicProfiles } = useAuth()
   const [statuses, setStatuses] = useState<UserStatus[]>([])
 
   useEffect(() => {
@@ -45,7 +45,7 @@ export function StoriesBar() {
     fetchStatuses()
   }, [])
 
-  const avatar = getUserAvatar(userProfile) || '/circular-logo.png'
+  const avatar = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
 
   return (
     <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-0.5">
@@ -61,24 +61,33 @@ export function StoriesBar() {
       </div>
 
       {/* Community Statuses if active */}
-      {statuses.map((item) => (
-        <div
-          key={item.id}
-          className="flex shrink-0 items-center gap-2 rounded-xl border border-border/70 bg-card px-2.5 py-1.5 cursor-pointer group hover:border-pink-500/40 hover:bg-muted/50 transition-all"
-        >
-          <div className="relative size-7 rounded-full overflow-hidden bg-muted ring-2 ring-pink-500">
-            <Image
-              src={item.userAvatar || item.mediaUrl || '/circular-logo.png'}
-              alt={item.userName || 'Member'}
-              fill
-              className="object-cover"
-            />
+      {statuses.map((item) => {
+        const itemAvatar =
+          getUserAvatar(item, publicProfiles) || item.mediaUrl || '/circular-logo.png'
+        const displayName =
+          publicProfiles?.[item.userId]?.name?.split(' ')[0] ||
+          item.userName?.split(' ')[0] ||
+          'Member'
+
+        return (
+          <div
+            key={item.id}
+            className="flex shrink-0 items-center gap-2 rounded-xl border border-border/70 bg-card px-2.5 py-1.5 cursor-pointer group hover:border-pink-500/40 hover:bg-muted/50 transition-all"
+          >
+            <div className="relative size-7 rounded-full overflow-hidden bg-muted ring-2 ring-pink-500">
+              <Image
+                src={itemAvatar}
+                alt={displayName}
+                fill
+                className="object-cover"
+              />
+            </div>
+            <span className="max-w-[80px] truncate text-[11px] font-semibold text-foreground">
+              {displayName}
+            </span>
           </div>
-          <span className="max-w-[80px] truncate text-[11px] font-semibold text-foreground">
-            {item.userName?.split(' ')[0] || 'Member'}
-          </span>
-        </div>
-      ))}
+        )
+      })}
     </div>
   )
 }

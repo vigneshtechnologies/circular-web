@@ -10,10 +10,10 @@ import { ref, get, query, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { BusinessProfile } from '@/lib/types'
 import { getBusinessPhoto } from '@/lib/imageUtils'
-import { Store, MapPin, Star, Phone, CheckCircle2, Search } from 'lucide-react'
+import { Store, MapPin, Star, CheckCircle2, Search } from 'lucide-react'
 
 export default function BusinessesPage() {
-  const { user, userProfile, loading } = useAuth()
+  const { user, userProfile, publicProfiles, loading } = useAuth()
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([])
   const [photosRecord, setPhotosRecord] = useState<Record<string, any>>({})
   const [selectedCategory, setSelectedCategory] = useState('All')
@@ -50,7 +50,13 @@ export default function BusinessesPage() {
         if (bSnap.exists()) {
           const list: BusinessProfile[] = []
           bSnap.forEach((c) => {
-            list.push({ id: c.key as string, ...c.val() })
+            const val = c.val()
+            list.push({
+              id: c.key as string,
+              name: val.businessName || val.name || 'Local Business',
+              category: val.category || val.businessCategory || 'Local Shop',
+              ...val,
+            })
           })
           setBusinesses(list.reverse())
         }
@@ -156,9 +162,12 @@ export default function BusinessesPage() {
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
             {filtered.map((b) => {
-              const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
+              const photo =
+                getBusinessPhoto(b, photosRecord, publicProfiles) || '/circular-logo.png'
               const hasRating = typeof b.rating === 'number' && b.rating > 0
               const isRecent = b.createdAt && Date.now() - b.createdAt < 14 * 24 * 60 * 60 * 1000
+              const bizName = b.name || (b as any).businessName || 'Local Business'
+              const bizCategory = b.category || (b as any).businessCategory || 'Local Shop'
 
               return (
                 <Link
@@ -172,7 +181,7 @@ export default function BusinessesPage() {
                       <div className="relative size-14 overflow-hidden rounded-2xl bg-primary/10 ring-1 ring-border">
                         <Image
                           src={photo}
-                          alt={b.name || 'Business'}
+                          alt={bizName}
                           fill
                           className="object-cover"
                         />
@@ -187,9 +196,9 @@ export default function BusinessesPage() {
 
                     {/* Info */}
                     <h3 className="mt-3 truncate text-sm font-bold text-navy group-hover:text-primary">
-                      {b.name}
+                      {bizName}
                     </h3>
-                    <p className="text-xs font-medium text-muted-foreground">{b.category || 'Local Shop'}</p>
+                    <p className="text-xs font-medium text-muted-foreground">{bizCategory}</p>
 
                     {b.description && (
                       <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-foreground/80">

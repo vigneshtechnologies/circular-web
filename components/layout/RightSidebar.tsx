@@ -17,7 +17,7 @@ export function RightSidebar({
   currentArea?: string
   onSelectArea?: (area: string) => void
 }) {
-  const { user, userProfile } = useAuth()
+  const { user, userProfile, publicProfiles } = useAuth()
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([])
   const [needs, setNeeds] = useState<NeedPost[]>([])
   const [photosRecord, setPhotosRecord] = useState<Record<string, any>>({})
@@ -45,7 +45,6 @@ export function RightSidebar({
           const list: BusinessProfile[] = []
           bSnap.forEach((child) => {
             const val = child.val()
-            // Map exact business schema fields
             list.push({
               id: child.key as string,
               name: val.businessName || val.name || 'Local Business',
@@ -158,7 +157,8 @@ export function RightSidebar({
             <p className="text-xs text-muted-foreground py-3 text-center">No local businesses found.</p>
           ) : (
             businesses.map((b) => {
-              const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
+              const photo =
+                getBusinessPhoto(b, photosRecord, publicProfiles) || '/circular-logo.png'
               const hasRating = typeof b.rating === 'number' && b.rating > 0
               const isRecent = b.createdAt && Date.now() - b.createdAt < 14 * 24 * 60 * 60 * 1000
               const bizName = b.name || (b as any).businessName || 'Local Business'

@@ -21,10 +21,11 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onOpenComments }: PostCardProps) {
-  const { user } = useAuth()
+  const { user, publicProfiles } = useAuth()
   const [isLiked, setIsLiked] = useState(false)
   const [likesCount, setLikesCount] = useState(post.likesCount || 0)
   const [copied, setCopied] = useState(false)
+  const [imgError, setImgError] = useState(false)
 
   // Listen to like status for current user
   useEffect(() => {
@@ -80,7 +81,11 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
     return new Date(ts).toLocaleDateString()
   }
 
-  const authorAvatar = getUserAvatar(post) || '/circular-logo.png'
+  // Resolve author avatar from post or publicProfiles
+  const authorAvatar =
+    (!imgError && getUserAvatar(post, publicProfiles)) || '/circular-logo.png'
+  const authorName =
+    publicProfiles?.[post.userId]?.name || post.userName || 'Circular Member'
   const displayLocation = getPostLocation(post)
 
   const allImages: string[] = []
@@ -101,9 +106,10 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
           >
             <Image
               src={authorAvatar}
-              alt={post.userName || 'Author'}
+              alt={authorName}
               fill
               className="object-cover"
+              onError={() => setImgError(true)}
             />
           </Link>
           <div>
@@ -112,7 +118,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
                 href={`/user/${post.userId}`}
                 className="font-bold text-navy hover:text-primary text-xs sm:text-sm"
               >
-                {post.userName || 'Circular Member'}
+                {authorName}
               </Link>
               {post.businessTrustLabel && (
                 <span className="rounded-full bg-purple-500/10 px-2 py-0.2 text-[9px] font-bold text-purple-600">
