@@ -1,23 +1,27 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
-import { ref, onValue, off, set, remove, runTransaction } from 'firebase/database'
-import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
 import { useAuth } from '@/context/AuthContext'
+import { ref, update, push, set } from 'firebase/database'
+import { db } from '@/lib/firebase'
 import { getUserAvatar, getPostLocation } from '@/lib/imageUtils'
 import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
+import { SmartPostRenderer } from '@/components/smartPosts/SmartPostRenderer'
+import { LinkPreviewCard } from '@/components/links/LinkPreviewCard'
 import {
   Heart,
-  MessageSquare,
+  MessageCircle,
   Share2,
   MapPin,
   Calendar,
-  Vote,
-  ExternalLink,
+  Clock,
+  Phone,
+  BarChart2,
   CheckCircle2,
+  Check,
 } from 'lucide-react'
 
 interface PostCardProps {
@@ -26,273 +30,292 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onOpenComments }: PostCardProps) {
-  const { user, publicProfiles } = useAuth()
-  const [isLiked, setIsLiked] = useState(false)
+  const { user, userProfile, publicProfiles } = useAuth()
+  const [liked, setLiked] = useState(false)
   const [likesCount, setLikesCount] = useState(post.likesCount || 0)
-  const [copied, setCopied] = useState(false)
-  const [imgError, setImgError] = useState(false)
-  const [lightboxIndex, setLightboxIndex] = useState<number | null>(null)
+  const [sharedToast, setSharedToast] = useState(false)
 
-  // Listen to like status for current user
-  useEffect(() => {
-    if (!user || !post.id) return
+  // Lightbox modal state
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [lightboxIndex, setLightboxIndex] = useState(0)
 
-    const likeRef = ref(db, `postLikes/${post.id}/${user.uid}`)
-    const callback = (snap: any) => {
-      setIsLiked(snap.exists() && snap.val() === true)
-    }
-    onValue(likeRef, callback)
+  // Poll interactive voting state
+  const [selectedPollOption, setSelectedPollOption] = useState<string | null>(null)
+  const [hasVoted, setHasVoted] = useState(false)
 
-    return () => off(likeRef)
-  }, [user, post.id])
-
-  const handleToggleLike = async () => {
+  const handleLike = async () => {
     if (!user) return
+    const newLiked = !liked
+    setLiked(newLiked)
+    const newCount = newLiked ? likesCount + 1 : Math.max(0, likesCount - 1)
+    setLikesCount(newCount)
 
-    const likeRef = ref(db, `postLikes/${post.id}/${user.uid}`)
-    const postRef = ref(db, `posts/${post.id}/likesCount`)
-
-    if (isLiked) {
-      setIsLiked(false)
-      setLikesCount((prev) => Math.max(0, prev - 1))
-      await remove(likeRef)
-      await runTransaction(postRef, (curr) => Math.max(0, (curr || 1) - 1))
-    } else {
-      setIsLiked(true)
-      setLikesCount((prev) => prev + 1)
-      await set(likeRef, true)
-      await runTransaction(postRef, (curr) => (curr || 0) + 1)
+    try {
+      await update(ref(db, `posts/${post.id}`), {
+        likesCount: newCount,
+      })
+    } catch (e) {
+      console.error(e)
     }
   }
 
   const handleShare = async () => {
-    const url = `https://circularapp.in/post/${post.id}`
-    if (navigator.share) {
+    const shareUrl = `https://circularapp.in/post/${post.id}`
+    if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: post.userName || 'Circular Post',
-          text: post.text || 'Check out this post on Circular!',
-          url,
+          title: post.userName ? `Post by ${post.userName} on Circular` : 'Circular Post',
+          text: post.text?.substring(0, 100) || 'Check out this post on Circular',
+          url: shareUrl,
         })
         return
-      } catch {}
+      } catch (err) {}
     }
-    if (navigator.clipboard) {
-      await navigator.clipboard.writeText(url)
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
+
+    // Fallback: Copy canonical link
+    if (typeof navigator !== 'undefined' && navigator.clipboard) {
+      await navigator.clipboard.writeText(shareUrl)
+      setSharedToast(true)
+      setTimeout(() => setSharedToast(false), 2500)
     }
   }
 
-  const formatTimestamp = (ts: number) => {
-    if (!ts) return 'Recent'
-    const diffMs = Date.now() - ts
-    const diffMins = Math.floor(diffMs / (1000 * 60))
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins}m ago`
-    const diffHours = Math.floor(diffMins / 60)
-    if (diffHours < 24) return `${diffHours}h ago`
-    const diffDays = Math.floor(diffHours / 24)
-    if (diffDays < 7) return `${diffDays}d ago`
-    return new Date(ts).toLocaleDateString()
-  }
+  // Format date / timestamp
+  const postDate = new Date(post.createdAt || Date.now()).toLocaleDateString('en-IN', {
+    month: 'short',
+    day: 'numeric',
+  })
 
-  const authorAvatar =
-    (!imgError && getUserAvatar(post, publicProfiles)) || '/circular-logo.png'
-  const authorName =
-    publicProfiles?.[post.userId]?.name || post.userName || 'Circular Member'
-  const displayLocation = getPostLocation(post)
+  // Author details
+  const authorAvatar = getUserAvatar(post, publicProfiles) || '/circular-logo.png'
+  const authorName = post.businessName || post.userName || 'Circular Member'
+  const locationName = getPostLocation(post)
 
-  const allImages: string[] = []
-  if (Array.isArray(post.imageUrls) && post.imageUrls.length > 0) {
-    post.imageUrls.forEach((u) => { if (typeof u === 'string' && u.trim()) allImages.push(u.trim()) })
-  } else if (post.imageUrl && typeof post.imageUrl === 'string' && post.imageUrl.trim()) {
-    allImages.push(post.imageUrl.trim())
+  // Image list
+  const allImages = post.imageUrls && post.imageUrls.length > 0
+    ? post.imageUrls
+    : post.imageUrl
+    ? [post.imageUrl]
+    : []
+
+  const openLightbox = (index: number) => {
+    setLightboxIndex(index)
+    setLightboxOpen(true)
   }
 
   return (
-    <>
-      <article className="rounded-3xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md md:p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between">
-          <div className="flex items-center gap-3">
-            <Link
-              href={`/user/${post.userId}`}
-              className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border"
+    <article className="rounded-3xl border border-border bg-card p-4 md:p-5 shadow-sm transition-all hover:border-primary/30">
+      {/* Top Author Row */}
+      <div className="flex items-center justify-between">
+        <Link href={`/user/${post.userId}`} className="flex items-center gap-3 group min-w-0">
+          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border group-hover:ring-primary">
+            <Image
+              src={authorAvatar}
+              alt={authorName}
+              fill
+              className="object-cover"
+            />
+          </div>
+          <div className="min-w-0">
+            <div className="flex items-center gap-1.5">
+              <span className="truncate text-xs sm:text-sm font-bold text-navy group-hover:text-primary">
+                {authorName}
+              </span>
+              {post.businessTrustLabel && (
+                <CheckCircle2 className="size-3.5 text-emerald-500 fill-emerald-500/20 shrink-0" />
+              )}
+            </div>
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <span>{postDate}</span>
+              {locationName && (
+                <>
+                  <span>•</span>
+                  <span className="flex items-center gap-0.5 text-primary font-semibold truncate">
+                    <MapPin className="size-3" />
+                    {locationName}
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+        </Link>
+
+        {post.category && (
+          <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground shrink-0">
+            {post.category}
+          </span>
+        )}
+      </div>
+
+      {/* Main Text Body */}
+      {post.text && (
+        <p className="mt-3 text-xs sm:text-sm text-foreground leading-relaxed whitespace-pre-line break-words">
+          {post.text}
+        </p>
+      )}
+
+      {/* Image Grid with Clickable Lightbox */}
+      {allImages.length > 0 && (
+        <div className="mt-3 overflow-hidden rounded-2xl border border-border/80">
+          {allImages.length === 1 ? (
+            <div
+              onClick={() => openLightbox(0)}
+              className="relative h-64 sm:h-80 w-full cursor-pointer bg-muted/40 group overflow-hidden"
             >
               <Image
-                src={authorAvatar}
-                alt={authorName}
+                src={allImages[0]}
+                alt="Post photo"
                 fill
-                className="object-cover"
-                onError={() => setImgError(true)}
+                className="object-cover transition-transform duration-300 group-hover:scale-105"
               />
-            </Link>
-            <div>
-              <div className="flex items-center gap-1.5">
-                <Link
-                  href={`/user/${post.userId}`}
-                  className="font-bold text-navy hover:text-primary text-xs sm:text-sm"
-                >
-                  {authorName}
-                </Link>
-                {post.businessTrustLabel && (
-                  <span className="rounded-full bg-purple-500/10 px-2 py-0.2 text-[9px] font-bold text-purple-600">
-                    {post.businessTrustLabel}
-                  </span>
-                )}
-              </div>
-
-              <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-                {displayLocation ? (
-                  <>
-                    <span className="flex items-center gap-1">
-                      <MapPin className="size-3 text-primary" />
-                      <span>{displayLocation}</span>
-                    </span>
-                    <span>•</span>
-                  </>
-                ) : null}
-                <span>{formatTimestamp(post.createdAt)}</span>
-              </div>
             </div>
-          </div>
-
-          {/* Category Badge */}
-          {post.category && (
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
-              {post.category}
-            </span>
-          )}
-        </div>
-
-        {/* Post Text */}
-        {post.text && (
-          <p className="mt-3 whitespace-pre-line text-xs sm:text-sm leading-relaxed text-foreground">
-            {post.text}
-          </p>
-        )}
-
-        {/* Special Post Type: Event */}
-        {post.postType === 'event' && post.event && (
-          <div className="mt-3 rounded-2xl border border-primary/20 bg-primary/5 p-3.5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-primary">
-              <Calendar className="size-4" />
-              <span>{post.event.title || 'Community Event'}</span>
-            </div>
-            {post.event.description && (
-              <p className="text-xs text-muted-foreground">{post.event.description}</p>
-            )}
-            <div className="flex flex-wrap items-center gap-3 text-[11px] font-semibold text-foreground pt-1">
-              {post.event.venue && <span>📍 {post.event.venue}</span>}
-              {post.event.eventDate && <span>📅 {post.event.eventDate}</span>}
-              {post.event.time && <span>⏰ {post.event.time}</span>}
-            </div>
-          </div>
-        )}
-
-        {/* Special Post Type: Poll */}
-        {post.postType === 'poll' && post.poll && (
-          <div className="mt-3 rounded-2xl border border-purple-500/20 bg-purple-500/5 p-3.5 space-y-2">
-            <div className="flex items-center gap-2 text-xs font-bold text-purple-700 dark:text-purple-300">
-              <Vote className="size-4" />
-              <span>{post.poll.question}</span>
-            </div>
-            <div className="space-y-1.5 pt-1">
-              {(post.poll.options || []).map((opt: string, idx: number) => (
+          ) : (
+            <div className="grid grid-cols-2 gap-1 bg-muted/40">
+              {allImages.slice(0, 4).map((img, idx) => (
                 <div
                   key={idx}
-                  className="flex items-center justify-between rounded-xl border border-border bg-card p-2 text-xs font-medium"
+                  onClick={() => openLightbox(idx)}
+                  className="relative h-36 sm:h-44 cursor-pointer overflow-hidden group"
                 >
-                  <span>{opt}</span>
-                  <span className="text-[10px] text-muted-foreground">Vote</span>
+                  <Image
+                    src={img}
+                    alt={`Post photo ${idx + 1}`}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                  {idx === 3 && allImages.length > 4 && (
+                    <div className="absolute inset-0 flex items-center justify-center bg-black/60 font-black text-white text-base">
+                      +{allImages.length - 4}
+                    </div>
+                  )}
                 </div>
               ))}
             </div>
-          </div>
-        )}
+          )}
+        </div>
+      )}
 
-        {/* Clickable Image Grid with Lightbox */}
-        {allImages.length === 1 && (
-          <div
-            onClick={() => setLightboxIndex(0)}
-            className="relative mt-3 aspect-video w-full overflow-hidden rounded-2xl bg-muted ring-1 ring-border cursor-pointer group"
-          >
-            <Image
-              src={allImages[0]}
-              alt="Post photo"
-              fill
-              className="object-cover transition-transform group-hover:scale-102"
-            />
-          </div>
-        )}
+      {/* Special Post: Smart Posts (9 templates) */}
+      {post.postType === 'smart' && post.smart && (
+        <SmartPostRenderer postId={post.id} smart={post.smart} />
+      )}
 
-        {allImages.length > 1 && (
-          <div className={`mt-3 grid gap-2 ${allImages.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
-            {allImages.map((url, idx) => (
-              <div
-                key={idx}
-                onClick={() => setLightboxIndex(idx)}
-                className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted ring-1 ring-border cursor-pointer group"
-              >
-                <Image
-                  src={url}
-                  alt={`Post photo ${idx + 1}`}
-                  fill
-                  className="object-cover transition-transform group-hover:scale-102"
-                />
+      {/* Special Post: Rich Link Preview */}
+      {post.postType === 'link' && post.linkPreview && (
+        <LinkPreviewCard preview={post.linkPreview} />
+      )}
+
+      {/* Special Post: Event Card */}
+      {post.postType === 'event' && post.event && (
+        <div className="mt-3 rounded-2xl border border-primary/20 bg-primary/5 p-4 space-y-2.5">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary">
+            <Calendar className="size-4" />
+            <span>COMMUNITY EVENT</span>
+          </div>
+          <h3 className="text-sm sm:text-base font-extrabold text-navy">{post.event.title}</h3>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
+            {(post.event.eventDate || post.event.startAt) && (
+              <div className="flex items-center gap-1.5">
+                <Clock className="size-3.5 text-primary" />
+                <span>
+                  {post.event.eventDate || new Date(post.event.startAt!).toLocaleDateString()}
+                  {post.event.time ? ` at ${post.event.time}` : ''}
+                </span>
               </div>
-            ))}
+            )}
+            {post.event.venue && (
+              <div className="flex items-center gap-1.5 truncate">
+                <MapPin className="size-3.5 text-primary" />
+                <span className="truncate">{post.event.venue}</span>
+              </div>
+            )}
           </div>
-        )}
+          {post.event.description && (
+            <p className="text-xs text-foreground/90 leading-relaxed border-t border-primary/10 pt-2">
+              {post.event.description}
+            </p>
+          )}
+        </div>
+      )}
 
-        {/* Engagement Footer */}
-        <div className="mt-3.5 flex items-center justify-between border-t border-border pt-2.5 text-xs font-semibold text-muted-foreground">
-          <div className="flex items-center gap-4 sm:gap-6">
-            {/* Like Button */}
-            <button
-              type="button"
-              onClick={handleToggleLike}
-              className={`flex items-center gap-1.5 transition-colors ${
-                isLiked ? 'text-rose-500 font-bold' : 'hover:text-rose-500'
-              }`}
-            >
-              <Heart className={`size-4 ${isLiked ? 'fill-rose-500' : ''}`} />
-              <span>{likesCount}</span>
-            </button>
-
-            {/* Comment Button */}
-            <button
-              type="button"
-              onClick={() => onOpenComments && onOpenComments(post.id)}
-              className="flex items-center gap-1.5 transition-colors hover:text-primary"
-            >
-              <MessageSquare className="size-4" />
-              <span>{post.commentsCount || 0}</span>
-            </button>
+      {/* Special Post: Poll Card */}
+      {post.postType === 'poll' && post.poll && (
+        <div className="mt-3 rounded-2xl border border-border bg-muted/30 p-4 space-y-3">
+          <div className="flex items-center gap-2 text-xs font-bold text-primary">
+            <BarChart2 className="size-4" />
+            <span>COMMUNITY POLL</span>
           </div>
+          <h3 className="text-xs sm:text-sm font-bold text-navy">{post.poll.question}</h3>
+          <div className="space-y-2">
+            {Array.isArray(post.poll.options)
+              ? post.poll.options.map((opt: any, idx: number) => {
+                  const optText = typeof opt === 'string' ? opt : opt.text || ''
+                  const isSelected = selectedPollOption === String(idx)
+                  return (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setSelectedPollOption(String(idx))
+                        setHasVoted(true)
+                      }}
+                      className={`w-full text-left rounded-xl border p-2.5 text-xs font-semibold transition-all flex items-center justify-between ${
+                        isSelected
+                          ? 'border-primary bg-primary/10 text-primary'
+                          : 'border-border bg-card text-foreground hover:bg-muted'
+                      }`}
+                    >
+                      <span>{optText}</span>
+                      {isSelected && <Check className="size-4 text-primary" />}
+                    </button>
+                  )
+                })
+              : null}
+          </div>
+        </div>
+      )}
 
-          {/* Share */}
+      {/* Bottom Engagement Row */}
+      <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
+        <div className="flex items-center gap-6">
           <button
             type="button"
-            onClick={handleShare}
-            className="flex items-center gap-1.5 transition-colors hover:text-primary"
+            onClick={handleLike}
+            className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
+              liked ? 'text-rose-600' : 'text-muted-foreground hover:text-foreground'
+            }`}
           >
-            <Share2 className="size-4" />
-            <span>{copied ? 'Copied!' : 'Share'}</span>
+            <Heart className={`size-4 ${liked ? 'fill-rose-600 text-rose-600' : ''}`} />
+            <span>{likesCount}</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => onOpenComments && onOpenComments(post.id)}
+            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <MessageCircle className="size-4" />
+            <span>{post.commentsCount || 0}</span>
           </button>
         </div>
-      </article>
+
+        <button
+          type="button"
+          onClick={handleShare}
+          className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
+        >
+          <Share2 className="size-4" />
+          <span>{sharedToast ? 'Link Copied!' : 'Share'}</span>
+        </button>
+      </div>
 
       {/* Lightbox Modal */}
-      {lightboxIndex !== null && (
-        <ImageViewerModal
-          isOpen={true}
-          images={allImages}
-          initialIndex={lightboxIndex}
-          onClose={() => setLightboxIndex(null)}
-        />
-      )}
-    </>
+      <ImageViewerModal
+        isOpen={lightboxOpen}
+        images={allImages}
+        initialIndex={lightboxIndex}
+        onClose={() => setLightboxOpen(false)}
+      />
+    </article>
   )
 }

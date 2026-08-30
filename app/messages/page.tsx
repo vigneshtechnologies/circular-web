@@ -148,7 +148,7 @@ export default function MessagesPage() {
                 <div className="relative size-12 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
                   <Image
                     src={conv.otherUserAvatar || '/circular-logo.png'}
-                    alt={conv.otherUserName}
+                    alt={conv.otherUserName || 'Member'}
                     fill
                     className="object-cover"
                   />
@@ -163,7 +163,7 @@ export default function MessagesPage() {
                 <span className="text-[10px] text-muted-foreground">
                   {conv.updatedAt ? new Date(conv.updatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                 </span>
-                {conv.unreadCount > 0 && (
+                {Boolean(conv.unreadCount && conv.unreadCount > 0) && (
                   <span className="mt-1 block rounded-full bg-primary px-2 py-0.5 text-[10px] font-black text-white">
                     {conv.unreadCount}
                   </span>

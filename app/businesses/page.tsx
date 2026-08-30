@@ -6,12 +6,12 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
-import { ref, get, query, limitToLast } from 'firebase/database'
+import { ref, get } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { BusinessProfile } from '@/lib/types'
 import { getBusinessPhoto } from '@/lib/imageUtils'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
-import { Store, MapPin, Star, CheckCircle2, Search, X } from 'lucide-react'
+import { Store, MapPin, Star, CheckCircle2, Search, X, Loader2 } from 'lucide-react'
 
 // Exact categories matching Android CreateBusinessProfileScreen.tsx
 const OFFICIAL_BUSINESS_CATEGORIES = [
@@ -38,19 +38,13 @@ export default function BusinessesPage() {
   useEffect(() => {
     if (!user) return
 
+    let isMounted = true
+
     const loadBusinesses = async () => {
       setDataLoading(true)
       try {
-        const [bSnap, pSnap] = await Promise.all([
-          get(query(ref(db, 'businessProfiles'), limitToLast(100))),
-          get(query(ref(db, 'businessPhotos'), limitToLast(50))),
-        ])
-
-        if (pSnap.exists()) {
-          setPhotosRecord(pSnap.val() || {})
-        }
-
-        if (bSnap.exists()) {
+        const bSnap = await get(ref(db, 'businessProfiles')).catch(() => null)
+        if (isMounted && bSnap && bSnap.exists()) {
           const list: BusinessProfile[] = []
           bSnap.forEach((c) => {
             const val = c.val()
@@ -67,12 +61,23 @@ export default function BusinessesPage() {
         }
       } catch (e) {
         console.error('Error fetching businesses:', e)
-      } finally {
-        setDataLoading(false)
       }
+
+      try {
+        const pSnap = await get(ref(db, 'businessPhotos')).catch(() => null)
+        if (isMounted && pSnap && pSnap.exists()) {
+          setPhotosRecord(pSnap.val() || {})
+        }
+      } catch (err) {}
+
+      if (isMounted) setDataLoading(false)
     }
 
     loadBusinesses()
+
+    return () => {
+      isMounted = false
+    }
   }, [user])
 
   if (loading) {
@@ -96,8 +101,9 @@ export default function BusinessesPage() {
       selCat === 'all' ||
       bCat === selCat ||
       bCat.includes(selCat) ||
-      (selCat === 'food' && bCat.includes('dine')) ||
-      (selCat === 'technology' && (bCat.includes('tech') || bCat.includes('it')))
+      (selCat === 'food' && (bCat.includes('dine') || bCat.includes('food') || bCat.includes('hotel') || bCat.includes('restaurant'))) ||
+      (selCat === 'technology' && (bCat.includes('tech') || bCat.includes('it') || bCat.includes('software'))) ||
+      (selCat === 'shopping' && (bCat.includes('shop') || bCat.includes('wear') || bCat.includes('textile') || bCat.includes('store')))
 
     const bName = (b.name || (b as any).businessName || '').toLowerCase()
     const bArea = (b.area || '').toLowerCase()
@@ -133,82 +139,69 @@ export default function BusinessesPage() {
           </div>
         </div>
 
-        {/* Search Input */}
+        {/* Search Bar */}
         <div className="mt-3 relative flex items-center">
           <Search className="absolute left-3.5 size-4 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search businesses by name, category, or locality..."
-            className="w-full rounded-xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none"
+            placeholder="Search by business name, product, or area..."
+            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none"
           />
           {searchQuery && (
             <button
               type="button"
               onClick={() => setSearchQuery('')}
-              className="absolute right-3 text-muted-foreground hover:text-foreground"
+              className="absolute right-3 text-muted-foreground hover:text-foreground p-1"
             >
               <X className="size-3.5" />
             </button>
           )}
         </div>
 
-        {/* Category Pills (Intentional Horizontal Scrolling) */}
-        <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
-          {OFFICIAL_BUSINESS_CATEGORIES.map((cat) => {
-            const isSelected = selectedCategory.toLowerCase() === cat.toLowerCase()
-            return (
-              <button
-                key={cat}
-                type="button"
-                onClick={() => setSelectedCategory(cat)}
-                className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
-                  isSelected
-                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-500/40'
-                    : 'border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
-                }`}
-              >
-                {cat}
-              </button>
-            )
-          })}
+        {/* Intentional Horizontally Scrollable Categories */}
+        <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-1">
+          {OFFICIAL_BUSINESS_CATEGORIES.map((cat) => (
+            <button
+              key={cat}
+              type="button"
+              onClick={() => setSelectedCategory(cat)}
+              className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
+                selectedCategory === cat
+                  ? 'bg-blue-600 text-white shadow-sm font-bold'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+              }`}
+            >
+              {cat}
+            </button>
+          ))}
         </div>
       </header>
 
-      {/* Content */}
-      <div className="mx-auto max-w-4xl px-4 py-6 md:px-6">
+      {/* Directory Grid */}
+      <div className="mx-auto max-w-2xl px-4 py-6 md:px-6">
         {dataLoading ? (
-          <div className="py-12 text-center text-xs text-muted-foreground">
-            <div className="mx-auto size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="mt-2">Loading businesses...</p>
+          <div className="flex flex-col items-center justify-center py-16 text-center text-xs text-muted-foreground gap-2">
+            <Loader2 className="size-6 animate-spin text-primary" />
+            <span>Loading verified businesses...</span>
           </div>
         ) : filtered.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600">
               <Store className="size-6" />
             </div>
-            <h3 className="mt-3 text-base font-bold text-navy">No businesses found</h3>
+            <h3 className="mt-3 text-sm font-bold text-navy">No businesses found</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              {selectedCategory !== 'All'
-                ? `No ${selectedCategory} businesses currently registered.`
-                : 'Try clearing your search or exploring other categories.'}
+              {searchQuery
+                ? `No businesses match "${searchQuery}".`
+                : `No businesses found under "${selectedCategory}".`}
             </p>
-            {selectedCategory !== 'All' && (
-              <button
-                type="button"
-                onClick={() => setSelectedCategory('All')}
-                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow"
-              >
-                <span>View All Businesses</span>
-              </button>
-            )}
           </div>
         ) : (
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((b) => {
-              const photo =
-                getBusinessPhoto(b, photosRecord, publicProfiles) || '/circular-logo.png'
+              const photo = getBusinessPhoto(b, photosRecord, publicProfiles) || '/circular-logo.png'
               const hasRating = typeof b.rating === 'number' && b.rating > 0
               const isRecent = b.createdAt && Date.now() - b.createdAt < 14 * 24 * 60 * 60 * 1000
               const bizName = b.name || (b as any).businessName || 'Local Business'
@@ -218,60 +211,55 @@ export default function BusinessesPage() {
                 <Link
                   key={b.id}
                   href={`/business/${b.id}`}
-                  className="group flex flex-col justify-between rounded-3xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                  className="group flex flex-col rounded-3xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
                 >
-                  <div>
-                    {/* Top: Logo + Verified Badge */}
-                    <div className="flex items-start justify-between">
-                      <div className="relative size-14 overflow-hidden rounded-2xl bg-primary/10 ring-1 ring-border">
-                        <Image
-                          src={photo}
-                          alt={bizName}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      {b.isVerified && (
-                        <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600">
-                          <CheckCircle2 className="size-3" />
-                          <span>Verified</span>
-                        </span>
-                      )}
+                  <div className="flex items-center gap-3">
+                    <div className="relative size-14 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10 ring-1 ring-border">
+                      <Image
+                        src={photo}
+                        alt={bizName}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <h3 className="truncate text-sm font-bold text-navy group-hover:text-primary">
+                          {bizName}
+                        </h3>
+                        {b.isVerified && (
+                          <CheckCircle2 className="size-3.5 text-emerald-500 fill-emerald-500/20 shrink-0" />
+                        )}
+                      </div>
+                      <p className="truncate text-xs text-muted-foreground">{bizCategory}</p>
 
-                    {/* Info */}
-                    <h3 className="mt-3 truncate text-sm font-bold text-navy group-hover:text-primary">
-                      {bizName}
-                    </h3>
-                    <p className="text-xs font-medium text-muted-foreground">{bizCategory}</p>
+                      <div className="mt-1 flex items-center gap-2 text-[11px]">
+                        {hasRating ? (
+                          <span className="flex items-center gap-1 font-bold text-amber-500">
+                            <Star className="size-3 fill-amber-500" />
+                            <span>{b.rating!.toFixed(1)}</span>
+                          </span>
+                        ) : isRecent ? (
+                          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+                            New
+                          </span>
+                        ) : null}
 
-                    {b.description && (
-                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-foreground/80">
-                        {b.description}
-                      </p>
-                    )}
+                        {b.area && (
+                          <span className="flex items-center gap-0.5 text-muted-foreground truncate">
+                            <MapPin className="size-3 text-primary" />
+                            <span className="truncate">{b.area}</span>
+                          </span>
+                        )}
+                      </div>
+                    </div>
                   </div>
 
-                  {/* Bottom Bar */}
-                  <div className="mt-4 border-t border-border pt-3 flex items-center justify-between text-xs text-muted-foreground">
-                    {hasRating ? (
-                      <span className="flex items-center gap-1 font-bold text-amber-500">
-                        <Star className="size-3.5 fill-amber-500" />
-                        <span>{b.rating!.toFixed(1)}</span>
-                      </span>
-                    ) : isRecent ? (
-                      <span className="text-[11px] font-bold text-emerald-600">New Business</span>
-                    ) : (
-                      <span className="text-[11px] text-muted-foreground">Local Business</span>
-                    )}
-
-                    {b.area && (
-                      <span className="flex items-center gap-1 text-[11px]">
-                        <MapPin className="size-3 text-primary" />
-                        <span className="truncate max-w-[120px]">{b.area}</span>
-                      </span>
-                    )}
-                  </div>
+                  {b.description && (
+                    <p className="mt-3 text-xs text-muted-foreground line-clamp-2 leading-relaxed border-t border-border/50 pt-2.5">
+                      {b.description}
+                    </p>
+                  )}
                 </Link>
               )
             })}

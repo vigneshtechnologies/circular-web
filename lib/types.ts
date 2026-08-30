@@ -19,6 +19,89 @@ export interface UserProfile {
   followingCount?: number
 }
 
+export type CircularPostType =
+  | 'standard'
+  | 'regular'
+  | 'link'
+  | 'poll'
+  | 'event'
+  | 'smart'
+  | 'announcement'
+
+export type LinkPreviewData = {
+  originalUrl: string
+  canonicalUrl?: string
+  title?: string
+  description?: string
+  imageUrl?: string
+  siteName?: string
+  domain?: string
+  fetchedAt?: number
+  previewStatus?: 'ready' | 'fallback'
+}
+
+export type SmartPostTemplate =
+  | 'list'
+  | 'checklist'
+  | 'table'
+  | 'comparison'
+  | 'priceList'
+  | 'schedule'
+  | 'availability'
+  | 'progress'
+  | 'notice'
+
+export type SmartColumnType =
+  | 'text'
+  | 'number'
+  | 'price'
+  | 'date'
+  | 'time'
+  | 'status'
+  | 'phone'
+  | 'link'
+  | 'percentage'
+
+export type SmartColumn = {
+  id: string
+  title: string
+  type: SmartColumnType
+  order: number
+  sortable?: boolean
+  filterable?: boolean
+}
+
+export type SmartRow = {
+  id: string
+  order: number
+  cells: Record<string, any>
+}
+
+export type SmartListItem = {
+  id: string
+  text: string
+  order: number
+}
+
+export type SmartPostData = {
+  template: SmartPostTemplate
+  title: string
+  description?: string
+  items?: SmartListItem[]
+  columns?: SmartColumn[]
+  rows?: SmartRow[]
+  progress?: {
+    current: number
+    target: number
+    unit?: string
+  }
+  settings?: {
+    sortable?: boolean
+    filterable?: boolean
+    allowSuggestions?: boolean
+  }
+}
+
 export interface Post {
   id: string
   userId: string
@@ -44,13 +127,15 @@ export interface Post {
   updatedAt?: number
   likesCount?: number
   commentsCount?: number
-  postType?: 'regular' | 'event' | 'poll' | 'smart' | 'announcement'
+  postType?: CircularPostType
   postScope?: string
   isAdminPost?: boolean
   isGlobal?: boolean
+  linkPreview?: LinkPreviewData
+  smart?: SmartPostData
   poll?: {
     question?: string
-    options?: string[]
+    options?: string[] | Record<string, { id: string; text: string; order: number }>
     votes?: Record<string, number>
     totalVotes?: number
   }
@@ -64,6 +149,7 @@ export interface Post {
     description?: string
     imageUrl?: string
     contactPhone?: string
+    status?: 'active' | 'cancelled' | 'completed'
   }
 }
 
@@ -97,7 +183,13 @@ export interface BusinessProfile {
   photoURL?: string
   profileImage?: string
   logo?: string
+  businessLogo?: string
+  businessImage?: string
+  image?: string
+  picture?: string
   coverImage?: string
+  bannerUrl?: string
+  thumbnail?: string
   photos?: string[]
   imageUrls?: string[]
   rating?: number
@@ -122,15 +214,15 @@ export interface BusinessRating {
 export interface LocalJob {
   id: string
   userId: string
-  businessName?: string
+  businessName: string
   title: string
-  category?: string
-  description: string
-  jobType?: 'Full-time' | 'Part-time' | 'Freelance' | 'Internship'
+  category: string
+  jobType: 'Full-time' | 'Part-time' | 'Freelance' | 'Internship'
   salary?: string
-  area?: string
+  area: string
   phone?: string
   email?: string
+  description: string
   createdAt: number
 }
 
@@ -140,66 +232,71 @@ export interface NeedPost {
   userName: string
   userAvatar?: string
   title: string
-  category?: string
+  category: string
+  urgency: 'Low' | 'Medium' | 'High' | 'Urgent'
+  area: string
+  phone?: string
   description: string
-  urgency?: 'Low' | 'Medium' | 'High' | 'Urgent'
-  area?: string
   createdAt: number
+  isResolved?: boolean
 }
 
 export interface CommunityEvent {
   id: string
   userId: string
+  organizerName?: string
   userName?: string
   title: string
   category?: string
-  description: string
-  venue: string
-  eventDate?: string
+  eventDate: string
+  time?: string
   eventTime?: string
-  startAt?: number
-  area?: string
+  venue: string
+  area: string
+  description: string
   imageUrl?: string
+  contactPhone?: string
   createdAt: number
+  attendeesCount?: number
 }
 
 export interface NotificationItem {
   id: string
-  recipientId: string
+  userId: string
+  type: 'like' | 'comment' | 'follow' | 'system' | 'mention'
+  title: string
+  message: string
   senderId?: string
   senderName?: string
   senderAvatar?: string
-  type: 'like' | 'comment' | 'follow' | 'review' | 'chat' | 'broadcast' | 'report' | 'job' | 'need' | 'event'
-  title: string
-  message: string
   targetId?: string
-  targetType?: 'post' | 'business' | 'job' | 'need' | 'event' | 'chat' | 'profile'
+  targetType?: string
   read: boolean
   createdAt: number
 }
 
 export interface ChatConversation {
-  conversationId: string
-  otherUserId: string
-  otherUserName: string
+  id: string
+  conversationId?: string
+  participantIds: string[]
+  lastMessage?: string
+  lastMessageText?: string
+  lastMessageAt?: number
+  updatedAt?: number
+  unreadCount?: number
+  otherParticipant?: UserProfile
+  otherUserName?: string
   otherUserAvatar?: string
-  otherUserUsername?: string
-  isBusiness?: boolean
-  businessName?: string
-  lastMessageText: string
-  lastMessageSenderId: string
-  lastMessageTime: number
-  unreadCount: number
-  updatedAt: number
 }
 
 export interface ChatMessage {
   id: string
   conversationId: string
   senderId: string
-  senderName: string
+  senderName?: string
   senderAvatar?: string
   text: string
-  createdAt: number
-  read: boolean
+  timestamp?: number
+  createdAt?: number
+  read?: boolean
 }

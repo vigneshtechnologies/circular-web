@@ -191,7 +191,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ conversatio
                       isMe ? 'text-blue-100 text-right' : 'text-muted-foreground text-left'
                     }`}
                   >
-                    {new Date(m.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {new Date(m.createdAt || m.timestamp || Date.now()).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                   </span>
                 </div>
               </div>

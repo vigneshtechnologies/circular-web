@@ -64,7 +64,13 @@ export function getBusinessPhoto(
     business.profileImage,
     business.logo,
     business.logoUrl,
+    business.businessLogo,
+    business.businessImage,
+    business.image,
+    business.picture,
     business.coverImage,
+    business.bannerUrl,
+    business.thumbnail,
   ]
 
   for (const c of directCandidates) {
