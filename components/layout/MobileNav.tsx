@@ -1,4 +1,4 @@
-﻿'use client'
+'use client'
 
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
@@ -50,10 +50,14 @@ export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
             key={tab.href}
             href={tab.href}
             className={`flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors ${
-              isActive ? 'text-primary' : 'text-muted-foreground'
+              isActive ? 'text-blue-600 font-bold' : 'text-slate-500'
             }`}
           >
-            <Icon className={`size-5 ${isActive ? 'text-primary' : ''}`} />
+            <Icon
+              className={`size-5 ${
+                isActive ? 'text-blue-600 stroke-[2.5]' : 'text-slate-500 stroke-[2]'
+              }`}
+            />
             <span>{tab.label}</span>
           </Link>
         )
@@ -65,10 +69,10 @@ export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
         onClick={onOpenPostComposer}
         className="flex flex-col items-center gap-0.5 px-4 py-1"
       >
-        <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-primary via-purple-600 to-pink-600 shadow-lg shadow-primary/30">
+        <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 shadow-lg shadow-blue-500/30">
           <PlusCircle className="size-5 text-white" />
         </div>
-        <span className="text-[10px] font-semibold text-primary">Post</span>
+        <span className="text-[10px] font-semibold text-blue-600">Post</span>
       </button>
 
       {/* Notifications + Profile */}
@@ -80,11 +84,15 @@ export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
             key={tab.href}
             href={tab.href}
             className={`relative flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors ${
-              isActive ? 'text-primary' : 'text-muted-foreground'
+              isActive ? 'text-blue-600 font-bold' : 'text-slate-500'
             }`}
           >
             <div className="relative">
-              <Icon className={`size-5 ${isActive ? 'text-primary' : ''}`} />
+              <Icon
+                className={`size-5 ${
+                  isActive ? 'text-blue-600 stroke-[2.5]' : 'text-slate-500 stroke-[2]'
+                }`}
+              />
               {tab.badge != null && tab.badge > 0 && (
                 <span className="absolute -right-2 -top-1.5 flex size-4 items-center justify-center rounded-full bg-rose-500 text-[9px] font-black text-white">
                   {tab.badge > 9 ? '9+' : tab.badge}

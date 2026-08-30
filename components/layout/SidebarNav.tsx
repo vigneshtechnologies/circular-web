@@ -38,7 +38,6 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
   useEffect(() => {
     if (!user) return
 
-    // Listen to unread notifications
     const notifRef = ref(db, `notifications/${user.uid}`)
     const notifCallback = (snap: any) => {
       if (snap.exists()) {
@@ -51,7 +50,6 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
     }
     onValue(notifRef, notifCallback)
 
-    // Listen to user conversations
     const convRef = ref(db, `userConversations/${user.uid}`)
     const convCallback = (snap: any) => {
       if (snap.exists()) {
@@ -127,14 +125,14 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
           <button
             type="button"
             onClick={onOpenPostComposer}
-            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-primary via-purple-600 to-pink-600 py-3 text-sm font-bold text-white shadow-md shadow-primary/25 transition-all hover:opacity-95 active:scale-[0.98]"
+            className="flex w-full items-center justify-center gap-2 rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-3 text-sm font-bold text-white shadow-md shadow-blue-500/25 transition-all hover:opacity-95 active:scale-[0.98]"
           >
             <PlusCircle className="size-5" />
             <span>Create Post</span>
           </button>
         )}
 
-        {/* Nav Links */}
+        {/* Nav Links with Guaranteed Visible Icons */}
         <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-280px)] pr-1 no-scrollbar">
           {navItems.map((item) => {
             const isActive = pathname === item.href
@@ -142,21 +140,27 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
               <Link
                 key={item.href}
                 href={item.href}
-                className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-colors ${
+                className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
                   isActive
-                    ? 'bg-primary text-primary-foreground shadow-sm'
-                    : 'text-muted-foreground hover:bg-muted hover:text-foreground'
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
+                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center gap-3">
-                  <item.icon className={`size-5 ${isActive ? 'text-white' : 'text-primary'}`} />
-                  <span>{item.label}</span>
+                  <item.icon
+                    className={`size-5 shrink-0 ${
+                      isActive ? 'text-white stroke-[2.5]' : 'text-blue-600 stroke-[2]'
+                    }`}
+                  />
+                  <span className={isActive ? 'font-bold text-white' : 'text-slate-800'}>
+                    {item.label}
+                  </span>
                 </div>
 
                 {item.badge && item.badge > 0 && (
                   <span
                     className={`rounded-full px-2 py-0.5 text-xs font-black ${
-                      isActive ? 'bg-white text-primary' : 'bg-rose-500 text-white'
+                      isActive ? 'bg-white text-blue-600' : 'bg-rose-500 text-white'
                     }`}
                   >
                     {item.badge > 99 ? '99+' : item.badge}
@@ -170,7 +174,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
 
       {/* User Footer Profile */}
       <div className="border-t border-border pt-3">
-        <div className="flex items-center justify-between rounded-2xl p-2 hover:bg-muted/70 transition-colors">
+        <div className="flex items-center justify-between rounded-2xl p-2 hover:bg-slate-100 transition-colors">
           <Link href="/profile" className="flex items-center gap-2.5 flex-1 min-w-0 mr-1">
             <div className="relative size-9 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-primary/20">
               <Image

@@ -8,7 +8,7 @@ import { db } from '@/lib/firebase'
 import { useAuth } from '@/context/AuthContext'
 import { BusinessProfile, NeedPost } from '@/lib/types'
 import { getBusinessPhoto } from '@/lib/imageUtils'
-import { Store, HandHeart, MapPin, Smartphone, CheckCircle2, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
+import { Store, HandHeart, Smartphone, CheckCircle2, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
 
 export function RightSidebar({
   currentArea,
@@ -24,8 +24,6 @@ export function RightSidebar({
   const [loadingBiz, setLoadingBiz] = useState(true)
   const [loadingNeeds, setLoadingNeeds] = useState(true)
   const [bizError, setBizError] = useState<string | null>(null)
-
-  const displayArea = currentArea?.trim() || userProfile?.area || userProfile?.city || 'Your Community'
 
   useEffect(() => {
     if (!user) {
@@ -104,28 +102,7 @@ export function RightSidebar({
 
   return (
     <aside className="sticky top-0 hidden h-screen w-80 flex-col gap-4 overflow-y-auto border-l border-border bg-card p-4 xl:flex">
-      {/* Current Community Area Card */}
-      <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-purple-500/5 to-transparent p-4 shadow-sm">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
-              <MapPin className="size-4" />
-            </div>
-            <div>
-              <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
-                Your Community
-              </span>
-              <div className="text-sm font-black text-navy">{displayArea}</div>
-            </div>
-          </div>
-
-          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-            Active
-          </span>
-        </div>
-      </div>
-
-      {/* Nearby Businesses Widget */}
+      {/* Nearby Businesses Widget (Starts Naturally at Top) */}
       <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-border pb-2.5">
           <div className="flex items-center gap-2">
@@ -277,7 +254,7 @@ export function RightSidebar({
           href="https://play.google.com/store/apps/details?id=com.vigneshtechnologies.circular"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-primary py-2 text-xs font-bold text-white shadow transition-all hover:bg-primary/90"
+          className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2 text-xs font-bold text-white shadow transition-all hover:bg-blue-700"
         >
           <Smartphone className="size-3.5" />
           <span>Get on Google Play</span>

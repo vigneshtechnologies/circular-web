@@ -18,11 +18,12 @@ import {
   DEFAULT_RADIUS_KM,
   getDistanceKm,
   isValidCoordinate,
+  getUserCommunityLocation,
 } from '@/lib/locationUtils'
 import { ref, get, query, orderByChild, limitToLast, endAt } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
-import { Sparkles, MapPin, PlusCircle, Loader2, ArrowDown, Navigation } from 'lucide-react'
+import { Sparkles, MapPin, Loader2, ArrowDown, Navigation } from 'lucide-react'
 
 const INITIAL_PAGE_SIZE = 30
 const NEXT_PAGE_SIZE = 30
@@ -145,7 +146,6 @@ export default function CircularRootPage() {
           return
         }
 
-        // Merge using post ID map to guarantee ZERO duplicates
         setPosts((prev) => {
           const map = new Map<string, Post>(prev.map((p) => [p.id, p]))
           batch.forEach((p) => map.set(p.id, p))
@@ -189,7 +189,6 @@ export default function CircularRootPage() {
     return () => observer.disconnect()
   }, [hasMorePosts, loadingMore, feedLoading, loadMorePosts])
 
-  // If initial auth is checking, show splash
   if (loading) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-navy text-white">
@@ -208,13 +207,11 @@ export default function CircularRootPage() {
     )
   }
 
-  // If guest, show Authentication Portal
   if (!user) {
     return <AuthPortal />
   }
 
-  const currentArea = userProfile?.area || userProfile?.city || ''
-  const displayLocation = currentArea ? currentArea : 'Your Community'
+  const displayLocation = getUserCommunityLocation(userProfile)
 
   // Filter posts by Category + Geographic Radius
   const filteredPosts = posts.filter((p) => {
@@ -246,9 +243,6 @@ export default function CircularRootPage() {
       return distance <= selectedRadius
     }
 
-    // Fallback for posts without coordinates:
-    // When radius is default 25 km, include all community posts.
-    // If user explicitly narrowed radius (<25 km) and location is active, exclude posts without verified coordinates.
     if (selectedRadius === DEFAULT_RADIUS_KM || !userCoords) {
       return true
     }
@@ -259,8 +253,8 @@ export default function CircularRootPage() {
   const authorAvatar = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
 
   return (
-    <AppShell currentArea={currentArea}>
-      {/* Top Header in Center Feed */}
+    <AppShell currentArea={displayLocation}>
+      {/* Top Header in Center Feed (Clean Layout: Location on Left, Radius on Right) */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
@@ -276,23 +270,14 @@ export default function CircularRootPage() {
             </div>
           </div>
 
-          {/* Right Action Controls: Radius Selector + Post Button */}
-          <div className="flex items-center gap-2 shrink-0">
+          {/* Right Action: ONLY Radius Selector (No duplicate blank buttons) */}
+          <div className="flex items-center shrink-0">
             <RadiusSelector
               selectedRadius={selectedRadius}
               onSelectRadius={handleSelectRadius}
               hasUserLocation={locationAvailable}
               onRequestLocation={requestUserLocation}
             />
-
-            <button
-              type="button"
-              onClick={() => setIsComposerOpen(true)}
-              className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-primary/90 active:scale-95 shrink-0"
-            >
-              <PlusCircle className="size-4" />
-              <span>Post</span>
-            </button>
           </div>
         </div>
 
@@ -328,7 +313,7 @@ export default function CircularRootPage() {
           </div>
           <button
             type="button"
-            className="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary shrink-0"
+            className="rounded-xl bg-blue-600 text-white px-3 py-1.5 text-xs font-bold shadow-sm shrink-0"
           >
             Post
           </button>
@@ -367,9 +352,8 @@ export default function CircularRootPage() {
               <button
                 type="button"
                 onClick={() => setIsComposerOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow"
               >
-                <PlusCircle className="size-3.5" />
                 <span>Create Post</span>
               </button>
             </div>
