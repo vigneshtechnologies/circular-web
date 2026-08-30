@@ -7,13 +7,12 @@ import { ref, onValue, off, set, remove, runTransaction } from 'firebase/databas
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
 import { useAuth } from '@/context/AuthContext'
-import { getUserAvatar } from '@/lib/imageUtils'
+import { getUserAvatar, getPostLocation } from '@/lib/imageUtils'
 import {
   Heart,
   MessageSquare,
   Share2,
   MapPin,
-  CheckCircle2,
 } from 'lucide-react'
 
 interface PostCardProps {
@@ -82,7 +81,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
   }
 
   const authorAvatar = getUserAvatar(post) || '/circular-logo.png'
-  const displayArea = post.area || post.areaName || post.city || ''
+  const displayLocation = getPostLocation(post)
 
   const allImages: string[] = []
   if (Array.isArray(post.imageUrls) && post.imageUrls.length > 0) {
@@ -123,13 +122,15 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
             </div>
 
             <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
-              {displayArea && (
-                <span className="flex items-center gap-1">
-                  <MapPin className="size-3 text-primary" />
-                  <span>{displayArea}</span>
-                </span>
-              )}
-              {displayArea && <span>•</span>}
+              {displayLocation ? (
+                <>
+                  <span className="flex items-center gap-1">
+                    <MapPin className="size-3 text-primary" />
+                    <span>{displayLocation}</span>
+                  </span>
+                  <span>•</span>
+                </>
+              ) : null}
               <span>{formatTimestamp(post.createdAt)}</span>
             </div>
           </div>

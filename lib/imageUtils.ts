@@ -1,6 +1,6 @@
 /**
- * Centralized Image and Data Resolution Utilities for Circular 2.0 Web
- * Mirrors the mobile app image-resolution hierarchy (imageResolution.ts).
+ * Centralized Image, Data, and Location Resolution Utilities for Circular 2.0 Web
+ * Mirrors the mobile app logic from imageResolution.ts and locationUtils.ts.
  */
 
 export function getUserAvatar(user: any): string {
@@ -80,5 +80,29 @@ export function getPostMainImage(post: any): string {
   if (post.event?.imageUrl && typeof post.event.imageUrl === 'string' && post.event.imageUrl.trim().length > 0) {
     return post.event.imageUrl.trim()
   }
+  return ''
+}
+
+/**
+ * Safely resolves post location name, never returning "Unknown", "null", or placeholder strings.
+ */
+export function getPostLocation(post: any): string {
+  if (!post) return ''
+
+  const candidates = [post.area, post.areaName, post.city, post.address]
+  for (const loc of candidates) {
+    if (typeof loc === 'string') {
+      const trimmed = loc.trim()
+      if (
+        trimmed &&
+        trimmed.toLowerCase() !== 'unknown' &&
+        trimmed.toLowerCase() !== 'undefined' &&
+        trimmed.toLowerCase() !== 'null'
+      ) {
+        return trimmed
+      }
+    }
+  }
+
   return ''
 }

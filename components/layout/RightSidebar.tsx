@@ -5,9 +5,10 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { ref, get, query, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
+import { useAuth } from '@/context/AuthContext'
 import { BusinessProfile, NeedPost } from '@/lib/types'
 import { getBusinessPhoto } from '@/lib/imageUtils'
-import { Store, HandHeart, MapPin, Star, Smartphone, CheckCircle2, ChevronRight } from 'lucide-react'
+import { Store, HandHeart, MapPin, Smartphone, CheckCircle2, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
 
 export function RightSidebar({
   currentArea,
@@ -16,47 +17,87 @@ export function RightSidebar({
   currentArea?: string
   onSelectArea?: (area: string) => void
 }) {
+  const { user, userProfile } = useAuth()
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([])
   const [needs, setNeeds] = useState<NeedPost[]>([])
   const [photosRecord, setPhotosRecord] = useState<Record<string, any>>({})
+  const [loadingBiz, setLoadingBiz] = useState(true)
+  const [loadingNeeds, setLoadingNeeds] = useState(true)
+  const [bizError, setBizError] = useState<string | null>(null)
 
-  const displayArea = currentArea?.trim() || 'Your Community'
+  const displayArea = currentArea?.trim() || userProfile?.area || userProfile?.city || 'Your Community'
 
   useEffect(() => {
-    const loadSidebarData = async () => {
+    // Only query when user authentication is established
+    if (!user) {
+      setLoadingBiz(false)
+      setLoadingNeeds(false)
+      return
+    }
+
+    let isMounted = true
+
+    const loadBusinesses = async () => {
+      setLoadingBiz(true)
+      setBizError(null)
       try {
-        const [bSnap, nSnap, pSnap] = await Promise.all([
-          get(query(ref(db, 'businessProfiles'), limitToLast(6))),
-          get(query(ref(db, 'needPosts'), limitToLast(3))),
-          get(query(ref(db, 'businessPhotos'), limitToLast(10))),
-        ])
-
-        if (pSnap.exists()) {
-          setPhotosRecord(pSnap.val())
-        }
-
-        if (bSnap.exists()) {
+        const bSnap = await get(query(ref(db, 'businessProfiles'), limitToLast(8)))
+        if (isMounted && bSnap.exists()) {
           const list: BusinessProfile[] = []
           bSnap.forEach((child) => {
             list.push({ id: child.key as string, ...child.val() })
           })
           setBusinesses(list.reverse().slice(0, 4))
+        } else if (isMounted) {
+          setBusinesses([])
         }
+      } catch (err: any) {
+        console.warn('Sidebar business fetch warning:', err)
+        if (isMounted) setBizError('Unable to load businesses')
+      } finally {
+        if (isMounted) setLoadingBiz(false)
+      }
+    }
 
-        if (nSnap.exists()) {
+    const loadNeeds = async () => {
+      setLoadingNeeds(true)
+      try {
+        const nSnap = await get(query(ref(db, 'needPosts'), limitToLast(3)))
+        if (isMounted && nSnap.exists()) {
           const list: NeedPost[] = []
           nSnap.forEach((child) => {
             list.push({ id: child.key as string, ...child.val() })
           })
           setNeeds(list.reverse())
+        } else if (isMounted) {
+          setNeeds([])
         }
-      } catch (e) {
-        console.error('Sidebar fetch error:', e)
+      } catch (err) {
+        console.warn('Sidebar needs fetch warning:', err)
+      } finally {
+        if (isMounted) setLoadingNeeds(false)
       }
     }
 
-    loadSidebarData()
-  }, [])
+    const loadPhotos = async () => {
+      try {
+        const pSnap = await get(query(ref(db, 'businessPhotos'), limitToLast(10)))
+        if (isMounted && pSnap.exists()) {
+          setPhotosRecord(pSnap.val())
+        }
+      } catch (err) {
+        // Silently ignore optional photo gallery errors
+      }
+    }
+
+    loadBusinesses()
+    loadNeeds()
+    loadPhotos()
+
+    return () => {
+      isMounted = false
+    }
+  }, [user])
 
   return (
     <aside className="sticky top-0 hidden h-screen w-80 flex-col gap-4 overflow-y-auto border-l border-border bg-card p-4 xl:flex">
@@ -99,8 +140,18 @@ export function RightSidebar({
         </div>
 
         <div className="mt-3 flex flex-col gap-3">
-          {businesses.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2">Loading local businesses...</p>
+          {loadingBiz ? (
+            <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-2">
+              <Loader2 className="size-3.5 animate-spin text-primary" />
+              <span>Loading businesses...</span>
+            </div>
+          ) : bizError ? (
+            <div className="flex items-center gap-1.5 py-3 text-xs text-muted-foreground">
+              <AlertCircle className="size-3.5 text-amber-500" />
+              <span>{bizError}</span>
+            </div>
+          ) : businesses.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-3 text-center">No local businesses found.</p>
           ) : (
             businesses.map((b) => {
               const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
@@ -175,8 +226,13 @@ export function RightSidebar({
         </div>
 
         <div className="mt-3 flex flex-col gap-2.5">
-          {needs.length === 0 ? (
-            <p className="text-xs text-muted-foreground py-2">No open requests right now.</p>
+          {loadingNeeds ? (
+            <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-2">
+              <Loader2 className="size-3.5 animate-spin text-primary" />
+              <span>Loading needs...</span>
+            </div>
+          ) : needs.length === 0 ? (
+            <p className="text-xs text-muted-foreground py-3 text-center">No open requests right now.</p>
           ) : (
             needs.map((n) => (
               <Link

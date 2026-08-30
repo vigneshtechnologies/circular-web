@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
 import { useAuth } from '@/context/AuthContext'
 import { AuthPortal } from '@/components/auth/AuthPortal'
@@ -11,43 +11,128 @@ import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { PostComposerModal } from '@/components/feed/PostComposerModal'
 import { StoriesBar } from '@/components/feed/StoriesBar'
 import { getUserAvatar } from '@/lib/imageUtils'
-import { ref, onValue, off, query, orderByChild, limitToLast } from 'firebase/database'
+import { ref, get, query, orderByChild, limitToLast, endAt } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
-import { Sparkles, MapPin, PlusCircle, Search } from 'lucide-react'
+import { Sparkles, MapPin, PlusCircle, Loader2, ArrowDown } from 'lucide-react'
+
+const INITIAL_PAGE_SIZE = 30
+const NEXT_PAGE_SIZE = 30
 
 export default function CircularRootPage() {
   const { user, userProfile, loading } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedCategory, setSelectedCategory] = useState('All')
-  const [searchQuery, setSearchQuery] = useState('')
   const [feedLoading, setFeedLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMorePosts, setHasMorePosts] = useState(true)
+  const [lastCreatedAt, setLastCreatedAt] = useState<number | null>(null)
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
 
-  // Listen to realtime posts
-  useEffect(() => {
+  const observerTarget = useRef<HTMLDivElement>(null)
+
+  // 1. Initial Page Load (30 posts ordered by createdAt descending)
+  const loadInitialPosts = useCallback(async () => {
     if (!user) return
-
     setFeedLoading(true)
-    const postsQuery = query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(60))
+    try {
+      const postsQuery = query(
+        ref(db, 'posts'),
+        orderByChild('createdAt'),
+        limitToLast(INITIAL_PAGE_SIZE)
+      )
 
-    const callback = (snap: any) => {
-      if (snap.exists()) {
-        const list: Post[] = []
-        snap.forEach((child: any) => {
-          list.push({ id: child.key, ...child.val() })
-        })
-        setPosts(list.reverse())
+      const snapshot = await get(postsQuery)
+      if (snapshot.exists()) {
+        const data = snapshot.val()
+        const batch: Post[] = Object.keys(data)
+          .map((key) => ({ id: key, ...data[key] }))
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+
+        setPosts(batch)
+        const oldest = batch[batch.length - 1]?.createdAt ?? null
+        setLastCreatedAt(oldest)
+        setHasMorePosts(batch.length >= INITIAL_PAGE_SIZE)
       } else {
         setPosts([])
+        setHasMorePosts(false)
       }
+    } catch (err) {
+      console.error('Error loading initial posts:', err)
+    } finally {
       setFeedLoading(false)
     }
-
-    onValue(postsQuery, callback)
-    return () => off(postsQuery)
   }, [user])
+
+  // 2. Cursor Pagination / Load More Posts (30 older posts)
+  const loadMorePosts = useCallback(async () => {
+    if (loadingMore || !hasMorePosts || lastCreatedAt == null || !user) return
+
+    setLoadingMore(true)
+    try {
+      const moreQuery = query(
+        ref(db, 'posts'),
+        orderByChild('createdAt'),
+        endAt(lastCreatedAt - 1),
+        limitToLast(NEXT_PAGE_SIZE)
+      )
+
+      const snapshot = await get(moreQuery)
+      if (snapshot.exists()) {
+        const data = snapshot.val()
+        const batch: Post[] = Object.keys(data)
+          .map((key) => ({ id: key, ...data[key] }))
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+
+        if (batch.length === 0) {
+          setHasMorePosts(false)
+          return
+        }
+
+        // Merge using post ID map to guarantee ZERO duplicates
+        setPosts((prev) => {
+          const map = new Map<string, Post>(prev.map((p) => [p.id, p]))
+          batch.forEach((p) => map.set(p.id, p))
+          return Array.from(map.values()).sort(
+            (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+          )
+        })
+
+        const nextOldest = batch[batch.length - 1]?.createdAt ?? null
+        setLastCreatedAt(nextOldest)
+        setHasMorePosts(batch.length >= NEXT_PAGE_SIZE)
+      } else {
+        setHasMorePosts(false)
+      }
+    } catch (err) {
+      console.error('Error loading more posts:', err)
+    } finally {
+      setLoadingMore(false)
+    }
+  }, [loadingMore, hasMorePosts, lastCreatedAt, user])
+
+  useEffect(() => {
+    loadInitialPosts()
+  }, [loadInitialPosts])
+
+  // 3. Infinite scroll observer when reaching bottom
+  useEffect(() => {
+    const el = observerTarget.current
+    if (!el) return
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMorePosts && !loadingMore && !feedLoading) {
+          loadMorePosts()
+        }
+      },
+      { threshold: 0.1 }
+    )
+
+    observer.observe(el)
+    return () => observer.disconnect()
+  }, [hasMorePosts, loadingMore, feedLoading, loadMorePosts])
 
   // If initial auth is checking, show splash
   if (loading) {
@@ -76,30 +161,17 @@ export default function CircularRootPage() {
   const currentArea = userProfile?.area || userProfile?.city || ''
   const displayLocation = currentArea ? currentArea : 'Your Community'
 
-  // Filter posts by category and text search
+  // Filter posts by category with synonym matching
   const filteredPosts = posts.filter((p) => {
     const postCat = (p.category || '').toLowerCase().trim()
     const selected = selectedCategory.toLowerCase().trim()
 
-    let matchesCat = selected === 'all'
-    if (!matchesCat) {
-      if (selected === 'general') {
-        matchesCat = !postCat || postCat === 'general'
-      } else if (selected === 'news & updates') {
-        matchesCat = postCat === 'news' || postCat === 'news & updates' || postCat === 'local news'
-      } else {
-        matchesCat = postCat === selected || postCat.includes(selected)
-      }
+    if (selected === 'all') return true
+    if (selected === 'general') return !postCat || postCat === 'general'
+    if (selected === 'news & updates') {
+      return postCat === 'news' || postCat === 'news & updates' || postCat === 'local news'
     }
-
-    const q = searchQuery.toLowerCase().trim()
-    const matchesSearch =
-      !q ||
-      p.text?.toLowerCase().includes(q) ||
-      p.userName?.toLowerCase().includes(q) ||
-      p.area?.toLowerCase().includes(q)
-
-    return matchesCat && matchesSearch
+    return postCat === selected || postCat.includes(selected)
   })
 
   const authorAvatar = getUserAvatar(userProfile) || '/circular-logo.png'
@@ -116,7 +188,7 @@ export default function CircularRootPage() {
             <div className="min-w-0">
               <h1 className="text-sm sm:text-base font-extrabold text-navy truncate">Home Feed</h1>
               <div className="text-[11px] font-semibold text-muted-foreground truncate">
-                Showing posts in <span className="text-primary">{displayLocation}</span>
+                Showing posts in <span className="text-primary font-bold">{displayLocation}</span>
               </div>
             </div>
           </div>
@@ -132,10 +204,10 @@ export default function CircularRootPage() {
         </div>
 
         {/* Category Filter Bar */}
-        <div className="mt-3">
+        <div className="mt-2.5">
           <CategoryFilterBar
             selectedCategory={selectedCategory}
-            onSelectCategory={setSelectedCategory}
+            onSelectCategory={(cat) => setSelectedCategory(cat)}
           />
         </div>
       </header>
@@ -175,7 +247,7 @@ export default function CircularRootPage() {
         {feedLoading ? (
           <div className="space-y-4 py-8 text-center text-xs text-muted-foreground">
             <div className="mx-auto size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p>Loading community feed...</p>
+            <p className="mt-2 font-medium">Loading community feed...</p>
           </div>
         ) : filteredPosts.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
@@ -206,12 +278,36 @@ export default function CircularRootPage() {
             />
           ))
         )}
+
+        {/* Infinite Scroll / Load More Trigger */}
+        {!feedLoading && posts.length > 0 && (
+          <div ref={observerTarget} className="py-4 text-center">
+            {loadingMore ? (
+              <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
+                <Loader2 className="size-4 animate-spin text-primary" />
+                <span>Loading older posts...</span>
+              </div>
+            ) : hasMorePosts ? (
+              <button
+                type="button"
+                onClick={loadMorePosts}
+                className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-bold text-muted-foreground hover:bg-muted hover:text-foreground shadow-sm"
+              >
+                <ArrowDown className="size-3.5" />
+                <span>Load More Posts</span>
+              </button>
+            ) : (
+              <p className="text-xs text-muted-foreground">You've reached the end of the feed.</p>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Modals */}
       <PostComposerModal
         isOpen={isComposerOpen}
         onClose={() => setIsComposerOpen(false)}
+        onSuccess={loadInitialPosts}
       />
 
       <PostCommentsDrawer
