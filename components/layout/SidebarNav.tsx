@@ -20,7 +20,6 @@ import {
   Bell,
   User,
   Shield,
-  Megaphone,
   LogOut,
   PlusCircle,
   Settings,
@@ -98,10 +97,9 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
 
   const adminNavItems = [
     {
-      href: '/messages',
+      href: '/admin/messages',
       label: 'Admin Messages',
       icon: MessageSquare,
-      badge: unreadMessages > 0 ? unreadMessages : undefined,
     },
     { href: '/admin', label: 'Admin Panel & Broadcast', icon: Shield },
   ]
@@ -190,7 +188,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
                 const isActive = pathname === item.href
                 return (
                   <Link
-                    key={item.label}
+                    key={item.href}
                     href={item.href}
                     className={`flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
                       isActive
@@ -206,16 +204,6 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
                       />
                       <span>{item.label}</span>
                     </div>
-
-                    {item.badge && item.badge > 0 && (
-                      <span
-                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
-                          isActive ? 'bg-white text-blue-600' : 'bg-rose-500 text-white'
-                        }`}
-                      >
-                        {item.badge}
-                      </span>
-                    )}
                   </Link>
                 )
               })}
