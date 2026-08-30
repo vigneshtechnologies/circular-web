@@ -19,8 +19,47 @@ export function LinkPreviewCard({
 
   const domain = preview.domain || preview.siteName || 'Web Link'
   const isYouTube = targetUrl.includes('youtube.com') || targetUrl.includes('youtu.be')
+  const isFacebook = targetUrl.includes('facebook.com') || targetUrl.includes('fb.watch')
+  const isInstagram = targetUrl.includes('instagram.com')
   const isMaps = targetUrl.includes('maps.google') || targetUrl.includes('goo.gl/maps')
   const isPlayStore = targetUrl.includes('play.google.com')
+
+  // Clean error strings if preview fetcher stored technical HTTP error messages
+  const rawTitle = preview.title || ''
+  const isTitleError =
+    rawTitle.includes('HTTP 400') ||
+    rawTitle.includes('HTTP 403') ||
+    rawTitle.includes('HTTP 404') ||
+    rawTitle.includes('HTTP 500') ||
+    rawTitle.includes('returned HTTP') ||
+    rawTitle.includes('failed to fetch')
+
+  const title = isTitleError
+    ? isFacebook
+      ? 'Facebook Post / Video'
+      : isInstagram
+      ? 'Instagram Post'
+      : isYouTube
+      ? 'YouTube Video'
+      : domain
+    : rawTitle || targetUrl
+
+  const rawDesc = preview.description || ''
+  const isDescError =
+    rawDesc.includes('HTTP 400') ||
+    rawDesc.includes('HTTP 403') ||
+    rawDesc.includes('HTTP 404') ||
+    rawDesc.includes('HTTP 500') ||
+    rawDesc.includes('returned HTTP') ||
+    rawDesc.includes('failed to fetch')
+
+  const description = isDescError
+    ? isFacebook
+      ? 'View post on Facebook'
+      : isInstagram
+      ? 'View post on Instagram'
+      : `Visit ${domain}`
+    : rawDesc
 
   return (
     <a
@@ -34,7 +73,7 @@ export function LinkPreviewCard({
         <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
           <Image
             src={preview.imageUrl}
-            alt={preview.title || 'Preview'}
+            alt={title}
             fill
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             onError={() => setImgFailed(true)}
@@ -64,12 +103,12 @@ export function LinkPreviewCard({
         </div>
 
         <h4 className="text-xs sm:text-sm font-bold text-navy group-hover:text-primary line-clamp-1">
-          {preview.title || targetUrl}
+          {title}
         </h4>
 
-        {preview.description && (
+        {description && (
           <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-            {preview.description}
+            {description}
           </p>
         )}
       </div>
