@@ -1,25 +1,33 @@
 'use client'
 
-import { getUserCommunityLocation } from '@/lib/locationUtils'
-
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
-import { ref, get, query, orderByChild, equalTo, set, update } from 'firebase/database'
+import { ref, get, query, orderByChild, equalTo, update, onValue } from 'firebase/database'
 import { db } from '@/lib/firebase'
-import { Post, BusinessProfile, UserProfile } from '@/lib/types'
+import { Post, BusinessProfile } from '@/lib/types'
 import { PostCard } from '@/components/feed/PostCard'
-import { User, MapPin, Edit3, Settings, Store, Sparkles, X, Shield } from 'lucide-react'
+import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
+import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+import { getUserAvatar } from '@/lib/imageUtils'
+import { MapPin, Edit3, Settings, Sparkles, X, Shield, Share2, Check } from 'lucide-react'
 
 export default function ProfilePage() {
-  const { user, userProfile, isAdmin, refreshProfile, loading } = useAuth()
+  const { user, userProfile, isAdmin, refreshProfile, loading, publicProfiles } = useAuth()
   const [activeTab, setActiveTab] = useState<'posts' | 'businesses'>('posts')
   const [myPosts, setMyPosts] = useState<Post[]>([])
   const [myBusinesses, setMyBusinesses] = useState<BusinessProfile[]>([])
+  const [followersCount, setFollowersCount] = useState(0)
+  const [followingCount, setFollowingCount] = useState(0)
+
   const [isEditOpen, setIsEditOpen] = useState(false)
+  const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
+  const [imageViewerSrc, setImageViewerSrc] = useState<string | null>(null)
+  const [copiedShare, setCopiedShare] = useState(false)
 
   // Edit fields
   const [name, setName] = useState('')
@@ -37,28 +45,36 @@ export default function ProfilePage() {
       setBio(userProfile.bio || '')
       setArea(userProfile.area || '')
       setPhone(userProfile.phone || '')
-      setPhotoURL(userProfile.photoURL || '')
+      setPhotoURL(userProfile.photoURL || userProfile.profileImage || '')
     }
   }, [userProfile])
 
   useEffect(() => {
     if (!user) return
 
+    // Followers / Following counts
+    const unsubFollowers = onValue(ref(db, `followers/${user.uid}`), (snap) => {
+      setFollowersCount(snap.exists() ? Object.keys(snap.val()).length : 0)
+    })
+    const unsubFollowing = onValue(ref(db, `following/${user.uid}`), (snap) => {
+      setFollowingCount(snap.exists() ? Object.keys(snap.val()).length : 0)
+    })
+
     const loadUserContent = async () => {
       try {
         // Fetch my posts
-        const pSnap = await get(query(ref(db, 'posts'), orderByChild('userId'), equalTo(user.uid)))
-        if (pSnap.exists()) {
+        const pSnap = await get(query(ref(db, 'posts'), orderByChild('userId'), equalTo(user.uid))).catch(() => null)
+        if (pSnap && pSnap.exists()) {
           const list: Post[] = []
           pSnap.forEach((c) => {
             list.push({ id: c.key as string, ...c.val() })
           })
-          setMyPosts(list.reverse())
+          setMyPosts(list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)))
         }
 
         // Fetch my businesses
-        const bSnap = await get(query(ref(db, 'businessProfiles'), orderByChild('userId'), equalTo(user.uid)))
-        if (bSnap.exists()) {
+        const bSnap = await get(query(ref(db, 'businessProfiles'), orderByChild('userId'), equalTo(user.uid))).catch(() => null)
+        if (bSnap && bSnap.exists()) {
           const list: BusinessProfile[] = []
           bSnap.forEach((c) => {
             list.push({ id: c.key as string, ...c.val() })
@@ -71,6 +87,11 @@ export default function ProfilePage() {
     }
 
     loadUserContent()
+
+    return () => {
+      unsubFollowers()
+      unsubFollowing()
+    }
   }, [user])
 
   const handleSaveProfile = async (e: React.FormEvent) => {
@@ -86,6 +107,7 @@ export default function ProfilePage() {
         area: area.trim(),
         phone: phone.trim(),
         photoURL: photoURL.trim(),
+        profileImage: photoURL.trim(),
       }
       await update(ref(db, `users/${user.uid}`), updatedData)
       await update(ref(db, `publicProfiles/${user.uid}`), updatedData)
@@ -95,6 +117,20 @@ export default function ProfilePage() {
       console.error(e)
     } finally {
       setSaving(false)
+    }
+  }
+
+  const handleShareProfile = async () => {
+    if (!user) return
+    const canonicalUrl = `https://circularapp.in/user/${user.uid}`
+    try {
+      if (navigator.clipboard) {
+        await navigator.clipboard.writeText(canonicalUrl)
+        setCopiedShare(true)
+        setTimeout(() => setCopiedShare(false), 2500)
+      }
+    } catch (err) {
+      console.error('Failed to copy share link:', err)
     }
   }
 
@@ -110,8 +146,11 @@ export default function ProfilePage() {
     return <AuthPortal />
   }
 
+  const avatarUrl = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
+  const displayLocality = getUserCommunityLocation(userProfile)
+
   return (
-    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
+    <AppShell currentArea={displayLocality}>
       {/* Header Profile Cover */}
       <div className="relative h-36 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 md:h-48" />
 
@@ -120,17 +159,22 @@ export default function ProfilePage() {
         <div className="relative -mt-16 rounded-3xl border border-border bg-card p-6 shadow-lg">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
-              <div className="relative size-24 shrink-0 overflow-hidden rounded-3xl bg-primary/10 ring-4 ring-card shadow-xl">
+              <button
+                type="button"
+                onClick={() => setImageViewerSrc(avatarUrl)}
+                className="group relative size-24 shrink-0 overflow-hidden rounded-3xl bg-primary/10 ring-4 ring-card shadow-xl focus:outline-none"
+                title="View profile photo"
+              >
                 <Image
-                  src={userProfile?.photoURL || '/circular-logo.png'}
+                  src={avatarUrl}
                   alt={userProfile?.name || 'Profile Avatar'}
                   fill
-                  className="object-cover"
+                  className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
-              </div>
-              <div>
+              </button>
+              <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-black tracking-tight text-navy">{userProfile?.name || 'Circular Member'}</h1>
+                  <h1 className="text-xl font-black tracking-tight text-navy truncate">{userProfile?.name || 'Circular Member'}</h1>
                   {isAdmin && (
                     <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
                       <Shield className="size-3" />
@@ -138,26 +182,35 @@ export default function ProfilePage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs font-medium text-muted-foreground">@{userProfile?.username || 'member'}</p>
+                <p className="text-xs font-semibold text-muted-foreground">@{userProfile?.username || 'member'}</p>
                 <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="size-3 text-primary" />
-                  <span>{getUserCommunityLocation(userProfile)}</span>
+                  <MapPin className="size-3.5 text-primary shrink-0" />
+                  <span className="truncate">{displayLocality}</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 pt-2 sm:pt-0">
               <button
                 type="button"
                 onClick={() => setIsEditOpen(true)}
-                className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/60 px-3.5 py-2 text-xs font-bold text-foreground hover:bg-muted"
+                className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/60 px-3.5 py-2 text-xs font-bold text-foreground hover:bg-muted transition-all"
               >
                 <Edit3 className="size-3.5" />
                 <span>Edit Profile</span>
               </button>
+              <button
+                type="button"
+                onClick={handleShareProfile}
+                className="flex size-9 items-center justify-center rounded-xl border border-border bg-card text-muted-foreground hover:bg-muted transition-all"
+                title="Share profile link"
+              >
+                {copiedShare ? <Check className="size-4 text-emerald-600" /> : <Share2 className="size-4" />}
+              </button>
               <Link
                 href="/settings"
-                className="rounded-xl border border-border bg-muted/60 p-2 text-muted-foreground hover:bg-muted"
+                className="rounded-xl border border-border bg-muted/60 p-2 text-muted-foreground hover:bg-muted transition-all"
+                title="Settings"
               >
                 <Settings className="size-4" />
               </Link>
@@ -165,7 +218,9 @@ export default function ProfilePage() {
           </div>
 
           {userProfile?.bio && (
-            <p className="mt-4 text-xs leading-relaxed text-foreground/90">{userProfile.bio}</p>
+            <p className="mt-4 text-xs leading-relaxed text-foreground/90 whitespace-pre-line border-t border-border/60 pt-3">
+              {userProfile.bio}
+            </p>
           )}
 
           {/* Stats Bar */}
@@ -175,11 +230,11 @@ export default function ProfilePage() {
               <span className="text-muted-foreground">Posts</span>
             </div>
             <div>
-              <span className="font-black text-navy">{userProfile?.followersCount || 0}</span>{' '}
+              <span className="font-black text-navy">{followersCount}</span>{' '}
               <span className="text-muted-foreground">Followers</span>
             </div>
             <div>
-              <span className="font-black text-navy">{userProfile?.followingCount || 0}</span>{' '}
+              <span className="font-black text-navy">{followingCount}</span>{' '}
               <span className="text-muted-foreground">Following</span>
             </div>
           </div>
@@ -219,7 +274,13 @@ export default function ProfilePage() {
                 You haven't posted any updates yet. Share what's happening around you!
               </div>
             ) : (
-              myPosts.map((p) => <PostCard key={p.id} post={p} />)
+              myPosts.map((p) => (
+                <PostCard
+                  key={p.id}
+                  post={p}
+                  onOpenComments={(pId) => setActiveCommentsPostId(pId)}
+                />
+              ))
             )
           ) : myBusinesses.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center text-xs text-muted-foreground">
@@ -231,10 +292,10 @@ export default function ProfilePage() {
                 <Link
                   key={b.id}
                   href={`/business/${b.id}`}
-                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm hover:border-primary/40"
+                  className="flex items-center gap-3 rounded-2xl border border-border bg-card p-4 shadow-sm hover:border-primary/40 transition-all hover:shadow"
                 >
                   <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-primary/10">
-                    <Image src={b.logoUrl || '/circular-logo.png'} alt={b.name} fill className="object-cover" />
+                    <Image src={b.logoUrl || b.imageUrl || '/circular-logo.png'} alt={b.name} fill className="object-cover" />
                   </div>
                   <div>
                     <h4 className="text-xs font-bold text-navy">{b.name}</h4>
@@ -322,6 +383,18 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* Drawers & Lightbox */}
+      <PostCommentsDrawer
+        postId={activeCommentsPostId}
+        onClose={() => setActiveCommentsPostId(null)}
+      />
+
+      <ImageViewerModal
+        isOpen={Boolean(imageViewerSrc)}
+        images={imageViewerSrc ? [imageViewerSrc] : []}
+        onClose={() => setImageViewerSrc(null)}
+      />
     </AppShell>
   )
 }
