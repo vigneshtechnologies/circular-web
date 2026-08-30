@@ -1,5 +1,7 @@
 'use client'
 
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
@@ -109,7 +111,7 @@ export default function ProfilePage() {
   }
 
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
       {/* Header Profile Cover */}
       <div className="relative h-36 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 md:h-48" />
 
@@ -139,7 +141,7 @@ export default function ProfilePage() {
                 <p className="text-xs font-medium text-muted-foreground">@{userProfile?.username || 'member'}</p>
                 <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                   <MapPin className="size-3 text-primary" />
-                  <span>{userProfile?.area || 'Rajapalayam'}</span>
+                  <span>{getUserCommunityLocation(userProfile)}</span>
                 </div>
               </div>
             </div>

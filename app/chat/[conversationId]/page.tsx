@@ -125,6 +125,22 @@ export default function ChatRoomPage({ params }: { params: Promise<{ conversatio
     return <AuthPortal />
   }
 
+  const isParticipant = conversationId.includes('_')
+    ? conversationId.split('_').includes(user.uid)
+    : true
+
+  if (!isParticipant) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center">
+        <h2 className="text-lg font-bold text-navy">Private Conversation</h2>
+        <p className="mt-1 text-xs text-muted-foreground">You do not have access to this conversation.</p>
+        <Link href="/messages" className="mt-4 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white">
+          Back to Messages
+        </Link>
+      </div>
+    )
+  }
+
   return (
     <div className="flex h-screen flex-col bg-background text-foreground">
       {/* Top Chat Bar */}

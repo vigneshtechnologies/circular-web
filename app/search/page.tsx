@@ -10,13 +10,14 @@ import { ref, get, query, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post, BusinessProfile, UserProfile, LocalJob, NeedPost, CommunityEvent } from '@/lib/types'
 import { PostCard } from '@/components/feed/PostCard'
-import { Search as SearchIcon, MapPin, Store, Users, FileText, Briefcase, HandHeart, Calendar, Star, Phone } from 'lucide-react'
+import { getUserAvatar, getBusinessPhoto } from '@/lib/imageUtils'
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+import { Search as SearchIcon, Store, Users, FileText, Briefcase, HandHeart, Calendar, Star, X } from 'lucide-react'
 
 export default function SearchPage() {
-  const { user, userProfile, loading } = useAuth()
+  const { user, userProfile, publicProfiles, loading } = useAuth()
   const [activeTab, setActiveTab] = useState<'all' | 'businesses' | 'posts' | 'people' | 'jobs' | 'needs' | 'events'>('all')
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedArea, setSelectedArea] = useState('')
   
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([])
   const [posts, setPosts] = useState<Post[]>([])
@@ -24,6 +25,7 @@ export default function SearchPage() {
   const [jobs, setJobs] = useState<LocalJob[]>([])
   const [needs, setNeeds] = useState<NeedPost[]>([])
   const [events, setEvents] = useState<CommunityEvent[]>([])
+  const [photosRecord, setPhotosRecord] = useState<Record<string, any>>({})
   const [isSearching, setIsSearching] = useState(true)
 
   useEffect(() => {
@@ -32,40 +34,69 @@ export default function SearchPage() {
     const loadSearchData = async () => {
       setIsSearching(true)
       try {
-        const [bSnap, pSnap, uSnap, jSnap, nSnap, eSnap] = await Promise.all([
-          get(query(ref(db, 'businessProfiles'), limitToLast(50))),
-          get(query(ref(db, 'posts'), limitToLast(50))),
-          get(query(ref(db, 'publicProfiles'), limitToLast(50))),
-          get(query(ref(db, 'jobs'), limitToLast(50))),
-          get(query(ref(db, 'needPosts'), limitToLast(50))),
-          get(query(ref(db, 'events'), limitToLast(50))),
+        const [bSnap, pSnap, uSnap, jSnap, nSnap, eSnap, bpSnap] = await Promise.all([
+          get(query(ref(db, 'businessProfiles'), limitToLast(100))),
+          get(query(ref(db, 'posts'), limitToLast(100))),
+          get(query(ref(db, 'publicProfiles'), limitToLast(100))),
+          get(query(ref(db, 'jobs'), limitToLast(100))),
+          get(query(ref(db, 'needPosts'), limitToLast(100))),
+          get(query(ref(db, 'events'), limitToLast(100))),
+          get(query(ref(db, 'businessPhotos'), limitToLast(30))),
         ])
+
+        if (bpSnap.exists()) {
+          setPhotosRecord(bpSnap.val() || {})
+        }
 
         if (bSnap.exists()) {
           const list: BusinessProfile[] = []
-          bSnap.forEach((c) => { list.push({ id: c.key as string, ...c.val() }) })
+          bSnap.forEach((c) => {
+            const val = c.val()
+            list.push({
+              id: c.key as string,
+              name: val.businessName || val.name || 'Local Business',
+              businessName: val.businessName || val.name || 'Local Business',
+              category: val.category || val.businessCategory || 'Local Shop',
+              area: val.area || val.city || val.areaName || '',
+              ...val,
+            })
+          })
           setBusinesses(list)
         }
+
         if (pSnap.exists()) {
           const list: Post[] = []
           pSnap.forEach((c) => { list.push({ id: c.key as string, ...c.val() }) })
           setPosts(list.reverse())
         }
+
         if (uSnap.exists()) {
           const list: UserProfile[] = []
-          uSnap.forEach((c) => { list.push({ uid: c.key as string, ...c.val() }) })
+          uSnap.forEach((c) => {
+            const val = c.val()
+            list.push({
+              uid: c.key as string,
+              name: val.name || 'Member',
+              username: val.username || 'user',
+              area: val.area || val.city || val.areaName || '',
+              ...val,
+            })
+          })
           setPeople(list)
         }
+
         if (jSnap.exists()) {
           const list: LocalJob[] = []
           jSnap.forEach((c) => { list.push({ id: c.key as string, ...c.val() }) })
           setJobs(list)
         }
+
         if (nSnap.exists()) {
           const list: NeedPost[] = []
           nSnap.forEach((c) => { list.push({ id: c.key as string, ...c.val() }) })
           setNeeds(list)
         }
+
         if (eSnap.exists()) {
           const list: CommunityEvent[] = []
           eSnap.forEach((c) => { list.push({ id: c.key as string, ...c.val() }) })
@@ -94,42 +125,63 @@ export default function SearchPage() {
   }
 
   const q = searchTerm.toLowerCase().trim()
-  const areaFilter = selectedArea.toLowerCase().trim()
 
   const filteredBusinesses = businesses.filter((b) => {
-    const matchesQ = !q || b.name?.toLowerCase().includes(q) || b.category?.toLowerCase().includes(q) || b.description?.toLowerCase().includes(q)
-    const matchesArea = !areaFilter || b.area?.toLowerCase().includes(areaFilter) || b.address?.toLowerCase().includes(areaFilter)
-    return matchesQ && matchesArea
+    if (!q) return true
+    const name = (b.name || (b as any).businessName || '').toLowerCase()
+    const cat = (b.category || (b as any).businessCategory || '').toLowerCase()
+    const desc = (b.description || '').toLowerCase()
+    const area = (b.area || '').toLowerCase()
+    const addr = (b.address || '').toLowerCase()
+    return name.includes(q) || cat.includes(q) || desc.includes(q) || area.includes(q) || addr.includes(q)
   })
 
   const filteredPosts = posts.filter((p) => {
-    const matchesQ = !q || p.text?.toLowerCase().includes(q) || p.userName?.toLowerCase().includes(q) || p.category?.toLowerCase().includes(q)
-    const matchesArea = !areaFilter || p.area?.toLowerCase().includes(areaFilter)
-    return matchesQ && matchesArea
+    if (!q) return true
+    const text = (p.text || '').toLowerCase()
+    const author = (p.userName || '').toLowerCase()
+    const cat = (p.category || '').toLowerCase()
+    const area = (p.area || p.areaName || '').toLowerCase()
+    return text.includes(q) || author.includes(q) || cat.includes(q) || area.includes(q)
   })
 
   const filteredPeople = people.filter((u) => {
-    const matchesQ = !q || u.name?.toLowerCase().includes(q) || u.username?.toLowerCase().includes(q) || u.bio?.toLowerCase().includes(q)
-    const matchesArea = !areaFilter || u.area?.toLowerCase().includes(areaFilter)
-    return matchesQ && matchesArea
+    if (!q) return true
+    const name = (u.name || '').toLowerCase()
+    const username = (u.username || '').toLowerCase()
+    const email = (u.email || '').toLowerCase()
+    const bio = (u.bio || '').toLowerCase()
+    const biz = (u.businessName || '').toLowerCase()
+    const area = (u.area || '').toLowerCase()
+    return name.includes(q) || username.includes(q) || email.includes(q) || bio.includes(q) || biz.includes(q) || area.includes(q)
   })
 
   const filteredJobs = jobs.filter((j) => {
-    const matchesQ = !q || j.title?.toLowerCase().includes(q) || j.category?.toLowerCase().includes(q) || j.businessName?.toLowerCase().includes(q)
-    const matchesArea = !areaFilter || j.area?.toLowerCase().includes(areaFilter)
-    return matchesQ && matchesArea
+    if (!q) return true
+    const title = (j.title || '').toLowerCase()
+    const biz = (j.businessName || '').toLowerCase()
+    const cat = (j.category || '').toLowerCase()
+    const desc = (j.description || '').toLowerCase()
+    const area = (j.area || '').toLowerCase()
+    return title.includes(q) || biz.includes(q) || cat.includes(q) || desc.includes(q) || area.includes(q)
   })
 
   const filteredNeeds = needs.filter((n) => {
-    const matchesQ = !q || n.title?.toLowerCase().includes(q) || n.category?.toLowerCase().includes(q) || n.description?.toLowerCase().includes(q)
-    const matchesArea = !areaFilter || n.area?.toLowerCase().includes(areaFilter)
-    return matchesQ && matchesArea
+    if (!q) return true
+    const title = (n.title || '').toLowerCase()
+    const desc = (n.description || '').toLowerCase()
+    const user = (n.userName || '').toLowerCase()
+    const area = (n.area || '').toLowerCase()
+    return title.includes(q) || desc.includes(q) || user.includes(q) || area.includes(q)
   })
 
   const filteredEvents = events.filter((e) => {
-    const matchesQ = !q || e.title?.toLowerCase().includes(q) || e.description?.toLowerCase().includes(q) || e.venue?.toLowerCase().includes(q)
-    const matchesArea = !areaFilter || e.area?.toLowerCase().includes(areaFilter)
-    return matchesQ && matchesArea
+    if (!q) return true
+    const title = (e.title || '').toLowerCase()
+    const desc = (e.description || '').toLowerCase()
+    const venue = (e.venue || '').toLowerCase()
+    const area = (e.area || '').toLowerCase()
+    return title.includes(q) || desc.includes(q) || venue.includes(q) || area.includes(q)
   })
 
   const tabs = [
@@ -142,8 +194,10 @@ export default function SearchPage() {
     { key: 'events', label: `Events (${filteredEvents.length})` },
   ] as const
 
+  const displayArea = getUserCommunityLocation(userProfile)
+
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={displayArea}>
       {/* Search Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="mx-auto max-w-2xl">
@@ -154,8 +208,17 @@ export default function SearchPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search businesses, people, jobs, needs, posts..."
-              className="w-full rounded-2xl border border-border bg-muted/60 py-2.5 pl-10 pr-4 text-sm text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-2xl border border-border bg-muted/60 py-2.5 pl-10 pr-10 text-sm text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none focus:ring-1 focus:ring-primary"
             />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => setSearchTerm('')}
+                className="absolute right-3 text-muted-foreground hover:text-foreground"
+              >
+                <X className="size-4" />
+              </button>
+            )}
           </div>
 
           {/* Filter Tabs */}
@@ -200,34 +263,44 @@ export default function SearchPage() {
                   </Link>
                 </div>
                 <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {filteredBusinesses.slice(0, activeTab === 'all' ? 4 : 50).map((b) => (
-                    <Link
-                      key={b.id}
-                      href={`/business/${b.id}`}
-                      className="flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-                    >
-                      <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-primary/10 ring-1 ring-border">
-                        <Image
-                          src={b.logoUrl || '/circular-logo.png'}
-                          alt={b.name}
-                          fill
-                          className="object-cover"
-                        />
-                      </div>
-                      <div className="min-w-0 flex-1">
-                        <h3 className="truncate text-xs font-bold text-navy">{b.name}</h3>
-                        <p className="truncate text-[11px] text-muted-foreground">{b.category}</p>
-                        <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
-                          <span className="flex items-center gap-0.5 text-amber-500 font-bold">
-                            <Star className="size-3 fill-amber-500" />
-                            {b.rating ? b.rating.toFixed(1) : '5.0'}
-                          </span>
-                          <span>•</span>
-                          <span className="truncate">{b.area || 'Rajapalayam'}</span>
+                  {filteredBusinesses.slice(0, activeTab === 'all' ? 4 : 50).map((b) => {
+                    const photo = getBusinessPhoto(b, photosRecord, publicProfiles) || '/circular-logo.png'
+                    const bizName = b.name || (b as any).businessName || 'Local Business'
+                    const bizCategory = b.category || (b as any).businessCategory || 'Local Shop'
+
+                    return (
+                      <Link
+                        key={b.id}
+                        href={`/business/${b.id}`}
+                        className="flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                      >
+                        <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-primary/10 ring-1 ring-border">
+                          <Image
+                            src={photo}
+                            alt={bizName}
+                            fill
+                            className="object-cover"
+                          />
                         </div>
-                      </div>
-                    </Link>
-                  ))}
+                        <div className="min-w-0 flex-1">
+                          <h3 className="truncate text-xs font-bold text-navy">{bizName}</h3>
+                          <p className="truncate text-[11px] text-muted-foreground">{bizCategory}</p>
+                          <div className="mt-1.5 flex items-center gap-2 text-[10px] text-muted-foreground">
+                            {b.rating && b.rating > 0 ? (
+                              <span className="flex items-center gap-0.5 text-amber-500 font-bold">
+                                <Star className="size-3 fill-amber-500" />
+                                {b.rating.toFixed(1)}
+                              </span>
+                            ) : (
+                              <span className="text-emerald-600 font-bold">New</span>
+                            )}
+                            <span>•</span>
+                            <span className="truncate">{b.area || displayArea}</span>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  })}
                 </div>
               </section>
             )}
@@ -240,31 +313,34 @@ export default function SearchPage() {
                   <span>People</span>
                 </h2>
                 <div className="grid grid-cols-1 gap-2.5 sm:grid-cols-2">
-                  {filteredPeople.slice(0, activeTab === 'all' ? 4 : 50).map((p) => (
-                    <Link
-                      key={p.uid}
-                      href={`/user/${p.uid}`}
-                      className="flex items-center justify-between rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:border-primary/40"
-                    >
-                      <div className="flex items-center gap-3 overflow-hidden">
-                        <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
-                          <Image
-                            src={p.photoURL || '/circular-logo.png'}
-                            alt={p.name}
-                            fill
-                            className="object-cover"
-                          />
+                  {filteredPeople.slice(0, activeTab === 'all' ? 4 : 50).map((p) => {
+                    const avatar = getUserAvatar(p, publicProfiles) || '/circular-logo.png'
+                    return (
+                      <Link
+                        key={p.uid}
+                        href={`/user/${p.uid}`}
+                        className="flex items-center justify-between rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:border-primary/40"
+                      >
+                        <div className="flex items-center gap-3 overflow-hidden">
+                          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
+                            <Image
+                              src={avatar}
+                              alt={p.name}
+                              fill
+                              className="object-cover"
+                            />
+                          </div>
+                          <div className="min-w-0">
+                            <h3 className="truncate text-xs font-bold text-navy">{p.name}</h3>
+                            <p className="truncate text-[11px] text-muted-foreground">@{p.username || 'member'}</p>
+                          </div>
                         </div>
-                        <div className="min-w-0">
-                          <h3 className="truncate text-xs font-bold text-navy">{p.name}</h3>
-                          <p className="truncate text-[11px] text-muted-foreground">@{p.username || 'member'}</p>
-                        </div>
-                      </div>
-                      <span className="shrink-0 rounded-xl bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
-                        View
-                      </span>
-                    </Link>
-                  ))}
+                        <span className="shrink-0 rounded-xl bg-primary/10 px-2.5 py-1 text-[10px] font-bold text-primary">
+                          View
+                        </span>
+                      </Link>
+                    )
+                  })}
                 </div>
               </section>
             )}
@@ -299,8 +375,7 @@ export default function SearchPage() {
                       </div>
                       <div className="mt-3 flex items-center gap-3 text-xs text-muted-foreground">
                         <span className="flex items-center gap-1">
-                          <MapPin className="size-3 text-primary" />
-                          {j.area || 'Rajapalayam'}
+                          📍 {j.area || displayArea}
                         </span>
                         {j.salary && <span>• {j.salary}</span>}
                       </div>
@@ -332,7 +407,7 @@ export default function SearchPage() {
                       <div className="flex items-start justify-between">
                         <h3 className="text-sm font-bold text-navy">{n.title}</h3>
                         <span className="rounded-lg bg-rose-500/10 px-2 py-0.5 text-[10px] font-bold text-rose-600">
-                          {n.urgency || 'Medium'}
+                          {n.urgency || 'Open'}
                         </span>
                       </div>
                       <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{n.description}</p>
@@ -364,7 +439,7 @@ export default function SearchPage() {
                       <h3 className="text-sm font-bold text-navy">{e.title}</h3>
                       <p className="mt-1 text-xs text-muted-foreground">{e.description}</p>
                       <div className="mt-2 flex items-center gap-3 text-xs text-muted-foreground">
-                        <span>📍 {e.venue}</span>
+                        <span>📍 {e.venue || displayArea}</span>
                         {e.eventDate && <span>• 📅 {e.eventDate}</span>}
                       </div>
                     </Link>

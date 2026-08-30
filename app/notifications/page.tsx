@@ -1,5 +1,7 @@
 'use client'
 
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
@@ -89,7 +91,7 @@ export default function NotificationsPage() {
   })
 
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3.5 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">

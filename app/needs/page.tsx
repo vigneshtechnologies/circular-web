@@ -1,5 +1,7 @@
 'use client'
 
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -22,7 +24,7 @@ export default function NeedsPage() {
   const [title, setTitle] = useState('')
   const [category, setCategory] = useState('General')
   const [urgency, setUrgency] = useState<'Low' | 'Medium' | 'High' | 'Urgent'>('Medium')
-  const [area, setArea] = useState('Rajapalayam')
+  const [area, setArea] = useState(getUserCommunityLocation(userProfile))
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -67,7 +69,7 @@ export default function NeedsPage() {
         title: title.trim(),
         category,
         urgency,
-        area: area.trim() || 'Rajapalayam',
+        area: area.trim() || getUserCommunityLocation(userProfile),
         description: description.trim(),
         createdAt: Date.now(),
       }
@@ -106,7 +108,7 @@ export default function NeedsPage() {
   })
 
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
@@ -212,7 +214,7 @@ export default function NeedsPage() {
               <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <MapPin className="size-3.5 text-primary" />
-                  <span>{need.area || 'Rajapalayam'}</span>
+                  <span>{need.area || getUserCommunityLocation(userProfile)}</span>
                 </span>
                 <span className="text-[11px]">
                   {need.createdAt ? new Date(need.createdAt).toLocaleDateString() : 'Recent'}
@@ -271,7 +273,7 @@ export default function NeedsPage() {
                     type="text"
                     value={area}
                     onChange={(e) => setArea(e.target.value)}
-                    placeholder="Rajapalayam"
+                    placeholder={getUserCommunityLocation(userProfile)}
                     className="w-full rounded-xl border border-border bg-muted/50 p-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>

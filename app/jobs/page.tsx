@@ -1,5 +1,7 @@
 'use client'
 
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -24,7 +26,7 @@ export default function JobsPage() {
   const [category, setCategory] = useState('General')
   const [jobType, setJobType] = useState<'Full-time' | 'Part-time' | 'Freelance' | 'Internship'>('Full-time')
   const [salary, setSalary] = useState('')
-  const [area, setArea] = useState('Rajapalayam')
+  const [area, setArea] = useState(getUserCommunityLocation(userProfile))
   const [phone, setPhone] = useState('')
   const [email, setEmail] = useState('')
   const [description, setDescription] = useState('')
@@ -71,7 +73,7 @@ export default function JobsPage() {
         category,
         jobType,
         salary: salary.trim(),
-        area: area.trim() || 'Rajapalayam',
+        area: area.trim() || getUserCommunityLocation(userProfile),
         phone: phone.trim(),
         email: email.trim(),
         description: description.trim(),
@@ -113,7 +115,7 @@ export default function JobsPage() {
   })
 
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
@@ -212,7 +214,7 @@ export default function JobsPage() {
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
                     <MapPin className="size-3.5 text-primary" />
-                    <span>{job.area || 'Rajapalayam'}</span>
+                    <span>{job.area || getUserCommunityLocation(userProfile)}</span>
                   </span>
                   {job.salary && (
                     <span className="font-semibold text-foreground">💰 {job.salary}</span>
@@ -298,7 +300,7 @@ export default function JobsPage() {
                     type="text"
                     value={area}
                     onChange={(e) => setArea(e.target.value)}
-                    placeholder="Rajapalayam"
+                    placeholder={getUserCommunityLocation(userProfile)}
                     className="w-full rounded-xl border border-border bg-muted/50 p-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
                   />
                 </div>

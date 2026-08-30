@@ -10,7 +10,22 @@ import { ref, get, query, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { BusinessProfile } from '@/lib/types'
 import { getBusinessPhoto } from '@/lib/imageUtils'
-import { Store, MapPin, Star, CheckCircle2, Search } from 'lucide-react'
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+import { Store, MapPin, Star, CheckCircle2, Search, X } from 'lucide-react'
+
+// Exact categories matching Android CreateBusinessProfileScreen.tsx
+const OFFICIAL_BUSINESS_CATEGORIES = [
+  'All',
+  'Education',
+  'Food',
+  'Shopping',
+  'Services',
+  'Medical',
+  'Jobs',
+  'Events',
+  'Technology',
+  'General',
+] as const
 
 export default function BusinessesPage() {
   const { user, userProfile, publicProfiles, loading } = useAuth()
@@ -20,18 +35,6 @@ export default function BusinessesPage() {
   const [searchQuery, setSearchQuery] = useState('')
   const [dataLoading, setDataLoading] = useState(true)
 
-  const categories = [
-    'All',
-    'Food & Dining',
-    'Retail & Shopping',
-    'Health & Wellness',
-    'Services & Repairs',
-    'Education & Classes',
-    'Automotive',
-    'Real Estate',
-    'IT & Tech',
-  ]
-
   useEffect(() => {
     if (!user) return
 
@@ -39,12 +42,12 @@ export default function BusinessesPage() {
       setDataLoading(true)
       try {
         const [bSnap, pSnap] = await Promise.all([
-          get(query(ref(db, 'businessProfiles'), limitToLast(60))),
-          get(query(ref(db, 'businessPhotos'), limitToLast(30))),
+          get(query(ref(db, 'businessProfiles'), limitToLast(100))),
+          get(query(ref(db, 'businessPhotos'), limitToLast(50))),
         ])
 
         if (pSnap.exists()) {
-          setPhotosRecord(pSnap.val())
+          setPhotosRecord(pSnap.val() || {})
         }
 
         if (bSnap.exists()) {
@@ -54,7 +57,9 @@ export default function BusinessesPage() {
             list.push({
               id: c.key as string,
               name: val.businessName || val.name || 'Local Business',
-              category: val.category || val.businessCategory || 'Local Shop',
+              businessName: val.businessName || val.name || 'Local Business',
+              category: val.category || val.businessCategory || 'General',
+              area: val.area || val.city || val.areaName || '',
               ...val,
             })
           })
@@ -82,19 +87,36 @@ export default function BusinessesPage() {
     return <AuthPortal />
   }
 
+  const q = searchQuery.toLowerCase().trim()
+  const selCat = selectedCategory.toLowerCase().trim()
+
   const filtered = businesses.filter((b) => {
-    const matchesCat = selectedCategory === 'All' || b.category?.toLowerCase() === selectedCategory.toLowerCase()
+    const bCat = (b.category || (b as any).businessCategory || '').toLowerCase().trim()
+    const matchesCat =
+      selCat === 'all' ||
+      bCat === selCat ||
+      bCat.includes(selCat) ||
+      (selCat === 'food' && bCat.includes('dine')) ||
+      (selCat === 'technology' && (bCat.includes('tech') || bCat.includes('it')))
+
+    const bName = (b.name || (b as any).businessName || '').toLowerCase()
+    const bArea = (b.area || '').toLowerCase()
+    const bDesc = (b.description || '').toLowerCase()
+
     const matchesQ =
-      !searchQuery.trim() ||
-      b.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.category?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.area?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      b.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      !q ||
+      bName.includes(q) ||
+      bCat.includes(q) ||
+      bArea.includes(q) ||
+      bDesc.includes(q)
+
     return matchesCat && matchesQ
   })
 
+  const displayArea = getUserCommunityLocation(userProfile)
+
   return (
-    <AppShell currentArea={userProfile?.area || userProfile?.city || ''}>
+    <AppShell currentArea={displayArea}>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
@@ -105,40 +127,52 @@ export default function BusinessesPage() {
             <div>
               <h1 className="text-base font-extrabold text-navy">Business Directory</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
-                Discover verified shops, services &amp; local businesses
+                Discover verified shops, services &amp; local businesses in {displayArea}
               </p>
             </div>
           </div>
         </div>
 
-        {/* Search */}
+        {/* Search Input */}
         <div className="mt-3 relative flex items-center">
           <Search className="absolute left-3.5 size-4 text-muted-foreground" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search businesses, shops, services..."
-            className="w-full rounded-xl border border-border bg-muted/60 py-2 pl-10 pr-4 text-xs text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none"
+            placeholder="Search businesses by name, category, or locality..."
+            className="w-full rounded-xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none"
           />
+          {searchQuery && (
+            <button
+              type="button"
+              onClick={() => setSearchQuery('')}
+              className="absolute right-3 text-muted-foreground hover:text-foreground"
+            >
+              <X className="size-3.5" />
+            </button>
+          )}
         </div>
 
-        {/* Category Pills */}
-        <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-          {categories.map((cat) => (
-            <button
-              key={cat}
-              type="button"
-              onClick={() => setSelectedCategory(cat)}
-              className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-colors ${
-                selectedCategory === cat
-                  ? 'bg-primary text-white shadow-sm'
-                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
-              }`}
-            >
-              {cat}
-            </button>
-          ))}
+        {/* Category Pills (Intentional Horizontal Scrolling) */}
+        <div className="mt-2.5 flex items-center gap-1.5 overflow-x-auto no-scrollbar scroll-smooth py-0.5">
+          {OFFICIAL_BUSINESS_CATEGORIES.map((cat) => {
+            const isSelected = selectedCategory.toLowerCase() === cat.toLowerCase()
+            return (
+              <button
+                key={cat}
+                type="button"
+                onClick={() => setSelectedCategory(cat)}
+                className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-bold transition-all ${
+                  isSelected
+                    ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-500/40'
+                    : 'border border-border/80 bg-card text-muted-foreground hover:bg-muted hover:text-foreground'
+                }`}
+              >
+                {cat}
+              </button>
+            )
+          })}
         </div>
       </header>
 
@@ -156,8 +190,19 @@ export default function BusinessesPage() {
             </div>
             <h3 className="mt-3 text-base font-bold text-navy">No businesses found</h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Try selecting a different category or clearing your search.
+              {selectedCategory !== 'All'
+                ? `No ${selectedCategory} businesses currently registered.`
+                : 'Try clearing your search or exploring other categories.'}
             </p>
+            {selectedCategory !== 'All' && (
+              <button
+                type="button"
+                onClick={() => setSelectedCategory('All')}
+                className="mt-4 inline-flex items-center gap-1.5 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow"
+              >
+                <span>View All Businesses</span>
+              </button>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
@@ -213,11 +258,6 @@ export default function BusinessesPage() {
                       <span className="flex items-center gap-1 font-bold text-amber-500">
                         <Star className="size-3.5 fill-amber-500" />
                         <span>{b.rating!.toFixed(1)}</span>
-                        {b.ratingCount && b.ratingCount > 0 && (
-                          <span className="text-[10px] font-normal text-muted-foreground">
-                            ({b.ratingCount})
-                          </span>
-                        )}
                       </span>
                     ) : isRecent ? (
                       <span className="text-[11px] font-bold text-emerald-600">New Business</span>

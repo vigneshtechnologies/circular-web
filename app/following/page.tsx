@@ -11,15 +11,17 @@ import { Post } from '@/lib/types'
 import { PostCard } from '@/components/feed/PostCard'
 import { PostComposerModal } from '@/components/feed/PostComposerModal'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
+import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { Users, Sparkles, PlusCircle } from 'lucide-react'
 
 export default function FollowingFeedPage() {
   const { user, userProfile, loading } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
   const [feedLoading, setFeedLoading] = useState(true)
-  const [followingUids, setFollowingUids] = useState<string[]>([])
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
+
+  const displayArea = getUserCommunityLocation(userProfile)
 
   useEffect(() => {
     if (!user) return
@@ -29,16 +31,16 @@ export default function FollowingFeedPage() {
       try {
         // 1. Get list of UIDs user follows
         const fSnap = await get(ref(db, `following/${user.uid}`))
-        const uids: string[] = [user.uid] // Include self
+        const uids: string[] = [user.uid]
         if (fSnap.exists()) {
-          Object.keys(fSnap.val()).forEach((k) => {
-            if (fSnap.val()[k]) uids.push(k)
+          const val = fSnap.val()
+          Object.keys(val).forEach((k) => {
+            if (val[k]) uids.push(k)
           })
         }
-        setFollowingUids(uids)
 
         // 2. Fetch recent posts
-        const pSnap = await get(query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(50)))
+        const pSnap = await get(query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(60)))
         if (pSnap.exists()) {
           const list: Post[] = []
           pSnap.forEach((child) => {
@@ -72,7 +74,7 @@ export default function FollowingFeedPage() {
   }
 
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={displayArea}>
       {/* Top Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3.5 md:px-6">
         <div className="flex items-center justify-between">
@@ -83,7 +85,7 @@ export default function FollowingFeedPage() {
             <div>
               <h1 className="text-base font-extrabold text-navy">Following Feed</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
-                Updates from creators &amp; businesses you follow
+                Updates from creators &amp; businesses you follow in {displayArea}
               </p>
             </div>
           </div>

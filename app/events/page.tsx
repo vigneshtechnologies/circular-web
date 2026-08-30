@@ -1,5 +1,7 @@
 'use client'
 
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -22,7 +24,7 @@ export default function EventsPage() {
   const [venue, setVenue] = useState('')
   const [eventDate, setEventDate] = useState('')
   const [eventTime, setEventTime] = useState('')
-  const [area, setArea] = useState('Rajapalayam')
+  const [area, setArea] = useState(getUserCommunityLocation(userProfile))
   const [description, setDescription] = useState('')
   const [submitting, setSubmitting] = useState(false)
 
@@ -65,7 +67,7 @@ export default function EventsPage() {
         venue: venue.trim(),
         eventDate: eventDate.trim(),
         eventTime: eventTime.trim(),
-        area: area.trim() || 'Rajapalayam',
+        area: area.trim() || getUserCommunityLocation(userProfile),
         description: description.trim(),
         createdAt: Date.now(),
       }
@@ -100,7 +102,7 @@ export default function EventsPage() {
   })
 
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">

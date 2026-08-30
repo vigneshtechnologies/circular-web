@@ -9,6 +9,25 @@ export const DEFAULT_RADIUS_KM: CircularRadiusOption = 25
 export const MAX_RADIUS_KM: CircularRadiusOption = 25
 
 /**
+ * Returns clean user locality name, never returning 'Unknown', 'null', or hardcoded fallbacks.
+ */
+export function getUserCommunityLocation(userProfile?: any): string {
+  if (!userProfile) return 'Your Community'
+  const area = userProfile.area || userProfile.areaName || userProfile.city || ''
+  if (typeof area === 'string' && area.trim().length > 0) {
+    const clean = area.trim()
+    if (
+      clean.toLowerCase() !== 'unknown' &&
+      clean.toLowerCase() !== 'undefined' &&
+      clean.toLowerCase() !== 'null'
+    ) {
+      return clean
+    }
+  }
+  return 'Your Community'
+}
+
+/**
  * Checks if a coordinate pair is physically valid and not a placeholder (0,0).
  */
 export function isValidCoordinate(
@@ -73,7 +92,6 @@ export function getDistanceKm(
 
 /**
  * Formats a distance in kilometers into a clean, human-readable string.
- * e.g., 0.65 -> "650 m", 2.4 -> "2.4 km"
  */
 export function formatDistanceKm(distanceKm: number | undefined | null): string {
   if (typeof distanceKm !== 'number' || isNaN(distanceKm) || distanceKm <= 0) {

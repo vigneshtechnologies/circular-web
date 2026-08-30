@@ -1,5 +1,7 @@
 'use client'
 
+import { getUserCommunityLocation } from '@/lib/locationUtils'
+
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
@@ -135,7 +137,7 @@ export default function AdminPage() {
 
   if (!isAdmin) {
     return (
-      <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+      <AppShell currentArea={getUserCommunityLocation(userProfile)}>
         <div className="mx-auto max-w-md py-20 px-4 text-center">
           <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <AlertCircle className="size-7" />
@@ -153,7 +155,7 @@ export default function AdminPage() {
   }
 
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3.5 md:px-6">
         <div className="flex items-center gap-2.5">
           <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -284,7 +286,7 @@ export default function AdminPage() {
               <div key={b.id} className="flex items-center justify-between rounded-2xl border border-border p-3">
                 <div>
                   <h4 className="text-xs font-bold text-navy">{b.name}</h4>
-                  <p className="text-[11px] text-muted-foreground">{b.category} • {b.area || 'Rajapalayam'}</p>
+                  <p className="text-[11px] text-muted-foreground">{b.category} • {b.area || getUserCommunityLocation(userProfile)}</p>
                 </div>
                 <button
                   type="button"

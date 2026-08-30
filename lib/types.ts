@@ -48,13 +48,22 @@ export interface Post {
   postScope?: string
   isAdminPost?: boolean
   isGlobal?: boolean
+  poll?: {
+    question?: string
+    options?: string[]
+    votes?: Record<string, number>
+    totalVotes?: number
+  }
   event?: {
     title?: string
     startAt?: number
     endAt?: number
+    eventDate?: string
+    time?: string
     venue?: string
     description?: string
     imageUrl?: string
+    contactPhone?: string
   }
 }
 
