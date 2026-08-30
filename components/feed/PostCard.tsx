@@ -7,16 +7,13 @@ import { ref, onValue, off, set, remove, runTransaction } from 'firebase/databas
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
 import { useAuth } from '@/context/AuthContext'
+import { getUserAvatar } from '@/lib/imageUtils'
 import {
   Heart,
   MessageSquare,
   Share2,
   MapPin,
-  Tag,
   CheckCircle2,
-  MoreVertical,
-  Flag,
-  Calendar,
 } from 'lucide-react'
 
 interface PostCardProps {
@@ -29,7 +26,6 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
   const [isLiked, setIsLiked] = useState(false)
   const [likesCount, setLikesCount] = useState(post.likesCount || 0)
   const [copied, setCopied] = useState(false)
-  const [showMenu, setShowMenu] = useState(false)
 
   // Listen to like status for current user
   useEffect(() => {
@@ -73,7 +69,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
   }
 
   const formatTimestamp = (ts: number) => {
-    if (!ts) return ''
+    if (!ts) return 'Recent'
     const diffMs = Date.now() - ts
     const diffMins = Math.floor(diffMs / (1000 * 60))
     if (diffMins < 1) return 'Just now'
@@ -85,14 +81,27 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
     return new Date(ts).toLocaleDateString()
   }
 
+  const authorAvatar = getUserAvatar(post) || '/circular-logo.png'
+  const displayArea = post.area || post.areaName || post.city || ''
+
+  const allImages: string[] = []
+  if (Array.isArray(post.imageUrls) && post.imageUrls.length > 0) {
+    post.imageUrls.forEach((u) => { if (typeof u === 'string' && u.trim()) allImages.push(u.trim()) })
+  } else if (post.imageUrl && typeof post.imageUrl === 'string' && post.imageUrl.trim()) {
+    allImages.push(post.imageUrl.trim())
+  }
+
   return (
-    <article className="rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:shadow-md md:p-6">
+    <article className="rounded-3xl border border-border bg-card p-4 shadow-sm transition-all hover:shadow-md md:p-5">
       {/* Header */}
       <div className="flex items-start justify-between">
         <div className="flex items-center gap-3">
-          <Link href={`/user/${post.userId}`} className="relative size-11 overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/20">
+          <Link
+            href={`/user/${post.userId}`}
+            className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border"
+          >
             <Image
-              src={post.profileImage || '/circular-logo.png'}
+              src={authorAvatar}
               alt={post.userName || 'Author'}
               fill
               className="object-cover"
@@ -100,70 +109,71 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
           </Link>
           <div>
             <div className="flex items-center gap-1.5">
-              <Link href={`/user/${post.userId}`} className="font-bold text-navy hover:underline text-sm sm:text-base">
+              <Link
+                href={`/user/${post.userId}`}
+                className="font-bold text-navy hover:text-primary text-xs sm:text-sm"
+              >
                 {post.userName || 'Circular Member'}
               </Link>
               {post.businessTrustLabel && (
-                <span className="rounded-full bg-purple-500/10 px-2 py-0.2 text-[10px] font-bold text-purple-600">
+                <span className="rounded-full bg-purple-500/10 px-2 py-0.2 text-[9px] font-bold text-purple-600">
                   {post.businessTrustLabel}
                 </span>
               )}
             </div>
 
-            <div className="flex items-center gap-2 text-xs text-muted-foreground">
-              {post.area && (
+            <div className="flex items-center gap-2 text-[11px] text-muted-foreground">
+              {displayArea && (
                 <span className="flex items-center gap-1">
                   <MapPin className="size-3 text-primary" />
-                  <span>{post.area}</span>
+                  <span>{displayArea}</span>
                 </span>
               )}
-              <span>•</span>
+              {displayArea && <span>•</span>}
               <span>{formatTimestamp(post.createdAt)}</span>
             </div>
           </div>
         </div>
 
-        {/* Category tag */}
-        <div className="flex items-center gap-2">
-          {post.category && (
-            <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[11px] font-bold text-primary">
-              {post.category}
-            </span>
-          )}
-        </div>
+        {/* Category Badge */}
+        {post.category && (
+          <span className="rounded-full bg-primary/10 px-2.5 py-0.5 text-[10px] font-bold text-primary">
+            {post.category}
+          </span>
+        )}
       </div>
 
-      {/* Post Text */}
+      {/* Post Text (Unicode & Tamil supported) */}
       {post.text && (
-        <p className="mt-3.5 whitespace-pre-line text-sm leading-relaxed text-foreground sm:text-base">
+        <p className="mt-3 whitespace-pre-line text-xs sm:text-sm leading-relaxed text-foreground">
           {post.text}
         </p>
       )}
 
-      {/* Single or Multi-Images */}
-      {post.imageUrl && (
-        <div className="relative mt-3.5 aspect-video w-full overflow-hidden rounded-2xl bg-muted ring-1 ring-border">
+      {/* Post Media Images */}
+      {allImages.length === 1 && (
+        <div className="relative mt-3 aspect-video w-full overflow-hidden rounded-2xl bg-muted ring-1 ring-border">
           <Image
-            src={post.imageUrl}
-            alt="Post media"
+            src={allImages[0]}
+            alt="Post photo"
             fill
             className="object-cover"
           />
         </div>
       )}
 
-      {post.imageUrls && post.imageUrls.length > 0 && !post.imageUrl && (
-        <div className="mt-3.5 grid grid-cols-2 gap-2">
-          {post.imageUrls.map((url, idx) => (
+      {allImages.length > 1 && (
+        <div className={`mt-3 grid gap-2 ${allImages.length === 2 ? 'grid-cols-2' : 'grid-cols-2 sm:grid-cols-3'}`}>
+          {allImages.map((url, idx) => (
             <div key={idx} className="relative aspect-square w-full overflow-hidden rounded-xl bg-muted ring-1 ring-border">
-              <Image src={url} alt={`Post media ${idx + 1}`} fill className="object-cover" />
+              <Image src={url} alt={`Post photo ${idx + 1}`} fill className="object-cover" />
             </div>
           ))}
         </div>
       )}
 
       {/* Engagement Footer */}
-      <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs font-semibold text-muted-foreground">
+      <div className="mt-3.5 flex items-center justify-between border-t border-border pt-2.5 text-xs font-semibold text-muted-foreground">
         <div className="flex items-center gap-4 sm:gap-6">
           {/* Like Button */}
           <button
@@ -195,7 +205,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
           className="flex items-center gap-1.5 transition-colors hover:text-primary"
         >
           <Share2 className="size-4" />
-          <span>{copied ? 'Copied link!' : 'Share'}</span>
+          <span>{copied ? 'Copied!' : 'Share'}</span>
         </button>
       </div>
     </article>

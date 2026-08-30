@@ -9,11 +9,13 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ref, get, query, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { BusinessProfile } from '@/lib/types'
-import { Store, MapPin, Star, Phone, CheckCircle2, Search, Filter, PlusCircle } from 'lucide-react'
+import { getBusinessPhoto } from '@/lib/imageUtils'
+import { Store, MapPin, Star, Phone, CheckCircle2, Search } from 'lucide-react'
 
 export default function BusinessesPage() {
   const { user, userProfile, loading } = useAuth()
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([])
+  const [photosRecord, setPhotosRecord] = useState<Record<string, any>>({})
   const [selectedCategory, setSelectedCategory] = useState('All')
   const [searchQuery, setSearchQuery] = useState('')
   const [dataLoading, setDataLoading] = useState(true)
@@ -36,10 +38,18 @@ export default function BusinessesPage() {
     const loadBusinesses = async () => {
       setDataLoading(true)
       try {
-        const snap = await get(query(ref(db, 'businessProfiles'), limitToLast(60)))
-        if (snap.exists()) {
+        const [bSnap, pSnap] = await Promise.all([
+          get(query(ref(db, 'businessProfiles'), limitToLast(60))),
+          get(query(ref(db, 'businessPhotos'), limitToLast(30))),
+        ])
+
+        if (pSnap.exists()) {
+          setPhotosRecord(pSnap.val())
+        }
+
+        if (bSnap.exists()) {
           const list: BusinessProfile[] = []
-          snap.forEach((c) => {
+          bSnap.forEach((c) => {
             list.push({ id: c.key as string, ...c.val() })
           })
           setBusinesses(list.reverse())
@@ -78,7 +88,7 @@ export default function BusinessesPage() {
   })
 
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={userProfile?.area || userProfile?.city || ''}>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
@@ -145,61 +155,77 @@ export default function BusinessesPage() {
           </div>
         ) : (
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 md:grid-cols-2 lg:grid-cols-3">
-            {filtered.map((b) => (
-              <Link
-                key={b.id}
-                href={`/business/${b.id}`}
-                className="group flex flex-col justify-between rounded-3xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
-              >
-                <div>
-                  {/* Top: Logo + Verified Badge */}
-                  <div className="flex items-start justify-between">
-                    <div className="relative size-14 overflow-hidden rounded-2xl bg-primary/10 ring-1 ring-border">
-                      <Image
-                        src={b.logoUrl || '/circular-logo.png'}
-                        alt={b.name}
-                        fill
-                        className="object-cover"
-                      />
+            {filtered.map((b) => {
+              const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
+              const hasRating = typeof b.rating === 'number' && b.rating > 0
+              const isRecent = b.createdAt && Date.now() - b.createdAt < 14 * 24 * 60 * 60 * 1000
+
+              return (
+                <Link
+                  key={b.id}
+                  href={`/business/${b.id}`}
+                  className="group flex flex-col justify-between rounded-3xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                >
+                  <div>
+                    {/* Top: Logo + Verified Badge */}
+                    <div className="flex items-start justify-between">
+                      <div className="relative size-14 overflow-hidden rounded-2xl bg-primary/10 ring-1 ring-border">
+                        <Image
+                          src={photo}
+                          alt={b.name || 'Business'}
+                          fill
+                          className="object-cover"
+                        />
+                      </div>
+                      {b.isVerified && (
+                        <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600">
+                          <CheckCircle2 className="size-3" />
+                          <span>Verified</span>
+                        </span>
+                      )}
                     </div>
-                    {b.isVerified && (
-                      <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[10px] font-bold text-emerald-600">
-                        <CheckCircle2 className="size-3" />
-                        <span>Verified</span>
-                      </span>
+
+                    {/* Info */}
+                    <h3 className="mt-3 truncate text-sm font-bold text-navy group-hover:text-primary">
+                      {b.name}
+                    </h3>
+                    <p className="text-xs font-medium text-muted-foreground">{b.category || 'Local Shop'}</p>
+
+                    {b.description && (
+                      <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-foreground/80">
+                        {b.description}
+                      </p>
                     )}
                   </div>
 
-                  {/* Info */}
-                  <h3 className="mt-3 truncate text-sm font-bold text-navy group-hover:text-primary">
-                    {b.name}
-                  </h3>
-                  <p className="text-xs font-medium text-muted-foreground">{b.category}</p>
+                  {/* Bottom Bar */}
+                  <div className="mt-4 border-t border-border pt-3 flex items-center justify-between text-xs text-muted-foreground">
+                    {hasRating ? (
+                      <span className="flex items-center gap-1 font-bold text-amber-500">
+                        <Star className="size-3.5 fill-amber-500" />
+                        <span>{b.rating!.toFixed(1)}</span>
+                        {b.ratingCount && b.ratingCount > 0 && (
+                          <span className="text-[10px] font-normal text-muted-foreground">
+                            ({b.ratingCount})
+                          </span>
+                        )}
+                      </span>
+                    ) : isRecent ? (
+                      <span className="text-[11px] font-bold text-emerald-600">New Business</span>
+                    ) : (
+                      <span className="text-[11px] text-muted-foreground">Local Business</span>
+                    )}
 
-                  {b.description && (
-                    <p className="mt-2 line-clamp-2 text-xs leading-relaxed text-foreground/80">
-                      {b.description}
-                    </p>
-                  )}
-                </div>
-
-                {/* Bottom Bar */}
-                <div className="mt-4 border-t border-border pt-3 flex items-center justify-between text-xs text-muted-foreground">
-                  <span className="flex items-center gap-1 font-bold text-amber-500">
-                    <Star className="size-3.5 fill-amber-500" />
-                    <span>{b.rating ? b.rating.toFixed(1) : '5.0'}</span>
-                    <span className="text-[10px] font-normal text-muted-foreground">
-                      ({b.ratingCount || 1})
-                    </span>
-                  </span>
-
-                  <span className="flex items-center gap-1 text-[11px]">
-                    <MapPin className="size-3 text-primary" />
-                    <span className="truncate max-w-[100px]">{b.area || 'Rajapalayam'}</span>
-                  </span>
-                </div>
-              </Link>
-            ))}
+                    {b.area && (
+                      <span className="flex items-center gap-1 text-[11px]">
+                        <MapPin className="size-3 text-primary" />
+                        <span className="truncate max-w-[120px]">{b.area}</span>
+                      </span>
+                    )}
+                  </div>
+                </Link>
+              )
+            })}
           </div>
         )}
       </div>

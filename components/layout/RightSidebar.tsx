@@ -3,13 +3,14 @@
 import React, { useEffect, useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { ref, get, query, limitToLast, orderByChild } from 'firebase/database'
+import { ref, get, query, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { BusinessProfile, NeedPost } from '@/lib/types'
+import { getBusinessPhoto } from '@/lib/imageUtils'
 import { Store, HandHeart, MapPin, Star, Smartphone, CheckCircle2, ChevronRight } from 'lucide-react'
 
 export function RightSidebar({
-  currentArea = 'Rajapalayam',
+  currentArea,
   onSelectArea,
 }: {
   currentArea?: string
@@ -17,21 +18,31 @@ export function RightSidebar({
 }) {
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([])
   const [needs, setNeeds] = useState<NeedPost[]>([])
+  const [photosRecord, setPhotosRecord] = useState<Record<string, any>>({})
+
+  const displayArea = currentArea?.trim() || 'Your Community'
 
   useEffect(() => {
-    // Fetch top businesses
     const loadSidebarData = async () => {
       try {
-        const bSnap = await get(query(ref(db, 'businessProfiles'), limitToLast(4)))
+        const [bSnap, nSnap, pSnap] = await Promise.all([
+          get(query(ref(db, 'businessProfiles'), limitToLast(6))),
+          get(query(ref(db, 'needPosts'), limitToLast(3))),
+          get(query(ref(db, 'businessPhotos'), limitToLast(10))),
+        ])
+
+        if (pSnap.exists()) {
+          setPhotosRecord(pSnap.val())
+        }
+
         if (bSnap.exists()) {
           const list: BusinessProfile[] = []
           bSnap.forEach((child) => {
             list.push({ id: child.key as string, ...child.val() })
           })
-          setBusinesses(list.reverse())
+          setBusinesses(list.reverse().slice(0, 4))
         }
 
-        const nSnap = await get(query(ref(db, 'needPosts'), limitToLast(3)))
         if (nSnap.exists()) {
           const list: NeedPost[] = []
           nSnap.forEach((child) => {
@@ -48,24 +59,24 @@ export function RightSidebar({
   }, [])
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-80 flex-col gap-5 overflow-y-auto border-l border-border bg-card p-4 xl:flex">
-      {/* Current Area Card */}
+    <aside className="sticky top-0 hidden h-screen w-80 flex-col gap-4 overflow-y-auto border-l border-border bg-card p-4 xl:flex">
+      {/* Current Community Area Card */}
       <div className="rounded-2xl border border-primary/20 bg-gradient-to-br from-primary/10 via-purple-500/5 to-transparent p-4 shadow-sm">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-white">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-white shadow-sm">
               <MapPin className="size-4" />
             </div>
             <div>
               <span className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
                 Your Community
               </span>
-              <div className="text-sm font-black text-navy">{currentArea}</div>
+              <div className="text-sm font-black text-navy">{displayArea}</div>
             </div>
           </div>
 
           <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
-            Active Feed
+            Active
           </span>
         </div>
       </div>
@@ -89,44 +100,59 @@ export function RightSidebar({
 
         <div className="mt-3 flex flex-col gap-3">
           {businesses.length === 0 ? (
-            <p className="text-xs text-muted-foreground">Loading nearby shops...</p>
+            <p className="text-xs text-muted-foreground py-2">Loading local businesses...</p>
           ) : (
-            businesses.map((b) => (
-              <Link
-                key={b.id}
-                href={`/business/${b.id}`}
-                className="group flex items-center justify-between rounded-xl p-1.5 transition-colors hover:bg-muted"
-              >
-                <div className="flex items-center gap-2.5">
-                  <div className="relative size-10 shrink-0 overflow-hidden rounded-xl bg-purple-500/10 ring-1 ring-border">
-                    <Image
-                      src={b.logoUrl || '/circular-logo.png'}
-                      alt={b.name}
-                      fill
-                      className="object-cover"
-                    />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-1">
-                      <span className="text-xs font-bold text-navy group-hover:text-primary">
-                        {b.name}
-                      </span>
-                      {b.isVerified && (
-                        <CheckCircle2 className="size-3 text-emerald-500 fill-emerald-500/20" />
-                      )}
+            businesses.map((b) => {
+              const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
+              const hasRating = typeof b.rating === 'number' && b.rating > 0
+              const isRecent = b.createdAt && Date.now() - b.createdAt < 14 * 24 * 60 * 60 * 1000
+
+              return (
+                <Link
+                  key={b.id}
+                  href={`/business/${b.id}`}
+                  className="group flex items-center justify-between rounded-xl p-1.5 transition-colors hover:bg-muted/70"
+                >
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="relative size-10 shrink-0 overflow-hidden rounded-xl bg-purple-500/10 ring-1 ring-border">
+                      <Image
+                        src={photo}
+                        alt={b.name || 'Business'}
+                        fill
+                        className="object-cover"
+                      />
                     </div>
-                    <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                      <span>{b.category}</span>
-                      <span>•</span>
-                      <span className="flex items-center text-amber-500 font-semibold">
-                        ★ {b.rating ? b.rating.toFixed(1) : 'New'}
-                      </span>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1">
+                        <span className="truncate text-xs font-bold text-navy group-hover:text-primary">
+                          {b.name}
+                        </span>
+                        {b.isVerified && (
+                          <CheckCircle2 className="size-3 shrink-0 text-emerald-500 fill-emerald-500/20" />
+                        )}
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
+                        <span className="truncate">{b.category || 'Local Shop'}</span>
+                        {hasRating ? (
+                          <>
+                            <span>•</span>
+                            <span className="flex items-center text-amber-500 font-semibold shrink-0">
+                              ★ {b.rating!.toFixed(1)}
+                            </span>
+                          </>
+                        ) : isRecent ? (
+                          <>
+                            <span>•</span>
+                            <span className="text-[10px] font-bold text-emerald-600 shrink-0">New</span>
+                          </>
+                        ) : null}
+                      </div>
                     </div>
                   </div>
-                </div>
-                <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary" />
-              </Link>
-            ))
+                  <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary shrink-0 ml-1" />
+                </Link>
+              )
+            })
           )}
         </div>
       </div>
@@ -135,7 +161,7 @@ export function RightSidebar({
       <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-border pb-2.5">
           <div className="flex items-center gap-2">
-            <HandHeart className="size-4 text-amber-600" />
+            <HandHeart className="size-4 text-pink-600" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-navy">
               Active Needs
             </h3>
@@ -150,7 +176,7 @@ export function RightSidebar({
 
         <div className="mt-3 flex flex-col gap-2.5">
           {needs.length === 0 ? (
-            <p className="text-xs text-muted-foreground">No open requests right now.</p>
+            <p className="text-xs text-muted-foreground py-2">No open requests right now.</p>
           ) : (
             needs.map((n) => (
               <Link
@@ -159,8 +185,8 @@ export function RightSidebar({
                 className="group rounded-xl border border-border/60 bg-card p-2.5 transition-colors hover:border-primary/40 hover:bg-muted"
               >
                 <div className="flex items-center justify-between text-[10px]">
-                  <span className="font-semibold text-muted-foreground">{n.userName}</span>
-                  <span className="rounded-full bg-amber-500/10 px-2 py-0.5 font-bold text-amber-600">
+                  <span className="font-semibold text-muted-foreground">{n.userName || 'Neighbor'}</span>
+                  <span className="rounded-full bg-pink-500/10 px-2 py-0.5 font-bold text-pink-600">
                     {n.urgency || 'Open'}
                   </span>
                 </div>

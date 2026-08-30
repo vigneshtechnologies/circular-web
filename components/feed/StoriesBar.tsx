@@ -5,6 +5,7 @@ import Image from 'next/image'
 import { ref, get, query, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/context/AuthContext'
+import { getUserAvatar } from '@/lib/imageUtils'
 import { Plus } from 'lucide-react'
 
 interface UserStatus {
@@ -44,14 +45,16 @@ export function StoriesBar() {
     fetchStatuses()
   }, [])
 
+  const avatar = getUserAvatar(userProfile) || '/circular-logo.png'
+
   return (
-    <div className="flex items-center gap-3 overflow-x-auto py-2 no-scrollbar">
-      {/* Current User Add Story */}
+    <div className="flex items-center gap-3 overflow-x-auto py-1 no-scrollbar">
+      {/* Current User Story Launcher */}
       <div className="flex shrink-0 flex-col items-center gap-1 cursor-pointer group">
-        <div className="relative size-14 rounded-full p-0.5 ring-2 ring-dashed ring-primary/40 transition-all group-hover:ring-primary">
+        <div className="relative size-13 rounded-full p-0.5 ring-2 ring-dashed ring-primary/40 transition-all group-hover:ring-primary">
           <div className="relative size-full overflow-hidden rounded-full bg-muted">
             <Image
-              src={userProfile?.photoURL || '/circular-logo.png'}
+              src={avatar}
               alt="Your Story"
               fill
               className="object-cover"
@@ -61,7 +64,7 @@ export function StoriesBar() {
             <Plus className="size-3 stroke-[3]" />
           </div>
         </div>
-        <span className="max-w-[60px] truncate text-[10px] font-medium text-muted-foreground">
+        <span className="max-w-[64px] truncate text-[10px] font-medium text-muted-foreground">
           Your Story
         </span>
       </div>
@@ -69,7 +72,7 @@ export function StoriesBar() {
       {/* Community Statuses */}
       {statuses.map((item) => (
         <div key={item.id} className="flex shrink-0 flex-col items-center gap-1 cursor-pointer group">
-          <div className="relative size-14 rounded-full p-0.5 ring-2 ring-gradient ring-pink-500 transition-all group-hover:scale-105">
+          <div className="relative size-13 rounded-full p-0.5 ring-2 ring-pink-500 transition-all group-hover:scale-105">
             <div className="relative size-full overflow-hidden rounded-full bg-muted">
               <Image
                 src={item.userAvatar || item.mediaUrl || '/circular-logo.png'}
@@ -79,7 +82,7 @@ export function StoriesBar() {
               />
             </div>
           </div>
-          <span className="max-w-[60px] truncate text-[10px] font-medium text-foreground">
+          <span className="max-w-[64px] truncate text-[10px] font-medium text-foreground">
             {item.userName?.split(' ')[0] || 'Member'}
           </span>
         </div>

@@ -4,11 +4,16 @@ export interface UserProfile {
   name: string
   username?: string
   photoURL?: string
+  profileImage?: string
   bio?: string
   area?: string
+  areaName?: string
   city?: string
   phone?: string
   isRestricted?: boolean
+  businessName?: string
+  businessTrustLabel?: string
+  showBusinessDetails?: boolean
   createdAt?: number
   followersCount?: number
   followingCount?: number
@@ -26,20 +31,30 @@ export interface Post {
   text?: string
   category?: string
   area?: string
+  areaName?: string
+  city?: string
   latitude?: number | null
   longitude?: number | null
   imageUrl?: string
   imageUrls?: string[]
+  imageCount?: number
+  imagePublicId?: string
+  imagePublicIds?: string[]
   createdAt: number
+  updatedAt?: number
   likesCount?: number
   commentsCount?: number
   postType?: 'regular' | 'event' | 'poll' | 'smart' | 'announcement'
+  postScope?: string
+  isAdminPost?: boolean
+  isGlobal?: boolean
   event?: {
     title?: string
     startAt?: number
     endAt?: number
     venue?: string
     description?: string
+    imageUrl?: string
   }
 }
 
@@ -68,12 +83,20 @@ export interface BusinessProfile {
   email?: string
   website?: string
   logoUrl?: string
+  imageUrl?: string
+  photoUrl?: string
+  photoURL?: string
+  profileImage?: string
+  logo?: string
+  coverImage?: string
   photos?: string[]
+  imageUrls?: string[]
   rating?: number
   ratingCount?: number
   isVerified?: boolean
   trustLabel?: string
   operatingHours?: string
+  isNew?: boolean
   createdAt: number
   updatedAt?: number
 }

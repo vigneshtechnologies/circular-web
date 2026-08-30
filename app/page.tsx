@@ -10,10 +10,11 @@ import { CategoryFilterBar } from '@/components/feed/CategoryFilterBar'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { PostComposerModal } from '@/components/feed/PostComposerModal'
 import { StoriesBar } from '@/components/feed/StoriesBar'
+import { getUserAvatar } from '@/lib/imageUtils'
 import { ref, onValue, off, query, orderByChild, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
-import { Sparkles, MapPin, PlusCircle } from 'lucide-react'
+import { Sparkles, MapPin, PlusCircle, Search } from 'lucide-react'
 
 export default function CircularRootPage() {
   const { user, userProfile, loading } = useAuth()
@@ -29,7 +30,7 @@ export default function CircularRootPage() {
     if (!user) return
 
     setFeedLoading(true)
-    const postsQuery = query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(50))
+    const postsQuery = query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(60))
 
     const callback = (snap: any) => {
       if (snap.exists()) {
@@ -62,7 +63,7 @@ export default function CircularRootPage() {
           />
         </div>
         <h1 className="mt-4 text-2xl font-black tracking-tight">Circular</h1>
-        <p className="mt-1 text-xs text-slate-400">Loading your local community...</p>
+        <p className="mt-1 text-xs text-slate-400">Connecting your local community...</p>
       </div>
     )
   }
@@ -72,30 +73,50 @@ export default function CircularRootPage() {
     return <AuthPortal />
   }
 
-  // Filter posts
+  const currentArea = userProfile?.area || userProfile?.city || ''
+  const displayLocation = currentArea ? currentArea : 'Your Community'
+
+  // Filter posts by category and text search
   const filteredPosts = posts.filter((p) => {
-    const matchesCat = selectedCategory === 'All' || p.category?.toLowerCase() === selectedCategory.toLowerCase()
+    const postCat = (p.category || '').toLowerCase().trim()
+    const selected = selectedCategory.toLowerCase().trim()
+
+    let matchesCat = selected === 'all'
+    if (!matchesCat) {
+      if (selected === 'general') {
+        matchesCat = !postCat || postCat === 'general'
+      } else if (selected === 'news & updates') {
+        matchesCat = postCat === 'news' || postCat === 'news & updates' || postCat === 'local news'
+      } else {
+        matchesCat = postCat === selected || postCat.includes(selected)
+      }
+    }
+
+    const q = searchQuery.toLowerCase().trim()
     const matchesSearch =
-      !searchQuery.trim() ||
-      p.text?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.userName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      p.area?.toLowerCase().includes(searchQuery.toLowerCase())
+      !q ||
+      p.text?.toLowerCase().includes(q) ||
+      p.userName?.toLowerCase().includes(q) ||
+      p.area?.toLowerCase().includes(q)
+
     return matchesCat && matchesSearch
   })
 
+  const authorAvatar = getUserAvatar(userProfile) || '/circular-logo.png'
+
   return (
-    <AppShell currentArea={userProfile?.area || 'Rajapalayam'}>
+    <AppShell currentArea={currentArea}>
       {/* Top Header in Center Feed */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
               <MapPin className="size-5" />
             </div>
-            <div>
-              <h1 className="text-base font-extrabold text-navy">Home Feed</h1>
-              <div className="text-[11px] font-semibold text-muted-foreground">
-                Showing posts in <span className="text-primary">{userProfile?.area || 'Rajapalayam'}</span>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-base font-extrabold text-navy truncate">Home Feed</h1>
+              <div className="text-[11px] font-semibold text-muted-foreground truncate">
+                Showing posts in <span className="text-primary">{displayLocation}</span>
               </div>
             </div>
           </div>
@@ -103,7 +124,7 @@ export default function CircularRootPage() {
           <button
             type="button"
             onClick={() => setIsComposerOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-primary/90 active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-primary/90 active:scale-95 shrink-0"
           >
             <PlusCircle className="size-4" />
             <span>Post</span>
@@ -120,31 +141,31 @@ export default function CircularRootPage() {
       </header>
 
       {/* Main Feed Container */}
-      <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-5">
+      <div className="mx-auto max-w-2xl px-4 py-5 md:px-6 space-y-4">
         {/* Local Stories / Statuses Bar */}
-        <div className="rounded-3xl border border-border bg-card p-3 shadow-sm">
+        <div className="rounded-2xl border border-border bg-card p-2.5 shadow-sm">
           <StoriesBar />
         </div>
 
         {/* Quick Post Prompt Card */}
         <div
           onClick={() => setIsComposerOpen(true)}
-          className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-primary/40 hover:bg-muted/40"
+          className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:border-primary/40 hover:bg-muted/40"
         >
-          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
+          <div className="relative size-9 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
             <Image
-              src={userProfile?.photoURL || '/circular-logo.png'}
+              src={authorAvatar}
               alt="Avatar"
               fill
               className="object-cover"
             />
           </div>
-          <div className="flex-1 rounded-xl bg-muted/60 px-4 py-2.5 text-xs text-muted-foreground">
+          <div className="flex-1 rounded-xl bg-muted/60 px-3.5 py-2 text-xs text-muted-foreground truncate">
             Share what's happening around you...
           </div>
           <button
             type="button"
-            className="rounded-xl bg-primary/10 px-3 py-2 text-xs font-bold text-primary"
+            className="rounded-xl bg-primary/10 px-3 py-1.5 text-xs font-bold text-primary shrink-0"
           >
             Post
           </button>
@@ -154,14 +175,16 @@ export default function CircularRootPage() {
         {feedLoading ? (
           <div className="space-y-4 py-8 text-center text-xs text-muted-foreground">
             <div className="mx-auto size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p>Loading local community feed...</p>
+            <p>Loading community feed...</p>
           </div>
         ) : filteredPosts.length === 0 ? (
-          <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
+          <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Sparkles className="size-6" />
             </div>
-            <h3 className="mt-3 text-base font-bold text-navy">No posts in this category</h3>
+            <h3 className="mt-3 text-sm sm:text-base font-bold text-navy">
+              No posts in {selectedCategory === 'All' ? 'this area' : selectedCategory}
+            </h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Be the first to share an update with your neighborhood!
             </p>

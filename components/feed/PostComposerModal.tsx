@@ -1,22 +1,27 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { ref, push, set } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/context/AuthContext'
-import { Post } from '@/lib/types'
-import { X, Image as ImageIcon, Sparkles, MapPin, Tag, ArrowRight } from 'lucide-react'
+import { getUserAvatar } from '@/lib/imageUtils'
+import { X, Image as ImageIcon, Sparkles, MapPin, Tag, ArrowRight, Loader2, Trash2 } from 'lucide-react'
 
-const categories = [
+const POST_CATEGORIES = [
   'General',
-  'Business',
+  'News & Updates',
+  'Food',
+  'Shopping',
+  'Services',
+  'Education',
+  'Medical',
   'Jobs',
-  'Needs',
   'Events',
-  'Local News',
-  'Offers',
-]
+] as const
+
+const IMAGE_WORKER_URL = 'https://buzzly-image-delete.vigneshtechnologyservice.workers.dev'
+const MAX_IMAGES = 5
 
 interface PostComposerModalProps {
   isOpen: boolean
@@ -27,144 +32,290 @@ interface PostComposerModalProps {
 export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerModalProps) {
   const { user, userProfile } = useAuth()
   const [text, setText] = useState('')
-  const [category, setCategory] = useState('General')
-  const [area, setArea] = useState(userProfile?.area || 'Rajapalayam')
-  const [imagePreview, setImagePreview] = useState<string | null>(null)
+  const [category, setCategory] = useState<string>('General')
+  const [area, setArea] = useState('')
+  const [selectedFiles, setSelectedFiles] = useState<{ file: File; preview: string }[]>([])
   const [loading, setLoading] = useState(false)
+  const [loadingStep, setLoadingStep] = useState('')
   const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (isOpen) {
+      setArea(userProfile?.area || userProfile?.city || '')
+      setError(null)
+    }
+  }, [isOpen, userProfile])
 
   if (!isOpen) return null
 
-  const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
+  const handleFileSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || [])
+    if (files.length === 0) return
 
-    if (file.size > 5 * 1024 * 1024) {
-      setError('Image must be under 5MB')
+    if (selectedFiles.length + files.length > MAX_IMAGES) {
+      setError(`You can upload up to ${MAX_IMAGES} photos per post`)
       return
     }
 
-    const reader = new FileReader()
-    reader.onloadend = () => {
-      setImagePreview(reader.result as string)
+    const newEntries: { file: File; preview: string }[] = []
+    for (const f of files) {
+      if (f.size > 8 * 1024 * 1024) {
+        setError('Each photo must be under 8MB')
+        return
+      }
+      newEntries.push({
+        file: f,
+        preview: URL.createObjectURL(f),
+      })
     }
-    reader.readAsDataURL(file)
+
+    setSelectedFiles((prev) => [...prev, ...newEntries])
+    setError(null)
+  }
+
+  const handleRemoveFile = (index: number) => {
+    setSelectedFiles((prev) => {
+      const copy = [...prev]
+      const [removed] = copy.splice(index, 1)
+      if (removed?.preview) URL.revokeObjectURL(removed.preview)
+      return copy
+    })
+  }
+
+  const uploadImages = async (): Promise<{ urls: string[]; publicIds: string[] }> => {
+    if (!user || selectedFiles.length === 0) {
+      return { urls: [], publicIds: [] }
+    }
+
+    const urls: string[] = []
+    const publicIds: string[] = []
+
+    for (let i = 0; i < selectedFiles.length; i++) {
+      setLoadingStep(`Uploading photo ${i + 1} of ${selectedFiles.length}...`)
+      const entry = selectedFiles[i]
+
+      try {
+        const idToken = await user.getIdToken(true)
+        const sigRes = await fetch(IMAGE_WORKER_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({
+            action: 'create-upload-signature',
+            imageType: 'post',
+          }),
+        })
+
+        if (sigRes.ok) {
+          const sigData = await sigRes.json()
+          if (sigData.success && sigData.cloudName && sigData.signature) {
+            const formData = new FormData()
+            formData.append('file', entry.file)
+            formData.append('api_key', sigData.apiKey)
+            formData.append('timestamp', String(sigData.timestamp))
+            formData.append('signature', sigData.signature)
+            if (sigData.context) formData.append('context', sigData.context)
+
+            const cloudRes = await fetch(
+              `https://api.cloudinary.com/v1_1/${sigData.cloudName}/image/upload`,
+              { method: 'POST', body: formData }
+            )
+
+            if (cloudRes.ok) {
+              const cloudData = await cloudRes.json()
+              if (cloudData.secure_url) {
+                urls.push(cloudData.secure_url)
+                publicIds.push(cloudData.public_id || '')
+                continue
+              }
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Worker upload error, falling back to base64 encoding:', err)
+      }
+
+      // Safe Fallback: Base64 data URL
+      const base64 = await new Promise<string>((resolve) => {
+        const reader = new FileReader()
+        reader.onloadend = () => resolve(reader.result as string)
+        reader.readAsDataURL(entry.file)
+      })
+      urls.push(base64)
+      publicIds.push('')
+    }
+
+    return { urls, publicIds }
   }
 
   const handleCreatePost = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!user) return
-    if (!text.trim() && !imagePreview) {
-      setError('Please add text or an image')
+    if (!text.trim() && selectedFiles.length === 0) {
+      setError('Please add post text or select at least one photo')
       return
     }
 
     setLoading(true)
     setError(null)
+    setLoadingStep('Preparing post...')
 
     try {
+      // 1. Upload any selected images
+      const { urls, publicIds } = await uploadImages()
+
+      setLoadingStep('Publishing to community...')
+
       const postsRef = push(ref(db, 'posts'))
-      const newPost: Post = {
-        id: postsRef.key as string,
-        userId: user.uid,
-        userEmail: user.email || undefined,
-        userName: userProfile?.name || user.displayName || 'Circular Member',
-        profileImage: userProfile?.photoURL || user.photoURL || undefined,
+      const postId = postsRef.key
+      if (!postId) throw new Error('Could not create post record')
+
+      const finalArea = area.trim() || userProfile?.area || userProfile?.city || ''
+      const authorAvatar = getUserAvatar(userProfile) || user.photoURL || ''
+
+      // 2. Format exact Android-compatible post schema
+      const now = Date.now()
+      const postPayload: Record<string, any> = {
+        postType: 'regular',
         text: text.trim(),
         category,
-        area: area.trim() || 'Rajapalayam',
-        imageUrl: imagePreview || undefined,
-        createdAt: Date.now(),
+        userId: user.uid,
+        userEmail: user.email || '',
+        userName: userProfile?.name || user.displayName || 'Circular Member',
+        profileImage: authorAvatar,
+        businessName: userProfile?.businessName || '',
+        businessTrustLabel: userProfile?.businessTrustLabel || '',
+        showBusinessDetails: userProfile?.showBusinessDetails !== false,
+        area: finalArea,
+        areaName: finalArea,
+        city: userProfile?.city || finalArea,
+        imageUrl: urls[0] || '',
+        imageUrls: urls,
+        imageCount: urls.length,
+        imagePublicId: publicIds[0] || '',
+        imagePublicIds: publicIds,
         likesCount: 0,
         commentsCount: 0,
-        postType: 'regular',
+        createdAt: now,
+        updatedAt: now,
+        postScope: 'local',
+        isAdminPost: false,
+        isGlobal: false,
       }
 
-      await set(postsRef, newPost)
+      await set(postsRef, postPayload)
+
+      // Cleanup
+      selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview))
       setText('')
-      setImagePreview(null)
+      setSelectedFiles([])
       onClose()
       if (onSuccess) onSuccess()
     } catch (err: any) {
-      console.error(err)
+      console.error('Post creation error:', err)
       setError(err.message || 'Failed to create post. Please try again.')
     } finally {
       setLoading(false)
+      setLoadingStep('')
     }
   }
 
+  const authorAvatar = getUserAvatar(userProfile) || '/circular-logo.png'
+  const displayPostingArea = area.trim() || userProfile?.area || userProfile?.city || 'your community'
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
-      <div className="w-full max-w-lg rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between border-b border-border p-4">
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-3 sm:p-4 backdrop-blur-sm">
+      <div className="w-full max-w-lg max-h-[92vh] flex flex-col rounded-3xl border border-border bg-card shadow-2xl overflow-hidden">
+        {/* Modal Header */}
+        <div className="flex items-center justify-between border-b border-border px-5 py-3.5 shrink-0">
           <div className="flex items-center gap-2">
             <Sparkles className="size-5 text-primary" />
-            <h3 className="text-base font-bold text-navy">Create Post</h3>
+            <h3 className="text-sm sm:text-base font-bold text-navy">Create Post</h3>
           </div>
           <button
             type="button"
             onClick={onClose}
+            disabled={loading}
             className="flex size-8 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <X className="size-5" />
           </button>
         </div>
 
-        {/* Form Body */}
-        <form onSubmit={handleCreatePost} className="p-5 space-y-4">
+        {/* Form Body - Scrollable */}
+        <form onSubmit={handleCreatePost} className="flex-1 overflow-y-auto p-4 sm:p-5 space-y-4">
           {error && (
             <div className="rounded-xl border border-destructive/20 bg-destructive/10 p-2.5 text-xs text-destructive">
               {error}
             </div>
           )}
 
-          {/* User info */}
+          {/* User & Location Info */}
           <div className="flex items-center gap-3">
-            <div className="relative size-10 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
+            <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
               <Image
-                src={userProfile?.photoURL || '/circular-logo.png'}
+                src={authorAvatar}
                 alt="Avatar"
                 fill
                 className="object-cover"
               />
             </div>
-            <div>
-              <div className="text-xs font-bold text-navy">
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-navy truncate">
                 {userProfile?.name || 'Circular Member'}
               </div>
-              <div className="text-[10px] text-muted-foreground">
-                Posting to <span className="font-semibold text-primary">{area}</span>
+              <div className="text-[11px] text-muted-foreground flex items-center gap-1">
+                <span>Posting to</span>
+                <span className="font-semibold text-primary truncate max-w-[150px]">
+                  {displayPostingArea}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Post Text Area */}
-          <textarea
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            rows={4}
-            placeholder="What's happening in your local neighborhood?"
-            className="w-full resize-none rounded-2xl border border-border bg-muted/30 p-3.5 text-sm text-foreground placeholder-muted-foreground focus:border-primary focus:bg-background focus:outline-none focus:ring-1 focus:ring-primary"
-          />
+          {/* Text Area with Character Counter */}
+          <div className="space-y-1">
+            <textarea
+              value={text}
+              onChange={(e) => setText(e.target.value)}
+              rows={4}
+              maxLength={1000}
+              placeholder="What's happening in your local neighborhood? (Supports English, தமிழ், etc.)"
+              className="w-full resize-none rounded-2xl border border-border bg-muted/30 p-3.5 text-xs sm:text-sm text-foreground placeholder-muted-foreground focus:border-primary focus:bg-background focus:outline-none focus:ring-1 focus:ring-primary"
+            />
+            <div className="flex justify-end text-[10px] text-muted-foreground">
+              {text.length}/1000
+            </div>
+          </div>
 
-          {/* Image Preview */}
-          {imagePreview && (
-            <div className="relative aspect-video w-full overflow-hidden rounded-2xl bg-muted ring-1 ring-border">
-              <Image src={imagePreview} alt="Preview" fill className="object-cover" />
-              <button
-                type="button"
-                onClick={() => setImagePreview(null)}
-                className="absolute top-2 right-2 flex size-7 items-center justify-center rounded-full bg-black/70 text-white hover:bg-black"
-              >
-                <X className="size-4" />
-              </button>
+          {/* Image Previews Grid */}
+          {selectedFiles.length > 0 && (
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs text-muted-foreground">
+                <span>Photos ({selectedFiles.length}/{MAX_IMAGES})</span>
+              </div>
+              <div className="grid grid-cols-3 gap-2">
+                {selectedFiles.map((item, idx) => (
+                  <div key={idx} className="relative aspect-square rounded-xl overflow-hidden bg-muted ring-1 ring-border group">
+                    <Image src={item.preview} alt={`Preview ${idx + 1}`} fill className="object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveFile(idx)}
+                      className="absolute top-1.5 right-1.5 flex size-6 items-center justify-center rounded-full bg-black/75 text-white hover:bg-rose-600 transition-colors"
+                    >
+                      <X className="size-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
 
           {/* Selectors Row */}
-          <div className="grid grid-cols-2 gap-3">
-            {/* Category Select */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {/* Category Selector */}
             <div>
               <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
                 Category
@@ -174,7 +325,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                 onChange={(e) => setCategory(e.target.value)}
                 className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs font-semibold text-foreground focus:border-primary focus:outline-none"
               >
-                {categories.map((c) => (
+                {POST_CATEGORIES.map((c) => (
                   <option key={c} value={c}>
                     {c}
                   </option>
@@ -182,7 +333,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
               </select>
             </div>
 
-            {/* Area Input */}
+            {/* Area / Locality Input */}
             <div>
               <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
                 Area / Locality
@@ -191,32 +342,47 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                 type="text"
                 value={area}
                 onChange={(e) => setArea(e.target.value)}
-                placeholder="Rajapalayam"
-                className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs font-semibold text-foreground focus:border-primary focus:outline-none"
+                placeholder="e.g. Rajapalayam, Gandhi Nagar"
+                className="w-full rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs font-semibold text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none"
               />
             </div>
           </div>
 
-          {/* Upload & Actions */}
-          <div className="flex items-center justify-between border-t border-border pt-3">
-            <label className="flex cursor-pointer items-center gap-2 rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground">
+          {/* Actions & Submit Button */}
+          <div className="flex items-center justify-between border-t border-border pt-3.5">
+            <label
+              className={`flex items-center gap-1.5 rounded-xl border border-border bg-muted/40 px-3 py-2 text-xs font-semibold text-muted-foreground hover:bg-muted hover:text-foreground cursor-pointer transition-colors ${
+                selectedFiles.length >= MAX_IMAGES ? 'opacity-40 pointer-events-none' : ''
+              }`}
+            >
               <ImageIcon className="size-4 text-primary" />
               <span>Add Photo</span>
               <input
                 type="file"
                 accept="image/*"
-                onChange={handleImageChange}
+                multiple
+                onChange={handleFileSelect}
                 className="hidden"
+                disabled={selectedFiles.length >= MAX_IMAGES || loading}
               />
             </label>
 
             <button
               type="submit"
-              disabled={loading || (!text.trim() && !imagePreview)}
+              disabled={loading || (!text.trim() && selectedFiles.length === 0)}
               className="flex items-center gap-2 rounded-2xl bg-gradient-to-r from-primary via-purple-600 to-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow-md shadow-primary/20 transition-all hover:opacity-95 disabled:opacity-50"
             >
-              <span>{loading ? 'Posting...' : 'Post Now'}</span>
-              <ArrowRight className="size-3.5" />
+              {loading ? (
+                <>
+                  <Loader2 className="size-3.5 animate-spin" />
+                  <span>{loadingStep || 'Posting...'}</span>
+                </>
+              ) : (
+                <>
+                  <span>Post Now</span>
+                  <ArrowRight className="size-3.5" />
+                </>
+              )}
             </button>
           </div>
         </form>
