@@ -12,14 +12,15 @@ import {
   Home,
   Compass,
   Users,
+  MessageSquare,
   Store,
   Briefcase,
   HandHeart,
   Calendar,
   Bell,
-  MessageSquare,
   User,
   Shield,
+  Megaphone,
   LogOut,
   PlusCircle,
   Settings,
@@ -38,6 +39,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
   useEffect(() => {
     if (!user) return
 
+    // 1. Notifications Unread
     const notifRef = ref(db, `notifications/${user.uid}`)
     const notifCallback = (snap: any) => {
       if (snap.exists()) {
@@ -50,6 +52,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
     }
     onValue(notifRef, notifCallback)
 
+    // 2. User Conversations Unread
     const convRef = ref(db, `userConversations/${user.uid}`)
     const convCallback = (snap: any) => {
       if (snap.exists()) {
@@ -68,10 +71,17 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
     }
   }, [user])
 
-  const navItems = [
+  // Core navigation items in preferred upper priority
+  const mainNavItems = [
     { href: '/', label: 'Home', icon: Home },
     { href: '/search', label: 'Search', icon: Compass },
     { href: '/following', label: 'Following', icon: Users },
+    {
+      href: '/messages',
+      label: 'Messages',
+      icon: MessageSquare,
+      badge: unreadMessages > 0 ? unreadMessages : undefined,
+    },
     { href: '/businesses', label: 'Businesses', icon: Store },
     { href: '/jobs', label: 'Local Jobs', icon: Briefcase },
     { href: '/needs', label: 'Need Board', icon: HandHeart },
@@ -82,19 +92,19 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
       icon: Bell,
       badge: unreadNotifications > 0 ? unreadNotifications : undefined,
     },
-    {
-      href: '/messages',
-      label: 'Messages',
-      icon: MessageSquare,
-      badge: unreadMessages > 0 ? unreadMessages : undefined,
-    },
     { href: '/profile', label: 'Profile', icon: User },
     { href: '/settings', label: 'Settings', icon: Settings },
   ]
 
-  if (isAdmin) {
-    navItems.push({ href: '/admin', label: 'Admin Panel', icon: Shield })
-  }
+  const adminNavItems = [
+    {
+      href: '/messages',
+      label: 'Admin Messages',
+      icon: MessageSquare,
+      badge: unreadMessages > 0 ? unreadMessages : undefined,
+    },
+    { href: '/admin', label: 'Admin Panel & Broadcast', icon: Shield },
+  ]
 
   const avatar = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
 
@@ -132,9 +142,9 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
           </button>
         )}
 
-        {/* Nav Links with Guaranteed Visible Icons */}
+        {/* Navigation List with Guaranteed Visible Icons */}
         <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-280px)] pr-1 no-scrollbar">
-          {navItems.map((item) => {
+          {mainNavItems.map((item) => {
             const isActive = pathname === item.href
             return (
               <Link
@@ -143,7 +153,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
                 className={`flex items-center justify-between rounded-xl px-3.5 py-2.5 text-sm font-semibold transition-all ${
                   isActive
                     ? 'bg-blue-600 text-white shadow-md shadow-blue-500/20'
-                    : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    : 'text-slate-700 hover:bg-slate-100 hover:text-slate-900'
                 }`}
               >
                 <div className="flex items-center gap-3">
@@ -169,6 +179,48 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
               </Link>
             )
           })}
+
+          {/* Admin Section (Visible Only to Admins) */}
+          {isAdmin && (
+            <div className="mt-4 pt-3 border-t border-border/80 space-y-1">
+              <span className="block px-3.5 text-[10px] font-black uppercase tracking-wider text-muted-foreground">
+                Administration
+              </span>
+              {adminNavItems.map((item) => {
+                const isActive = pathname === item.href
+                return (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className={`flex items-center justify-between rounded-xl px-3.5 py-2 text-xs font-bold transition-all ${
+                      isActive
+                        ? 'bg-blue-600 text-white shadow-sm'
+                        : 'text-slate-600 hover:bg-slate-100 hover:text-slate-900'
+                    }`}
+                  >
+                    <div className="flex items-center gap-2.5">
+                      <item.icon
+                        className={`size-4 shrink-0 ${
+                          isActive ? 'text-white stroke-[2.5]' : 'text-primary stroke-[2]'
+                        }`}
+                      />
+                      <span>{item.label}</span>
+                    </div>
+
+                    {item.badge && item.badge > 0 && (
+                      <span
+                        className={`rounded-full px-1.5 py-0.5 text-[10px] font-black ${
+                          isActive ? 'bg-white text-blue-600' : 'bg-rose-500 text-white'
+                        }`}
+                      >
+                        {item.badge}
+                      </span>
+                    )}
+                  </Link>
+                )
+              })}
+            </div>
+          )}
         </nav>
       </div>
 
@@ -185,7 +237,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
               />
             </div>
             <div className="flex-1 min-w-0 text-left">
-              <div className="truncate text-xs font-bold text-navy">
+              <div className="truncate text-xs font-bold text-navy" title={userProfile?.name || 'Circular User'}>
                 {userProfile?.name || 'Circular User'}
               </div>
               <div className="truncate text-[10px] text-muted-foreground">
@@ -198,7 +250,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
             type="button"
             onClick={logout}
             title="Logout"
-            className="flex size-8 shrink-0 items-center justify-center rounded-lg text-muted-foreground transition-colors hover:bg-destructive/10 hover:text-destructive"
+            className="rounded-xl p-2 text-muted-foreground hover:bg-destructive/10 hover:text-destructive transition-colors"
           >
             <LogOut className="size-4" />
           </button>
