@@ -6,7 +6,7 @@ import { ref, push, set } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/context/AuthContext'
 import { getUserAvatar } from '@/lib/imageUtils'
-import { X, Image as ImageIcon, Sparkles, MapPin, Tag, ArrowRight, Loader2, Trash2 } from 'lucide-react'
+import { X, Image as ImageIcon, Sparkles, MapPin, Tag, ArrowRight, Loader2 } from 'lucide-react'
 
 const POST_CATEGORIES = [
   'General',
@@ -34,6 +34,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
   const [text, setText] = useState('')
   const [category, setCategory] = useState<string>('General')
   const [area, setArea] = useState('')
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null)
   const [selectedFiles, setSelectedFiles] = useState<{ file: File; preview: string }[]>([])
   const [loading, setLoading] = useState(false)
   const [loadingStep, setLoadingStep] = useState('')
@@ -43,6 +44,22 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
     if (isOpen) {
       setArea(userProfile?.area || userProfile?.city || '')
       setError(null)
+
+      // Try acquiring browser location for the new post
+      if (typeof navigator !== 'undefined' && navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            setUserCoords({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            })
+          },
+          () => {
+            // Geolocation not available or denied
+          },
+          { timeout: 5000, maximumAge: 60000 }
+        )
+      }
     }
   }, [isOpen, userProfile])
 
@@ -163,9 +180,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
     setLoadingStep('Preparing post...')
 
     try {
-      // 1. Upload any selected images
       const { urls, publicIds } = await uploadImages()
-
       setLoadingStep('Publishing to community...')
 
       const postsRef = push(ref(db, 'posts'))
@@ -175,7 +190,6 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
       const finalArea = area.trim() || userProfile?.area || userProfile?.city || ''
       const authorAvatar = getUserAvatar(userProfile) || user.photoURL || ''
 
-      // 2. Format exact Android-compatible post schema
       const now = Date.now()
       const postPayload: Record<string, any> = {
         postType: 'regular',
@@ -191,6 +205,9 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
         area: finalArea,
         areaName: finalArea,
         city: userProfile?.city || finalArea,
+        latitude: userCoords?.latitude || null,
+        longitude: userCoords?.longitude || null,
+        radiusKm: 25,
         imageUrl: urls[0] || '',
         imageUrls: urls,
         imageCount: urls.length,
@@ -207,7 +224,6 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
 
       await set(postsRef, postPayload)
 
-      // Cleanup
       selectedFiles.forEach((f) => URL.revokeObjectURL(f.preview))
       setText('')
       setSelectedFiles([])

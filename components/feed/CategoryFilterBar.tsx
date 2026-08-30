@@ -1,7 +1,6 @@
 'use client'
 
-import React from 'react'
-import { Check } from 'lucide-react'
+import React, { useRef, useEffect } from 'react'
 
 export const CIRCULAR_CATEGORIES = [
   'All',
@@ -25,16 +24,34 @@ export function CategoryFilterBar({
   selectedCategory: string
   onSelectCategory: (cat: string) => void
 }) {
+  const containerRef = useRef<HTMLDivElement>(null)
+  const activeBtnRef = useRef<HTMLButtonElement>(null)
+
+  // Auto-scroll selected category pill into view if off-screen
+  useEffect(() => {
+    if (activeBtnRef.current && containerRef.current) {
+      activeBtnRef.current.scrollIntoView({
+        behavior: 'smooth',
+        inline: 'center',
+        block: 'nearest',
+      })
+    }
+  }, [selectedCategory])
+
   return (
-    <div className="flex items-center gap-2 overflow-x-auto py-1.5 no-scrollbar scroll-smooth">
+    <div
+      ref={containerRef}
+      className="flex items-center gap-2 overflow-x-auto py-1.5 no-scrollbar scroll-smooth"
+    >
       {CIRCULAR_CATEGORIES.map((cat) => {
         const isSelected = selectedCategory.toLowerCase() === cat.toLowerCase()
         return (
           <button
             key={cat}
+            ref={isSelected ? activeBtnRef : null}
             type="button"
             onClick={() => onSelectCategory(cat)}
-            className={`group relative shrink-0 flex items-center gap-1.5 rounded-full px-4 py-2 text-xs font-bold transition-all duration-150 ${
+            className={`shrink-0 flex items-center gap-1.5 rounded-full px-3.5 py-1.5 text-xs font-bold transition-all duration-150 ${
               isSelected
                 ? 'bg-blue-600 text-white shadow-md shadow-blue-500/25 ring-2 ring-blue-500/40 scale-102'
                 : 'border border-border/80 bg-card text-muted-foreground hover:border-primary/40 hover:bg-muted/80 hover:text-foreground'

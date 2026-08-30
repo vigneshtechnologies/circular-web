@@ -4,8 +4,24 @@
   * {
     border-color: #e2e8f0;
   }
+  html {
+    overflow-y: scroll;
+  }
   body {
     background-color: #ffffff;
     color: #0f172a;
   }
+}
+
+/* Hide scrollbar for Chrome, Safari and Opera */
+.no-scrollbar::-webkit-scrollbar,
+.scrollbar-none::-webkit-scrollbar {
+  display: none;
+}
+
+/* Hide scrollbar for IE, Edge and Firefox */
+.no-scrollbar,
+.scrollbar-none {
+  -ms-overflow-style: none;  /* IE and Edge */
+  scrollbar-width: none;  /* Firefox */
 }

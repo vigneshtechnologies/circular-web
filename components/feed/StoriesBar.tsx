@@ -19,7 +19,7 @@ interface UserStatus {
 }
 
 export function StoriesBar() {
-  const { user, userProfile } = useAuth()
+  const { userProfile } = useAuth()
   const [statuses, setStatuses] = useState<UserStatus[]>([])
 
   useEffect(() => {
@@ -39,7 +39,7 @@ export function StoriesBar() {
           setStatuses(list.reverse())
         }
       } catch (err) {
-        console.error('Error fetching statuses:', err)
+        console.warn('Statuses fetch warning:', err)
       }
     }
     fetchStatuses()
@@ -48,41 +48,33 @@ export function StoriesBar() {
   const avatar = getUserAvatar(userProfile) || '/circular-logo.png'
 
   return (
-    <div className="flex items-center gap-3 overflow-x-auto py-1 no-scrollbar">
+    <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-0.5">
       {/* Current User Story Launcher */}
-      <div className="flex shrink-0 flex-col items-center gap-1 cursor-pointer group">
-        <div className="relative size-13 rounded-full p-0.5 ring-2 ring-dashed ring-primary/40 transition-all group-hover:ring-primary">
-          <div className="relative size-full overflow-hidden rounded-full bg-muted">
+      <div className="flex shrink-0 items-center gap-2 rounded-xl border border-border/70 bg-card px-2.5 py-1.5 cursor-pointer group hover:border-primary/40 hover:bg-muted/50 transition-all">
+        <div className="relative size-7 rounded-full overflow-hidden bg-muted ring-1 ring-primary/30">
+          <Image src={avatar} alt="Your Story" fill className="object-cover" />
+        </div>
+        <div className="flex items-center gap-1 text-[11px] font-bold text-navy group-hover:text-primary">
+          <Plus className="size-3 text-primary stroke-[3]" />
+          <span>Add Story</span>
+        </div>
+      </div>
+
+      {/* Community Statuses if active */}
+      {statuses.map((item) => (
+        <div
+          key={item.id}
+          className="flex shrink-0 items-center gap-2 rounded-xl border border-border/70 bg-card px-2.5 py-1.5 cursor-pointer group hover:border-pink-500/40 hover:bg-muted/50 transition-all"
+        >
+          <div className="relative size-7 rounded-full overflow-hidden bg-muted ring-2 ring-pink-500">
             <Image
-              src={avatar}
-              alt="Your Story"
+              src={item.userAvatar || item.mediaUrl || '/circular-logo.png'}
+              alt={item.userName || 'Member'}
               fill
               className="object-cover"
             />
           </div>
-          <div className="absolute bottom-0 right-0 flex size-4 items-center justify-center rounded-full bg-primary text-white shadow">
-            <Plus className="size-3 stroke-[3]" />
-          </div>
-        </div>
-        <span className="max-w-[64px] truncate text-[10px] font-medium text-muted-foreground">
-          Your Story
-        </span>
-      </div>
-
-      {/* Community Statuses */}
-      {statuses.map((item) => (
-        <div key={item.id} className="flex shrink-0 flex-col items-center gap-1 cursor-pointer group">
-          <div className="relative size-13 rounded-full p-0.5 ring-2 ring-pink-500 transition-all group-hover:scale-105">
-            <div className="relative size-full overflow-hidden rounded-full bg-muted">
-              <Image
-                src={item.userAvatar || item.mediaUrl || '/circular-logo.png'}
-                alt={item.userName || 'Member'}
-                fill
-                className="object-cover"
-              />
-            </div>
-          </div>
-          <span className="max-w-[64px] truncate text-[10px] font-medium text-foreground">
+          <span className="max-w-[80px] truncate text-[11px] font-semibold text-foreground">
             {item.userName?.split(' ')[0] || 'Member'}
           </span>
         </div>

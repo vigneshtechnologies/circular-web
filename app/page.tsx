@@ -7,14 +7,22 @@ import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
 import { PostCard } from '@/components/feed/PostCard'
 import { CategoryFilterBar } from '@/components/feed/CategoryFilterBar'
+import { RadiusSelector } from '@/components/feed/RadiusSelector'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { PostComposerModal } from '@/components/feed/PostComposerModal'
 import { StoriesBar } from '@/components/feed/StoriesBar'
 import { getUserAvatar } from '@/lib/imageUtils'
+import {
+  CIRCULAR_RADIUS_OPTIONS,
+  CircularRadiusOption,
+  DEFAULT_RADIUS_KM,
+  getDistanceKm,
+  isValidCoordinate,
+} from '@/lib/locationUtils'
 import { ref, get, query, orderByChild, limitToLast, endAt } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
-import { Sparkles, MapPin, PlusCircle, Loader2, ArrowDown } from 'lucide-react'
+import { Sparkles, MapPin, PlusCircle, Loader2, ArrowDown, Navigation } from 'lucide-react'
 
 const INITIAL_PAGE_SIZE = 30
 const NEXT_PAGE_SIZE = 30
@@ -23,6 +31,10 @@ export default function CircularRootPage() {
   const { user, userProfile, loading } = useAuth()
   const [posts, setPosts] = useState<Post[]>([])
   const [selectedCategory, setSelectedCategory] = useState('All')
+  const [selectedRadius, setSelectedRadius] = useState<CircularRadiusOption>(DEFAULT_RADIUS_KM)
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [locationAvailable, setLocationAvailable] = useState(false)
+
   const [feedLoading, setFeedLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
   const [hasMorePosts, setHasMorePosts] = useState(true)
@@ -31,6 +43,49 @@ export default function CircularRootPage() {
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
 
   const observerTarget = useRef<HTMLDivElement>(null)
+
+  // Load radius preference from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('circular_feed_radius')
+      if (saved) {
+        const num = Number(saved) as CircularRadiusOption
+        if (CIRCULAR_RADIUS_OPTIONS.includes(num)) {
+          setSelectedRadius(num)
+        }
+      }
+    } catch {}
+  }, [])
+
+  // Acquire user browser geolocation
+  const requestUserLocation = useCallback(() => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserCoords({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          })
+          setLocationAvailable(true)
+        },
+        () => {
+          setLocationAvailable(false)
+        },
+        { timeout: 8000, maximumAge: 120000 }
+      )
+    }
+  }, [])
+
+  useEffect(() => {
+    requestUserLocation()
+  }, [requestUserLocation])
+
+  const handleSelectRadius = (radius: CircularRadiusOption) => {
+    setSelectedRadius(radius)
+    try {
+      localStorage.setItem('circular_feed_radius', String(radius))
+    } catch {}
+  }
 
   // 1. Initial Page Load (30 posts ordered by createdAt descending)
   const loadInitialPosts = useCallback(async () => {
@@ -161,17 +216,44 @@ export default function CircularRootPage() {
   const currentArea = userProfile?.area || userProfile?.city || ''
   const displayLocation = currentArea ? currentArea : 'Your Community'
 
-  // Filter posts by category with synonym matching
+  // Filter posts by Category + Geographic Radius
   const filteredPosts = posts.filter((p) => {
+    // 1. Category Filter
     const postCat = (p.category || '').toLowerCase().trim()
     const selected = selectedCategory.toLowerCase().trim()
 
-    if (selected === 'all') return true
-    if (selected === 'general') return !postCat || postCat === 'general'
-    if (selected === 'news & updates') {
-      return postCat === 'news' || postCat === 'news & updates' || postCat === 'local news'
+    let matchesCategory = selected === 'all'
+    if (!matchesCategory) {
+      if (selected === 'general') {
+        matchesCategory = !postCat || postCat === 'general'
+      } else if (selected === 'news & updates') {
+        matchesCategory = postCat === 'news' || postCat === 'news & updates' || postCat === 'local news'
+      } else {
+        matchesCategory = postCat === selected || postCat.includes(selected)
+      }
     }
-    return postCat === selected || postCat.includes(selected)
+
+    if (!matchesCategory) return false
+
+    // 2. Geographic Radius Filter
+    if (userCoords && isValidCoordinate(p.latitude, p.longitude)) {
+      const distance = getDistanceKm(
+        userCoords.latitude,
+        userCoords.longitude,
+        p.latitude!,
+        p.longitude!
+      )
+      return distance <= selectedRadius
+    }
+
+    // Fallback for posts without coordinates:
+    // When radius is default 25 km, include all community posts.
+    // If user explicitly narrowed radius (<25 km) and location is active, exclude posts without verified coordinates.
+    if (selectedRadius === DEFAULT_RADIUS_KM || !userCoords) {
+      return true
+    }
+
+    return false
   })
 
   const authorAvatar = getUserAvatar(userProfile) || '/circular-logo.png'
@@ -187,20 +269,31 @@ export default function CircularRootPage() {
             </div>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-base font-extrabold text-navy truncate">Home Feed</h1>
-              <div className="text-[11px] font-semibold text-muted-foreground truncate">
-                Showing posts in <span className="text-primary font-bold">{displayLocation}</span>
+              <div className="text-[11px] font-semibold text-muted-foreground truncate flex items-center gap-1">
+                <span>Showing posts in</span>
+                <span className="text-primary font-bold">{displayLocation}</span>
               </div>
             </div>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsComposerOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-primary/90 active:scale-95 shrink-0"
-          >
-            <PlusCircle className="size-4" />
-            <span>Post</span>
-          </button>
+          {/* Right Action Controls: Radius Selector + Post Button */}
+          <div className="flex items-center gap-2 shrink-0">
+            <RadiusSelector
+              selectedRadius={selectedRadius}
+              onSelectRadius={handleSelectRadius}
+              hasUserLocation={locationAvailable}
+              onRequestLocation={requestUserLocation}
+            />
+
+            <button
+              type="button"
+              onClick={() => setIsComposerOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition-all hover:bg-primary/90 active:scale-95 shrink-0"
+            >
+              <PlusCircle className="size-4" />
+              <span>Post</span>
+            </button>
+          </div>
         </div>
 
         {/* Category Filter Bar */}
@@ -213,18 +306,16 @@ export default function CircularRootPage() {
       </header>
 
       {/* Main Feed Container */}
-      <div className="mx-auto max-w-2xl px-4 py-5 md:px-6 space-y-4">
-        {/* Local Stories / Statuses Bar */}
-        <div className="rounded-2xl border border-border bg-card p-2.5 shadow-sm">
-          <StoriesBar />
-        </div>
+      <div className="mx-auto max-w-2xl px-4 py-4 md:px-6 space-y-3.5">
+        {/* Compact Stories / Status Launcher Bar */}
+        <StoriesBar />
 
         {/* Quick Post Prompt Card */}
         <div
           onClick={() => setIsComposerOpen(true)}
           className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:border-primary/40 hover:bg-muted/40"
         >
-          <div className="relative size-9 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
+          <div className="relative size-8 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
             <Image
               src={authorAvatar}
               alt="Avatar"
@@ -232,7 +323,7 @@ export default function CircularRootPage() {
               className="object-cover"
             />
           </div>
-          <div className="flex-1 rounded-xl bg-muted/60 px-3.5 py-2 text-xs text-muted-foreground truncate">
+          <div className="flex-1 rounded-xl bg-muted/60 px-3.5 py-1.5 text-xs text-muted-foreground truncate">
             Share what's happening around you...
           </div>
           <button
@@ -255,19 +346,33 @@ export default function CircularRootPage() {
               <Sparkles className="size-6" />
             </div>
             <h3 className="mt-3 text-sm sm:text-base font-bold text-navy">
-              No posts in {selectedCategory === 'All' ? 'this area' : selectedCategory}
+              No posts found within {selectedRadius} km
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              Be the first to share an update with your neighborhood!
+              {selectedCategory !== 'All'
+                ? `No ${selectedCategory} posts currently in this radius.`
+                : 'Try expanding your distance radius or sharing a new update!'}
             </p>
-            <button
-              type="button"
-              onClick={() => setIsComposerOpen(true)}
-              className="mt-4 inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2 text-xs font-bold text-white shadow"
-            >
-              <PlusCircle className="size-4" />
-              <span>Create Post</span>
-            </button>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {selectedRadius < 25 && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectRadius(25)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-foreground shadow-sm hover:bg-muted"
+                >
+                  <Navigation className="size-3.5 text-primary" />
+                  <span>Expand to 25 km</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsComposerOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-1.5 text-xs font-bold text-white shadow"
+              >
+                <PlusCircle className="size-3.5" />
+                <span>Create Post</span>
+              </button>
+            </div>
           </div>
         ) : (
           filteredPosts.map((post) => (

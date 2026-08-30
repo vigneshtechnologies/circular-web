@@ -14,10 +14,12 @@ interface AppShellProps {
   onRefreshFeed?: () => void
 }
 
-export function AppShell({ children, currentArea = 'Rajapalayam', onRefreshFeed }: AppShellProps) {
+export function AppShell({ children, currentArea, onRefreshFeed }: AppShellProps) {
   const { userProfile } = useAuth()
   const [isComposerOpen, setIsComposerOpen] = useState(false)
   const [commentsPostId, setCommentsPostId] = useState<string | null>(null)
+
+  const resolvedArea = currentArea?.trim() || userProfile?.area || userProfile?.city || ''
 
   return (
     <div className="flex min-h-screen bg-background text-foreground">
@@ -32,7 +34,7 @@ export function AppShell({ children, currentArea = 'Rajapalayam', onRefreshFeed 
       </main>
 
       {/* Right Local Info Sidebar (Large Desktop) */}
-      <RightSidebar currentArea={userProfile?.area || currentArea} />
+      <RightSidebar currentArea={resolvedArea} />
 
       {/* Mobile Bottom Navigation */}
       <MobileNav onOpenPostComposer={() => setIsComposerOpen(true)} />

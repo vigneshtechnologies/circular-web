@@ -7,6 +7,7 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { ref, onValue, off } from 'firebase/database'
 import { db } from '@/lib/firebase'
+import { getUserAvatar } from '@/lib/imageUtils'
 import {
   Home,
   Compass,
@@ -97,9 +98,11 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
     navItems.push({ href: '/admin', label: 'Admin Panel', icon: Shield })
   }
 
+  const avatar = getUserAvatar(userProfile) || '/circular-logo.png'
+
   return (
     <aside className="sticky top-0 flex h-screen w-64 flex-col justify-between border-r border-border bg-card p-4">
-      <div className="flex flex-col gap-6">
+      <div className="flex flex-col gap-5">
         {/* Logo */}
         <Link href="/" className="flex items-center gap-3 px-2">
           <div className="relative size-10 overflow-hidden rounded-xl bg-primary/10 shadow-sm ring-1 ring-primary/20">
@@ -132,7 +135,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
         )}
 
         {/* Nav Links */}
-        <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-280px)] pr-1">
+        <nav className="flex flex-col gap-1 overflow-y-auto max-h-[calc(100vh-280px)] pr-1 no-scrollbar">
           {navItems.map((item) => {
             const isActive = pathname === item.href
             return (
@@ -167,17 +170,17 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
 
       {/* User Footer Profile */}
       <div className="border-t border-border pt-3">
-        <div className="flex items-center justify-between rounded-xl p-2 hover:bg-muted">
-          <Link href="/profile" className="flex items-center gap-2.5 overflow-hidden">
+        <div className="flex items-center justify-between rounded-2xl p-2 hover:bg-muted/70 transition-colors">
+          <Link href="/profile" className="flex items-center gap-2.5 flex-1 min-w-0 mr-1">
             <div className="relative size-9 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-primary/20">
               <Image
-                src={userProfile?.photoURL || '/circular-logo.png'}
+                src={avatar}
                 alt="Profile Avatar"
                 fill
                 className="object-cover"
               />
             </div>
-            <div className="overflow-hidden text-left">
+            <div className="flex-1 min-w-0 text-left">
               <div className="truncate text-xs font-bold text-navy">
                 {userProfile?.name || 'Circular User'}
               </div>

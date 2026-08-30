@@ -28,7 +28,6 @@ export function RightSidebar({
   const displayArea = currentArea?.trim() || userProfile?.area || userProfile?.city || 'Your Community'
 
   useEffect(() => {
-    // Only query when user authentication is established
     if (!user) {
       setLoadingBiz(false)
       setLoadingNeeds(false)
@@ -45,7 +44,14 @@ export function RightSidebar({
         if (isMounted && bSnap.exists()) {
           const list: BusinessProfile[] = []
           bSnap.forEach((child) => {
-            list.push({ id: child.key as string, ...child.val() })
+            const val = child.val()
+            // Map exact business schema fields
+            list.push({
+              id: child.key as string,
+              name: val.businessName || val.name || 'Local Business',
+              category: val.category || val.businessCategory || 'Local Shop',
+              ...val,
+            })
           })
           setBusinesses(list.reverse().slice(0, 4))
         } else if (isMounted) {
@@ -85,9 +91,7 @@ export function RightSidebar({
         if (isMounted && pSnap.exists()) {
           setPhotosRecord(pSnap.val())
         }
-      } catch (err) {
-        // Silently ignore optional photo gallery errors
-      }
+      } catch (err) {}
     }
 
     loadBusinesses()
@@ -157,6 +161,8 @@ export function RightSidebar({
               const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
               const hasRating = typeof b.rating === 'number' && b.rating > 0
               const isRecent = b.createdAt && Date.now() - b.createdAt < 14 * 24 * 60 * 60 * 1000
+              const bizName = b.name || (b as any).businessName || 'Local Business'
+              const bizCategory = b.category || (b as any).businessCategory || 'Local Shop'
 
               return (
                 <Link
@@ -168,7 +174,7 @@ export function RightSidebar({
                     <div className="relative size-10 shrink-0 overflow-hidden rounded-xl bg-purple-500/10 ring-1 ring-border">
                       <Image
                         src={photo}
-                        alt={b.name || 'Business'}
+                        alt={bizName}
                         fill
                         className="object-cover"
                       />
@@ -176,14 +182,14 @@ export function RightSidebar({
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
                         <span className="truncate text-xs font-bold text-navy group-hover:text-primary">
-                          {b.name}
+                          {bizName}
                         </span>
                         {b.isVerified && (
                           <CheckCircle2 className="size-3 shrink-0 text-emerald-500 fill-emerald-500/20" />
                         )}
                       </div>
                       <div className="flex items-center gap-1.5 text-[10px] text-muted-foreground">
-                        <span className="truncate">{b.category || 'Local Shop'}</span>
+                        <span className="truncate">{bizCategory}</span>
                         {hasRating ? (
                           <>
                             <span>•</span>
