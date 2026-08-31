@@ -21,10 +21,18 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: 'Event Not Found',
       description: 'The requested community event is not available on Circular.',
+      alternates: {
+        canonical: `https://circularapp.in/event/${id}`,
+      },
+      openGraph: {
+        title: 'Community Event | Circular',
+        description: 'The requested community event is not available on Circular.',
+        url: `https://circularapp.in/event/${id}`,
+      },
     }
   }
 
-  const title = `${event.title} – ${event.venue}, ${event.area}`
+  const title = `${event.title} – ${event.venue}, ${event.area} | Circular`
   const description = event.description
     ? `${event.description.substring(0, 150)}... Join on Circular.`
     : `Discover this local event: ${event.title} at ${event.venue} in ${event.area} on Circular.`
@@ -66,8 +74,31 @@ export default async function PublicEventPage({ params }: Props) {
   const event = await getPublicEvent(id)
 
   if (!event) {
+    const fallbackBreadcrumbs = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://circularapp.in',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Events',
+          item: 'https://circularapp.in/events',
+        },
+      ],
+    }
+
     return (
       <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(fallbackBreadcrumbs) }}
+        />
         <CircularHeader />
         <main className="min-h-[70vh] bg-secondary/30 py-16 text-center">
           <div className="mx-auto max-w-md px-4">
@@ -123,17 +154,46 @@ export default async function PublicEventPage({ params }: Props) {
       : {}),
   }
 
+  const breadcrumbData = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://circularapp.in',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Events',
+        item: 'https://circularapp.in/events',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: event.title,
+        item: `https://circularapp.in/event/${id}`,
+      },
+    ],
+  }
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
       <CircularHeader />
 
       <main className="min-h-[80vh] bg-secondary/30 py-10 md:py-16">
         <div className="mx-auto max-w-3xl px-4 md:px-6">
-          <nav className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             <Link href="/" className="hover:text-primary">Home</Link>
             <span>/</span>
             <Link href="/events" className="hover:text-primary">Events</Link>

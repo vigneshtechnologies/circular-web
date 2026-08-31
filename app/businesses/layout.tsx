@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Local Business Directory',
-  description: 'Browse verified local shops, services, tuition academies, and businesses on Circular.',
+  title: 'Local Business Directory in Rajapalayam & Region',
+  description:
+    'Explore local shops, textile stores, tuition centers, technology businesses, and services in Rajapalayam, Dhalavaipuram, Muhavur, and surrounding areas on Circular.',
   alternates: {
     canonical: 'https://circularapp.in/businesses',
   },
   openGraph: {
-    title: 'Local Business Directory | Circular',
-    description: 'Browse verified local shops, services, tuition academies, and businesses on Circular.',
+    title: 'Local Business Directory in Rajapalayam & Region | Circular',
+    description:
+      'Explore local shops, textile stores, tuition centers, technology businesses, and services in Rajapalayam, Dhalavaipuram, Muhavur, and surrounding areas on Circular.',
     url: 'https://circularapp.in/businesses',
   },
 }

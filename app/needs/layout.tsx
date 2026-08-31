@@ -1,14 +1,16 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  title: 'Need Board',
-  description: 'Discover local requests, help wanted notices, and community needs on Circular.',
+  title: 'Local Need Board in Rajapalayam & Region',
+  description:
+    'Discover genuine community requests, help-needed notices, and neighborhood needs in Rajapalayam and surrounding areas on Circular.',
   alternates: {
     canonical: 'https://circularapp.in/needs',
   },
   openGraph: {
-    title: 'Need Board | Circular',
-    description: 'Discover local requests, help wanted notices, and community needs on Circular.',
+    title: 'Local Need Board in Rajapalayam & Region | Circular',
+    description:
+      'Discover genuine community requests, help-needed notices, and neighborhood needs in Rajapalayam and surrounding areas on Circular.',
     url: 'https://circularapp.in/needs',
   },
 }
