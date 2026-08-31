@@ -95,13 +95,7 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
     }
   }
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    )
-  }
+  // Allow immediate SSR rendering of public catalog without blocking on auth loading
 
   const q = searchQuery.toLowerCase().trim()
   const filtered = jobs.filter((j) => {

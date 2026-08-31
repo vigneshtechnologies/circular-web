@@ -59,13 +59,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
     }
   }, [user])
 
-  if (loading) {
-    return (
-      <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-      </div>
-    )
-  }
+  // Allow immediate SSR rendering of public catalog without blocking on auth loading
 
   const q = searchQuery.toLowerCase().trim()
   const selCat = selectedCategory.toLowerCase().trim()
