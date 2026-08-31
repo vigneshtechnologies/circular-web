@@ -12,16 +12,40 @@ export default function sitemap(): MetadataRoute.Sitemap {
       priority: 1.0,
     },
     {
-      url: `${baseUrl}/terms`,
+      url: `${baseUrl}/landing`,
       lastModified: currentDate,
-      changeFrequency: 'monthly',
+      changeFrequency: 'weekly',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/businesses`,
+      lastModified: currentDate,
+      changeFrequency: 'daily',
+      priority: 0.9,
+    },
+    {
+      url: `${baseUrl}/jobs`,
+      lastModified: currentDate,
+      changeFrequency: 'daily',
       priority: 0.8,
     },
     {
-      url: `${baseUrl}/competition`,
+      url: `${baseUrl}/events`,
       lastModified: currentDate,
-      changeFrequency: 'weekly',
+      changeFrequency: 'daily',
       priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/needs`,
+      lastModified: currentDate,
+      changeFrequency: 'daily',
+      priority: 0.8,
+    },
+    {
+      url: `${baseUrl}/terms`,
+      lastModified: currentDate,
+      changeFrequency: 'monthly',
+      priority: 0.5,
     },
   ]
 }
