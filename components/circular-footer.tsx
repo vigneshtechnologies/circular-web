@@ -52,9 +52,9 @@ export function CircularFooter() {
             </div>
           </div>
 
-          {/* Quick Links */}
+          {/* Discovery Links */}
           <div>
-            <h3 className="text-sm font-bold uppercase tracking-wider text-white">Platform</h3>
+            <h3 className="text-sm font-bold uppercase tracking-wider text-white">Discovery</h3>
             <ul className="mt-4 flex flex-col gap-2.5 text-sm text-navy-foreground/70">
               <li>
                 <Link href="/" className="transition-colors hover:text-white">
@@ -62,28 +62,23 @@ export function CircularFooter() {
                 </Link>
               </li>
               <li>
-                <a href="/#features" className="transition-colors hover:text-white">
-                  Explore Features
-                </a>
+                <Link href="/businesses" className="transition-colors hover:text-white">
+                  Local Businesses
+                </Link>
               </li>
               <li>
-                <a href="/#businesses" className="transition-colors hover:text-white">
-                  For Local Businesses
-                </a>
+                <Link href="/jobs" className="transition-colors hover:text-white">
+                  Jobs &amp; Openings
+                </Link>
               </li>
               <li>
-                <a href="/#community" className="transition-colors hover:text-white">
-                  Community &amp; Jobs
-                </a>
+                <Link href="/events" className="transition-colors hover:text-white">
+                  Community Events
+                </Link>
               </li>
               <li>
-                <a href="/#safety" className="transition-colors hover:text-white">
-                  Safety &amp; Moderation
-                </a>
-              </li>
-              <li>
-                <Link href="/competition" className="transition-colors hover:text-white">
-                  Innovation Challenge
+                <Link href="/needs" className="transition-colors hover:text-white">
+                  Need Board
                 </Link>
               </li>
             </ul>

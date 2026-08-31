@@ -3,7 +3,7 @@
 import { useState } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Menu, X, Smartphone, Store, Users, Shield, Sparkles } from 'lucide-react'
+import { Menu, X, Smartphone, Store, Briefcase, Calendar, HelpCircle, FileText, Sparkles } from 'lucide-react'
 
 const PLAY_STORE_URL =
   'https://play.google.com/store/apps/details?id=com.vigneshtechnologies.circular'
@@ -36,31 +36,31 @@ export function CircularHeader() {
         </Link>
 
         {/* Desktop Nav */}
-        <nav className="hidden items-center gap-6 md:flex">
-          <a
-            href="#features"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+        <nav className="hidden items-center gap-5 lg:gap-6 md:flex">
+          <Link
+            href="/businesses"
+            className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary"
           >
-            Features
-          </a>
-          <a
-            href="#businesses"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            Businesses
+          </Link>
+          <Link
+            href="/jobs"
+            className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary"
           >
-            For Businesses
-          </a>
-          <a
-            href="#community"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            Jobs
+          </Link>
+          <Link
+            href="/events"
+            className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary"
           >
-            Community
-          </a>
-          <a
-            href="#safety"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            Events
+          </Link>
+          <Link
+            href="/needs"
+            className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary"
           >
-            Safety
-          </a>
+            Need Board
+          </Link>
           <Link
             href="/terms"
             className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
@@ -96,45 +96,46 @@ export function CircularHeader() {
       {/* Mobile Dropdown */}
       {mobileMenuOpen && (
         <div className="border-b border-border bg-background px-4 py-4 md:hidden">
-          <div className="flex flex-col gap-3">
-            <a
-              href="#features"
-              onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
-            >
-              <Sparkles className="size-4 text-primary" />
-              <span>Features</span>
-            </a>
-            <a
-              href="#businesses"
+          <div className="flex flex-col gap-2">
+            <Link
+              href="/businesses"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
               <Store className="size-4 text-primary" />
-              <span>For Businesses</span>
-            </a>
-            <a
-              href="#community"
+              <span>Local Businesses</span>
+            </Link>
+            <Link
+              href="/jobs"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
-              <Users className="size-4 text-primary" />
-              <span>Community</span>
-            </a>
-            <a
-              href="#safety"
+              <Briefcase className="size-4 text-primary" />
+              <span>Jobs &amp; Openings</span>
+            </Link>
+            <Link
+              href="/events"
               onClick={() => setMobileMenuOpen(false)}
               className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
-              <Shield className="size-4 text-primary" />
-              <span>Safety &amp; Trust</span>
-            </a>
+              <Calendar className="size-4 text-primary" />
+              <span>Community Events</span>
+            </Link>
+            <Link
+              href="/needs"
+              onClick={() => setMobileMenuOpen(false)}
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+            >
+              <HelpCircle className="size-4 text-primary" />
+              <span>Need Board</span>
+            </Link>
             <Link
               href="/terms"
               onClick={() => setMobileMenuOpen(false)}
-              className="rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
-              Terms of Service
+              <FileText className="size-4 text-primary" />
+              <span>Terms of Service</span>
             </Link>
 
             <a

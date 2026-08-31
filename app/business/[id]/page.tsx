@@ -1,8 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { notFound } from 'next/navigation'
-import { ArrowLeft, Store, Star, MapPin, CheckCircle2, Compass, Tag } from 'lucide-react'
+import { Store, Star, MapPin, CheckCircle2, Compass, Tag } from 'lucide-react'
 import { CircularHeader } from '@/components/circular-header'
 import { CircularFooter } from '@/components/circular-footer'
 import { OpenInCircularBanner } from '@/components/public/open-in-circular-banner'
@@ -67,8 +66,37 @@ export default async function PublicBusinessPage({ params }: Props) {
   const business = await getPublicBusiness(id)
 
   if (!business) {
+    const fallbackBreadcrumbs = {
+      '@context': 'https://schema.org',
+      '@type': 'BreadcrumbList',
+      itemListElement: [
+        {
+          '@type': 'ListItem',
+          position: 1,
+          name: 'Home',
+          item: 'https://circularapp.in',
+        },
+        {
+          '@type': 'ListItem',
+          position: 2,
+          name: 'Businesses',
+          item: 'https://circularapp.in/businesses',
+        },
+        {
+          '@type': 'ListItem',
+          position: 3,
+          name: 'Business Directory',
+          item: `https://circularapp.in/business/${id}`,
+        },
+      ],
+    }
+
     return (
       <>
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: JSON.stringify(fallbackBreadcrumbs) }}
+        />
         <CircularHeader />
         <main className="min-h-[70vh] bg-secondary/30 py-16 text-center">
           <div className="mx-auto max-w-md px-4">
@@ -124,18 +152,47 @@ export default async function PublicBusinessPage({ params }: Props) {
       : {}),
   }
 
+  const breadcrumbData = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Home',
+        item: 'https://circularapp.in',
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Businesses',
+        item: 'https://circularapp.in/businesses',
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: business.name,
+        item: `https://circularapp.in/business/${id}`,
+      },
+    ],
+  }
+
   return (
     <>
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
       <CircularHeader />
 
       <main className="min-h-[80vh] bg-secondary/30 py-10 md:py-16">
         <div className="mx-auto max-w-3xl px-4 md:px-6">
           {/* Breadcrumbs */}
-          <nav className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
+          <nav aria-label="Breadcrumb" className="flex items-center gap-2 text-xs font-semibold text-muted-foreground">
             <Link href="/" className="hover:text-primary">Home</Link>
             <span>/</span>
             <Link href="/businesses" className="hover:text-primary">Businesses</Link>
