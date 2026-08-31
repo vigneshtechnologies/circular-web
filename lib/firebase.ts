@@ -5,7 +5,7 @@ import { getStorage } from 'firebase/storage'
 
 const firebaseConfig = {
   apiKey: 'AIzaSyAAj9NI9tHlfgZd3Xi4ie4l6z3c8xfJH_c',
-  authDomain: 'buzzly-v.firebaseapp.com',
+  authDomain: 'circularapp.in',
   databaseURL: 'https://buzzly-v-default-rtdb.firebaseio.com',
   projectId: 'buzzly-v',
   storageBucket: 'buzzly-v.appspot.com',
