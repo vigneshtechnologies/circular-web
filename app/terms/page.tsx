@@ -9,6 +9,12 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://circularapp.in/terms',
   },
+  openGraph: {
+    title: 'Terms of Service | Circular',
+    description:
+      'Terms of Service and User Agreement for Circular – Local Social & Business platform, operated by Vignesh Technologies.',
+    url: 'https://circularapp.in/terms',
+  },
 }
 
 export default function TermsOfServicePage() {

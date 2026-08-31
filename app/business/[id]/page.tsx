@@ -21,6 +21,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: 'Business Not Found',
       description: 'The requested local business profile is not available on Circular.',
+      alternates: {
+        canonical: `https://circularapp.in/business/${id}`,
+      },
+      openGraph: {
+        title: 'Business Profile | Circular',
+        description: 'The requested local business profile is not available on Circular.',
+        url: `https://circularapp.in/business/${id}`,
+      },
     }
   }
 

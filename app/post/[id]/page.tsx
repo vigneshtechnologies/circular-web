@@ -21,6 +21,14 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     return {
       title: 'Post Not Found',
       description: 'The requested community post is not available on Circular.',
+      alternates: {
+        canonical: `https://circularapp.in/post/${id}`,
+      },
+      openGraph: {
+        title: 'Community Post | Circular',
+        description: 'The requested community post is not available on Circular.',
+        url: `https://circularapp.in/post/${id}`,
+      },
     }
   }
 
