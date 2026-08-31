@@ -1,18 +1,21 @@
 'use client'
 
-import { getUserCommunityLocation } from '@/lib/locationUtils'
-
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
+import { CircularHeader } from '@/components/circular-header'
+import { CircularFooter } from '@/components/circular-footer'
+import { OpenInCircularBanner } from '@/components/public/open-in-circular-banner'
+import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { ref, get, query, limitToLast, push, set } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { NeedPost } from '@/lib/types'
 import { HandHeart, MapPin, PlusCircle, Search, Sparkles, X, AlertTriangle } from 'lucide-react'
 
 export default function NeedsPage() {
+  const router = useRouter()
   const { user, userProfile, loading } = useAuth()
   const [needs, setNeeds] = useState<NeedPost[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -33,8 +36,8 @@ export default function NeedsPage() {
   const fetchNeeds = async () => {
     setDataLoading(true)
     try {
-      const snap = await get(query(ref(db, 'needPosts'), limitToLast(50)))
-      if (snap.exists()) {
+      const snap = await get(query(ref(db, 'needPosts'), limitToLast(50))).catch(() => null)
+      if (snap && snap.exists()) {
         const list: NeedPost[] = []
         snap.forEach((c) => {
           list.push({ id: c.key as string, ...c.val() })
@@ -49,9 +52,8 @@ export default function NeedsPage() {
   }
 
   useEffect(() => {
-    if (!user) return
     fetchNeeds()
-  }, [user])
+  }, [])
 
   const handleCreateNeed = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -93,10 +95,6 @@ export default function NeedsPage() {
     )
   }
 
-  if (!user) {
-    return <AuthPortal />
-  }
-
   const filtered = needs.filter((n) => {
     const matchesUrg = selectedUrgency === 'All' || n.urgency === selectedUrgency
     const matchesQ =
@@ -107,8 +105,10 @@ export default function NeedsPage() {
     return matchesUrg && matchesQ
   })
 
-  return (
-    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
+  const displayArea = getUserCommunityLocation(userProfile)
+
+  const content = (
+    <>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
@@ -119,14 +119,14 @@ export default function NeedsPage() {
             <div>
               <h1 className="text-base font-extrabold text-navy">Need Board</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
-                Ask neighbors for help, items, recommendations or services
+                Ask neighbors for help, items, recommendations or services in {displayArea}
               </p>
             </div>
           </div>
 
           <button
             type="button"
-            onClick={() => setIsPostNeedOpen(true)}
+            onClick={() => (user ? setIsPostNeedOpen(true) : router.push('/login'))}
             className="flex items-center gap-1.5 rounded-xl bg-pink-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-pink-700"
           >
             <PlusCircle className="size-4" />
@@ -311,6 +311,23 @@ export default function NeedsPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </>
+  )
+
+  if (user) {
+    return <AppShell currentArea={displayArea}>{content}</AppShell>
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
+      <CircularHeader />
+      <main className="flex-1">
+        {content}
+        <div className="mx-auto max-w-2xl px-4 pb-12 md:px-6">
+          <OpenInCircularBanner path="/needs" title="Need Board" />
+        </div>
+      </main>
+      <CircularFooter />
+    </div>
   )
 }

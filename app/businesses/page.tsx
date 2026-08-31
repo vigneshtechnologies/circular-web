@@ -4,8 +4,10 @@ import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
-import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
+import { CircularHeader } from '@/components/circular-header'
+import { CircularFooter } from '@/components/circular-footer'
+import { OpenInCircularBanner } from '@/components/public/open-in-circular-banner'
 import { ref, get } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { BusinessProfile } from '@/lib/types'
@@ -36,8 +38,6 @@ export default function BusinessesPage() {
   const [dataLoading, setDataLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) return
-
     let isMounted = true
 
     const loadBusinesses = async () => {
@@ -88,10 +88,6 @@ export default function BusinessesPage() {
     )
   }
 
-  if (!user) {
-    return <AuthPortal />
-  }
-
   const q = searchQuery.toLowerCase().trim()
   const selCat = selectedCategory.toLowerCase().trim()
 
@@ -121,8 +117,8 @@ export default function BusinessesPage() {
 
   const displayArea = getUserCommunityLocation(userProfile)
 
-  return (
-    <AppShell currentArea={displayArea}>
+  const content = (
+    <>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
@@ -266,6 +262,23 @@ export default function BusinessesPage() {
           </div>
         )}
       </div>
-    </AppShell>
+    </>
+  )
+
+  if (user) {
+    return <AppShell currentArea={displayArea}>{content}</AppShell>
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
+      <CircularHeader />
+      <main className="flex-1">
+        {content}
+        <div className="mx-auto max-w-2xl px-4 pb-12 md:px-6">
+          <OpenInCircularBanner path="/businesses" title="Business Directory" />
+        </div>
+      </main>
+      <CircularFooter />
+    </div>
   )
 }

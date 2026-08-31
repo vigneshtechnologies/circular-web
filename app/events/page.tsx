@@ -1,18 +1,21 @@
 'use client'
 
-import { getUserCommunityLocation } from '@/lib/locationUtils'
-
 import React, { useState, useEffect } from 'react'
 import Link from 'next/link'
+import { useRouter } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
-import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
+import { CircularHeader } from '@/components/circular-header'
+import { CircularFooter } from '@/components/circular-footer'
+import { OpenInCircularBanner } from '@/components/public/open-in-circular-banner'
+import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { ref, get, query, limitToLast, push, set } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { CommunityEvent } from '@/lib/types'
 import { Calendar, MapPin, PlusCircle, Search, Sparkles, X, Clock } from 'lucide-react'
 
 export default function EventsPage() {
+  const router = useRouter()
   const { user, userProfile, loading } = useAuth()
   const [events, setEvents] = useState<CommunityEvent[]>([])
   const [searchQuery, setSearchQuery] = useState('')
@@ -31,8 +34,8 @@ export default function EventsPage() {
   const fetchEvents = async () => {
     setDataLoading(true)
     try {
-      const snap = await get(query(ref(db, 'events'), limitToLast(50)))
-      if (snap.exists()) {
+      const snap = await get(query(ref(db, 'events'), limitToLast(50))).catch(() => null)
+      if (snap && snap.exists()) {
         const list: CommunityEvent[] = []
         snap.forEach((c) => {
           list.push({ id: c.key as string, ...c.val() })
@@ -47,9 +50,8 @@ export default function EventsPage() {
   }
 
   useEffect(() => {
-    if (!user) return
     fetchEvents()
-  }, [user])
+  }, [])
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -92,17 +94,15 @@ export default function EventsPage() {
     )
   }
 
-  if (!user) {
-    return <AuthPortal />
-  }
-
   const filtered = events.filter((ev) => {
     const q = searchQuery.toLowerCase().trim()
     return !q || ev.title?.toLowerCase().includes(q) || ev.venue?.toLowerCase().includes(q) || ev.description?.toLowerCase().includes(q)
   })
 
-  return (
-    <AppShell currentArea={getUserCommunityLocation(userProfile)}>
+  const displayArea = getUserCommunityLocation(userProfile)
+
+  const content = (
+    <>
       {/* Header */}
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
@@ -113,14 +113,14 @@ export default function EventsPage() {
             <div>
               <h1 className="text-base font-extrabold text-navy">Community Events</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
-                Workshops, exhibitions, cultural &amp; local gatherings
+                Workshops, exhibitions, cultural &amp; local gatherings in {displayArea}
               </p>
             </div>
           </div>
 
           <button
             type="button"
-            onClick={() => setIsCreateEventOpen(true)}
+            onClick={() => (user ? setIsCreateEventOpen(true) : router.push('/login'))}
             className="flex items-center gap-1.5 rounded-xl bg-purple-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:bg-purple-700"
           >
             <PlusCircle className="size-4" />
@@ -279,6 +279,23 @@ export default function EventsPage() {
           </div>
         </div>
       )}
-    </AppShell>
+    </>
+  )
+
+  if (user) {
+    return <AppShell currentArea={displayArea}>{content}</AppShell>
+  }
+
+  return (
+    <div className="min-h-screen bg-background text-foreground flex flex-col justify-between">
+      <CircularHeader />
+      <main className="flex-1">
+        {content}
+        <div className="mx-auto max-w-2xl px-4 pb-12 md:px-6">
+          <OpenInCircularBanner path="/events" title="Community Events" />
+        </div>
+      </main>
+      <CircularFooter />
+    </div>
   )
 }

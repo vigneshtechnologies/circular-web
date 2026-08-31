@@ -3,7 +3,7 @@ import Link from 'next/link'
 import { ArrowLeft, ShieldCheck, FileText, Mail, MapPin } from 'lucide-react'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service | Circular – Local Social & Business',
+  title: 'Terms of Service',
   description:
     'Terms of Service and User Agreement for Circular – Local Social & Business platform, operated by Vignesh Technologies.',
   alternates: {
