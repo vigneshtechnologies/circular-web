@@ -38,8 +38,12 @@ export function RightSidebar({
       setLoadingBiz(true)
       setBizError(null)
       try {
-        const bSnap = await get(query(ref(db, 'businessProfiles'), limitToLast(8)))
-        if (isMounted && bSnap.exists()) {
+        let bSnap = await get(query(ref(db, 'businesses'), limitToLast(8))).catch(() => null)
+        if (!bSnap || !bSnap.exists()) {
+          bSnap = await get(query(ref(db, 'businessProfiles'), limitToLast(8))).catch(() => null)
+        }
+
+        if (isMounted && bSnap && bSnap.exists()) {
           const list: BusinessProfile[] = []
           bSnap.forEach((child) => {
             const val = child.val()
@@ -103,17 +107,17 @@ export function RightSidebar({
   return (
     <aside className="sticky top-0 hidden h-screen w-80 flex-col gap-4 overflow-y-auto border-l border-border bg-card p-4 xl:flex">
       {/* Nearby Businesses Widget (Starts Naturally at Top) */}
-      <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-border pb-2.5">
           <div className="flex items-center gap-2">
-            <Store className="size-4 text-purple-600" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-navy">
+            <Store className="size-4 text-purple-600 dark:text-purple-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
               Local Businesses
             </h3>
           </div>
           <Link
             href="/businesses"
-            className="text-[11px] font-semibold text-primary hover:underline"
+            className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline"
           >
             View all
           </Link>
@@ -122,7 +126,7 @@ export function RightSidebar({
         <div className="mt-3 flex flex-col gap-3">
           {loadingBiz ? (
             <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-2">
-              <Loader2 className="size-3.5 animate-spin text-primary" />
+              <Loader2 className="size-3.5 animate-spin text-purple-600" />
               <span>Loading businesses...</span>
             </div>
           ) : bizError ? (
@@ -135,7 +139,7 @@ export function RightSidebar({
           ) : (
             businesses.map((b) => {
               const photo =
-                getBusinessPhoto(b, photosRecord, publicProfiles) || '/circular-logo.png'
+                getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
               const hasRating = typeof b.rating === 'number' && b.rating > 0
               const isRecent = b.createdAt && Date.now() - b.createdAt < 14 * 24 * 60 * 60 * 1000
               const bizName = b.name || (b as any).businessName || 'Local Business'
@@ -158,7 +162,7 @@ export function RightSidebar({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
-                        <span className="truncate text-xs font-bold text-navy group-hover:text-primary">
+                        <span className="truncate text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                           {bizName}
                         </span>
                         {b.isVerified && (
@@ -177,13 +181,13 @@ export function RightSidebar({
                         ) : isRecent ? (
                           <>
                             <span>•</span>
-                            <span className="text-[10px] font-bold text-emerald-600 shrink-0">New</span>
+                            <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 shrink-0">New</span>
                           </>
                         ) : null}
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="size-4 text-muted-foreground group-hover:text-primary shrink-0 ml-1" />
+                  <ChevronRight className="size-4 text-muted-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400 shrink-0 ml-1" />
                 </Link>
               )
             })
@@ -192,17 +196,17 @@ export function RightSidebar({
       </div>
 
       {/* Community Needs Widget */}
-      <div className="rounded-2xl border border-border bg-background p-4 shadow-sm">
+      <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-border pb-2.5">
           <div className="flex items-center gap-2">
-            <HandHeart className="size-4 text-pink-600" />
-            <h3 className="text-xs font-bold uppercase tracking-wider text-navy">
+            <HandHeart className="size-4 text-pink-600 dark:text-pink-400" />
+            <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
               Active Needs
             </h3>
           </div>
           <Link
             href="/needs"
-            className="text-[11px] font-semibold text-primary hover:underline"
+            className="text-[11px] font-semibold text-pink-600 dark:text-pink-400 hover:underline"
           >
             View all
           </Link>
@@ -211,7 +215,7 @@ export function RightSidebar({
         <div className="mt-3 flex flex-col gap-2.5">
           {loadingNeeds ? (
             <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-2">
-              <Loader2 className="size-3.5 animate-spin text-primary" />
+              <Loader2 className="size-3.5 animate-spin text-pink-600" />
               <span>Loading needs...</span>
             </div>
           ) : needs.length === 0 ? (
@@ -221,15 +225,15 @@ export function RightSidebar({
               <Link
                 key={n.id}
                 href={`/need/${n.id}`}
-                className="group rounded-xl border border-border/60 bg-card p-2.5 transition-colors hover:border-primary/40 hover:bg-muted"
+                className="group rounded-xl border border-border/60 bg-muted/30 p-2.5 transition-colors hover:border-pink-500/40 hover:bg-muted"
               >
                 <div className="flex items-center justify-between text-[10px]">
                   <span className="font-semibold text-muted-foreground">{n.userName || 'Neighbor'}</span>
-                  <span className="rounded-full bg-pink-500/10 px-2 py-0.5 font-bold text-pink-600">
+                  <span className="rounded-full bg-pink-500/10 px-2 py-0.5 font-bold text-pink-600 dark:text-pink-400">
                     {n.urgency || 'Open'}
                   </span>
                 </div>
-                <h4 className="mt-1 text-xs font-bold text-navy group-hover:text-primary line-clamp-1">
+                <h4 className="mt-1 text-xs font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 line-clamp-1">
                   {n.title}
                 </h4>
                 <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
@@ -242,9 +246,9 @@ export function RightSidebar({
       </div>
 
       {/* Download Android App Promo */}
-      <div className="rounded-2xl border border-navy/20 bg-navy p-4 text-white shadow-md">
+      <div className="rounded-2xl border border-border bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 p-4 text-white shadow-md">
         <div className="flex items-center gap-2">
-          <Smartphone className="size-5 text-primary" />
+          <Smartphone className="size-5 text-pink-400" />
           <span className="text-xs font-black uppercase tracking-wider">Circular Android</span>
         </div>
         <p className="mt-2 text-xs leading-relaxed text-slate-300">
@@ -254,7 +258,7 @@ export function RightSidebar({
           href="https://play.google.com/store/apps/details?id=com.vigneshtechnologies.circular"
           target="_blank"
           rel="noopener noreferrer"
-          className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-blue-600 py-2 text-xs font-bold text-white shadow transition-all hover:bg-blue-700"
+          className="mt-3 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 py-2 text-xs font-bold text-white shadow transition-all hover:opacity-95 active:scale-[0.98]"
         >
           <Smartphone className="size-3.5" />
           <span>Get on Google Play</span>

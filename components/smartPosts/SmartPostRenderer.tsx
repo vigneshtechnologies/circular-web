@@ -159,7 +159,7 @@ export function SmartPostRenderer({ postId, smart, compact = false }: SmartPostR
                         }
                       }
                     }}
-                    className={`px-3 py-2 font-bold text-navy select-none ${
+                    className={`px-3 py-2 font-bold text-slate-900 dark:text-white select-none ${
                       col.sortable !== false ? 'cursor-pointer hover:bg-muted' : ''
                     }`}
                   >
@@ -264,7 +264,7 @@ export function SmartPostRenderer({ postId, smart, compact = false }: SmartPostR
             style={{ width: `${percentage}%` }}
           />
         </div>
-        <div className="flex items-center justify-between text-xs font-bold text-navy">
+        <div className="flex items-center justify-between text-xs font-bold text-slate-900 dark:text-white">
           <span>
             {current.toLocaleString('en-IN')} / {target.toLocaleString('en-IN')} {unit}
           </span>
@@ -305,7 +305,7 @@ export function SmartPostRenderer({ postId, smart, compact = false }: SmartPostR
           <IconComponent className="size-4" />
         </div>
         <div className="min-w-0 flex-1">
-          <h3 className="text-sm font-bold text-navy truncate">{smart.title}</h3>
+          <h3 className="text-sm font-bold text-slate-900 dark:text-white truncate">{smart.title}</h3>
           {smart.template !== 'notice' && smart.description && (
             <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{smart.description}</p>
           )}

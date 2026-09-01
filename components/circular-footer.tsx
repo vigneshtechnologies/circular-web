@@ -13,7 +13,7 @@ const ACCOUNT_DELETION_URL =
 
 export function CircularFooter() {
   return (
-    <footer className="border-t border-border bg-navy text-navy-foreground">
+    <footer className="border-t border-border bg-navy text-slate-900 dark:text-white-foreground">
       <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand Col */}
@@ -31,12 +31,12 @@ export function CircularFooter() {
                 <span className="text-xl font-black tracking-tight text-white">
                   Circular
                 </span>
-                <span className="block text-[10px] font-semibold uppercase tracking-wider text-navy-foreground/70">
+                <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-900 dark:text-white-foreground/70">
                   Local Social &amp; Business
                 </span>
               </div>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-navy-foreground/70">
+            <p className="mt-4 text-sm leading-relaxed text-slate-900 dark:text-white-foreground/70">
               Discover nearby shops, events, jobs, offers, and connect with your neighborhood on Circular.
             </p>
             <div className="mt-6">
@@ -55,7 +55,7 @@ export function CircularFooter() {
           {/* Discovery Links */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">Discovery</h3>
-            <ul className="mt-4 flex flex-col gap-2.5 text-sm text-navy-foreground/70">
+            <ul className="mt-4 flex flex-col gap-2.5 text-sm text-slate-900 dark:text-white-foreground/70">
               <li>
                 <Link href="/" className="transition-colors hover:text-white">
                   Home
@@ -87,7 +87,7 @@ export function CircularFooter() {
           {/* Legal & Safety */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">Legal &amp; Safety</h3>
-            <ul className="mt-4 flex flex-col gap-2.5 text-sm text-navy-foreground/70">
+            <ul className="mt-4 flex flex-col gap-2.5 text-sm text-slate-900 dark:text-white-foreground/70">
               <li>
                 <Link href="/terms" className="transition-colors hover:text-white">
                   Terms of Service
@@ -127,7 +127,7 @@ export function CircularFooter() {
                 <a
                   href="/.well-known/assetlinks.json"
                   target="_blank"
-                  className="text-xs text-navy-foreground/50 hover:text-white"
+                  className="text-xs text-slate-900 dark:text-white-foreground/50 hover:text-white"
                 >
                   Digital Asset Links
                 </a>
@@ -138,7 +138,7 @@ export function CircularFooter() {
           {/* Contact */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">Contact &amp; Support</h3>
-            <ul className="mt-4 flex flex-col gap-3 text-sm text-navy-foreground/70">
+            <ul className="mt-4 flex flex-col gap-3 text-sm text-slate-900 dark:text-white-foreground/70">
               <li className="flex items-start gap-2.5">
                 <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
                 <span>Rajapalayam, Tamil Nadu, India</span>
@@ -161,7 +161,7 @@ export function CircularFooter() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-navy-foreground/10 pt-6 text-xs text-navy-foreground/60 sm:flex-row">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-navy-foreground/10 pt-6 text-xs text-slate-900 dark:text-white-foreground/60 sm:flex-row">
           <p>&copy; {new Date().getFullYear()} Circular • Vignesh Technologies. All rights reserved.</p>
           <div className="flex items-center gap-1">
             <span>Made with</span>

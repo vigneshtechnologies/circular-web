@@ -103,7 +103,7 @@ export default async function PublicNeedPage({ params }: Props) {
             <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-muted text-muted-foreground">
               <HandHeart className="size-8" />
             </div>
-            <h1 className="mt-4 text-xl font-bold text-navy">Need Request Not Found</h1>
+            <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Need Request Not Found</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               This community request does not exist, has been resolved, or was closed.
             </p>
@@ -122,16 +122,23 @@ export default async function PublicNeedPage({ params }: Props) {
     )
   }
 
+  const authorUrl = need.requesterId ? `https://circularapp.in/user/${need.requesterId}` : undefined
+
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Article',
     headline: need.title,
     articleBody: need.description || '',
     url: `https://circularapp.in/need/${id}`,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://circularapp.in/need/${id}`,
+    },
     datePublished: need.createdAt ? new Date(need.createdAt).toISOString() : undefined,
     author: {
       '@type': 'Person',
       name: need.requesterName || 'Community Member',
+      ...(authorUrl ? { url: authorUrl } : {}),
     },
     publisher: {
       '@type': 'Organization',
@@ -199,7 +206,7 @@ export default async function PublicNeedPage({ params }: Props) {
                   <HandHeart className="size-3.5" />
                   <span>Need Board • {need.urgency}</span>
                 </div>
-                <h1 className="mt-3 text-2xl font-bold text-navy">{need.title}</h1>
+                <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">{need.title}</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="size-3.5 text-primary" />
@@ -220,7 +227,7 @@ export default async function PublicNeedPage({ params }: Props) {
             </div>
 
             <div className="py-6">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-navy">Request Details</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Request Details</h2>
               <p className="mt-2 text-sm leading-relaxed text-foreground sm:text-base whitespace-pre-line">
                 {need.description}
               </p>

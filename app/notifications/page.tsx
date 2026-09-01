@@ -95,11 +95,11 @@ export default function NotificationsPage() {
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3.5 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
               <Bell className="size-5" />
             </div>
             <div>
-              <h1 className="text-base font-extrabold text-navy">Notifications</h1>
+              <h1 className="text-base font-extrabold text-slate-900 dark:text-white">Notifications</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
                 Stay updated with your local community activities
               </p>
@@ -122,8 +122,10 @@ export default function NotificationsPage() {
           <button
             type="button"
             onClick={() => setFilter('all')}
-            className={`rounded-xl px-3 py-1 text-xs font-semibold ${
-              filter === 'all' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+            className={`rounded-xl px-3 py-1 text-xs font-semibold transition-all ${
+              filter === 'all'
+                ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-sm font-bold'
+                : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted'
             }`}
           >
             All ({notifications.length})
@@ -131,8 +133,10 @@ export default function NotificationsPage() {
           <button
             type="button"
             onClick={() => setFilter('unread')}
-            className={`rounded-xl px-3 py-1 text-xs font-semibold ${
-              filter === 'unread' ? 'bg-primary text-white' : 'bg-muted text-muted-foreground'
+            className={`rounded-xl px-3 py-1 text-xs font-semibold transition-all ${
+              filter === 'unread'
+                ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-sm font-bold'
+                : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted'
             }`}
           >
             Unread ({notifications.filter((n) => !n.read).length})
@@ -143,10 +147,10 @@ export default function NotificationsPage() {
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-2.5">
         {filtered.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
               <Bell className="size-6" />
             </div>
-            <h3 className="mt-3 text-base font-bold text-navy">No notifications</h3>
+            <h3 className="mt-3 text-base font-bold text-slate-900 dark:text-white">No notifications</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               You're all caught up with your updates!
             </p>
@@ -184,7 +188,7 @@ export default function NotificationsPage() {
                     />
                   </div>
                   <div className="min-w-0 flex-1">
-                    <h4 className="text-xs font-bold text-navy">{n.title}</h4>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">{n.title}</h4>
                     <p className="text-xs leading-relaxed text-foreground/80">{n.message}</p>
                     <span className="mt-1 block text-[10px] text-muted-foreground">
                       {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}

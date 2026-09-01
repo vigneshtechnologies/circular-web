@@ -36,7 +36,7 @@ export default function CircularLandingPage() {
                   <span>Circular 2.0 Web &amp; Android</span>
                 </div>
 
-                <h1 className="text-3xl font-black tracking-tight text-navy sm:text-5xl sm:leading-tight">
+                <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white sm:text-5xl sm:leading-tight">
                   Your Neighborhood.{' '}
                   <span className="bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
                     Connected &amp; Thriving.
@@ -81,7 +81,7 @@ export default function CircularLandingPage() {
                       />
                     </div>
                     <div>
-                      <h3 className="font-extrabold text-navy text-base">Circular Local Feed</h3>
+                      <h3 className="font-extrabold text-slate-900 dark:text-white text-base">Circular Local Feed</h3>
                       <p className="text-xs text-muted-foreground flex items-center gap-1">
                         <MapPin className="size-3 text-primary" /> Within 25 km of your location
                       </p>
@@ -119,7 +119,7 @@ export default function CircularLandingPage() {
           <div className="mx-auto max-w-6xl px-4 md:px-6">
             <div className="text-center max-w-2xl mx-auto mb-16 space-y-3">
               <h2 className="text-xs font-bold uppercase tracking-wider text-primary">Key Capabilities</h2>
-              <p className="text-2xl sm:text-4xl font-black text-navy">Built for Hyperlocal Communities</p>
+              <p className="text-2xl sm:text-4xl font-black text-slate-900 dark:text-white">Built for Hyperlocal Communities</p>
               <p className="text-sm text-muted-foreground">
                 Everything you need to discover, interact, and grow locally.
               </p>
@@ -130,7 +130,7 @@ export default function CircularLandingPage() {
                 <div className="size-10 rounded-xl bg-blue-500/10 text-blue-600 flex items-center justify-center">
                   <Compass className="size-5" />
                 </div>
-                <h3 className="font-bold text-navy text-base">Radius-Based Filtering</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">Radius-Based Filtering</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Filter posts and stories precisely within 1 km, 3 km, 5 km, 10 km, or 25 km from your current GPS position.
                 </p>
@@ -140,7 +140,7 @@ export default function CircularLandingPage() {
                 <div className="size-10 rounded-xl bg-purple-500/10 text-purple-600 flex items-center justify-center">
                   <Store className="size-5" />
                 </div>
-                <h3 className="font-bold text-navy text-base">Business Directory</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">Business Directory</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Discover verified neighborhood shops, service providers, galleries, and read genuine reviews from local patrons.
                 </p>
@@ -150,7 +150,7 @@ export default function CircularLandingPage() {
                 <div className="size-10 rounded-xl bg-emerald-500/10 text-emerald-600 flex items-center justify-center">
                   <MessageSquare className="size-5" />
                 </div>
-                <h3 className="font-bold text-navy text-base">Direct Chat &amp; Oversight</h3>
+                <h3 className="font-bold text-slate-900 dark:text-white text-base">Direct Chat &amp; Oversight</h3>
                 <p className="text-xs text-muted-foreground leading-relaxed">
                   Connect instantly with business owners and community members with secure real-time messaging.
                 </p>

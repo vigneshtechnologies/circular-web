@@ -1,26 +1,62 @@
 @import "tailwindcss";
 
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
   --color-primary-foreground: #ffffff;
-  --color-navy: #0f172a;
-  --color-border: #e2e8f0;
-  --color-card: #ffffff;
-  --color-muted: #f1f5f9;
-  --color-muted-foreground: #64748b;
-  --color-foreground: #0f172a;
+  --color-navy: var(--color-foreground);
+  --color-border: var(--border-color);
+  --color-card: var(--card-bg);
+  --color-muted: var(--muted-bg);
+  --color-muted-foreground: var(--muted-fg);
+  --color-foreground: var(--fg-color);
+  --color-background: var(--bg-color);
+  --color-purple: #8b5cf6;
+  --color-pink: #ec4899;
+  --color-orange: #f97316;
+  --color-emerald: #10b981;
+  --color-amber: #f59e0b;
+  --color-teal: #06b6d4;
+  --color-sky: #0284c7;
+  --color-rose: #f43f5e;
+  --color-indigo: #6366f1;
+  --color-violet: #7c3aed;
+}
+
+:root {
+  --border-color: #e2e8f0;
+  --card-bg: #ffffff;
+  --muted-bg: #f8fafc;
+  --muted-fg: #64748b;
+  --fg-color: #0f172a;
+  --bg-color: #f8fafc;
+}
+
+.dark {
+  --border-color: #1e293b;
+  --card-bg: #111827;
+  --muted-bg: #1e293b;
+  --muted-fg: #94a3b8;
+  --fg-color: #f8fafc;
+  --bg-color: #0b0f17;
 }
 
 @layer base {
   * {
-    border-color: #e2e8f0;
+    border-color: var(--border-color);
   }
   html {
     overflow-y: scroll;
+    color-scheme: light;
+  }
+  html.dark {
+    color-scheme: dark;
   }
   body {
-    background-color: #ffffff;
-    color: #0f172a;
+    background-color: var(--bg-color);
+    color: var(--fg-color);
   }
 }
 

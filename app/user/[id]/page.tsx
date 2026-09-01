@@ -275,7 +275,7 @@ export default function UserProfilePage({ params }: PageProps) {
           <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-muted text-muted-foreground">
             <User className="size-8" />
           </div>
-          <h2 className="mt-4 text-lg font-black text-navy">User Not Found</h2>
+          <h2 className="mt-4 text-lg font-black text-slate-900 dark:text-white">User Not Found</h2>
           <p className="mt-1 text-xs text-muted-foreground">
             This profile does not exist or may have been deactivated.
           </p>
@@ -301,8 +301,8 @@ export default function UserProfilePage({ params }: PageProps) {
 
   return (
     <AppShell currentArea={locality}>
-      {/* Top Header Banner */}
-      <div className="relative h-36 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 md:h-48">
+      {/* Top Header Banner (Refined Accent Banner) */}
+      <div className="relative h-24 sm:h-28 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600">
         <div className="absolute top-4 left-4 z-10 md:hidden">
           <Link
             href="/"
@@ -315,14 +315,14 @@ export default function UserProfilePage({ params }: PageProps) {
 
       <div className="mx-auto max-w-3xl px-4 md:px-6">
         {/* Profile Card Header */}
-        <div className="relative -mt-16 rounded-3xl border border-border bg-card p-6 shadow-lg">
+        <div className="relative -mt-12 rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-md">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
               {/* Profile Avatar (Clickable to Lightbox) */}
               <button
                 type="button"
                 onClick={() => setImageViewerSrc(avatarUrl)}
-                className="group relative size-24 shrink-0 overflow-hidden rounded-3xl bg-primary/10 ring-4 ring-card shadow-xl focus:outline-none"
+                className="group relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-2xl sm:rounded-3xl bg-primary/10 ring-4 ring-card shadow-lg focus:outline-none"
                 title="View profile photo"
               >
                 <Image
@@ -335,7 +335,7 @@ export default function UserProfilePage({ params }: PageProps) {
 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h1 className="text-xl font-black tracking-tight text-navy truncate">{displayName}</h1>
+                  <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white truncate">{displayName}</h1>
                   {profile.businessTrustLabel && (
                     <span className="flex items-center gap-1 rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
                       <Shield className="size-3" />
@@ -426,15 +426,15 @@ export default function UserProfilePage({ params }: PageProps) {
           {/* Follower & Following Stats */}
           <div className="mt-5 flex items-center gap-6 border-t border-border pt-4 text-xs">
             <div>
-              <span className="font-black text-navy">{userPosts.length}</span>{' '}
+              <span className="font-black text-slate-900 dark:text-white">{userPosts.length}</span>{' '}
               <span className="text-muted-foreground">Posts</span>
             </div>
             <div>
-              <span className="font-black text-navy">{followersCount}</span>{' '}
+              <span className="font-black text-slate-900 dark:text-white">{followersCount}</span>{' '}
               <span className="text-muted-foreground">Followers</span>
             </div>
             <div>
-              <span className="font-black text-navy">{followingCount}</span>{' '}
+              <span className="font-black text-slate-900 dark:text-white">{followingCount}</span>{' '}
               <span className="text-muted-foreground">Following</span>
             </div>
           </div>
@@ -481,7 +481,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <Sparkles className="size-6" />
                 </div>
-                <h3 className="text-sm font-bold text-navy">No public posts yet</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-white">No public posts yet</h3>
                 <p className="text-xs text-muted-foreground">
                   {displayName} hasn't posted any updates to the community yet.
                 </p>
@@ -511,7 +511,7 @@ export default function UserProfilePage({ params }: PageProps) {
                     <Image src={b.logoUrl || b.imageUrl || '/circular-logo.png'} alt={b.name} fill className="object-cover" />
                   </div>
                   <div className="min-w-0">
-                    <h4 className="text-xs font-bold text-navy truncate">{b.name}</h4>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{b.name}</h4>
                     <p className="text-[11px] text-muted-foreground truncate">{b.category}</p>
                     {b.area && <p className="text-[10px] text-muted-foreground truncate">{b.area}</p>}
                   </div>

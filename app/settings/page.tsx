@@ -32,7 +32,7 @@ export default function SettingsPage() {
             <Settings className="size-5" />
           </div>
           <div>
-            <h1 className="text-base font-extrabold text-navy">Settings</h1>
+            <h1 className="text-base font-extrabold text-slate-900 dark:text-white">Settings</h1>
             <p className="text-[11px] font-semibold text-muted-foreground">
               Account preferences, privacy &amp; application info
             </p>
@@ -46,7 +46,7 @@ export default function SettingsPage() {
           <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Account</h2>
           <div className="flex items-center justify-between text-xs">
             <div>
-              <p className="font-bold text-navy">{userProfile?.name || 'Member'}</p>
+              <p className="font-bold text-slate-900 dark:text-white">{userProfile?.name || 'Member'}</p>
               <p className="text-muted-foreground">{user.email}</p>
             </div>
             <Link

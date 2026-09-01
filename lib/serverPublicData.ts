@@ -1,4 +1,4 @@
-﻿import 'server-only'
+import 'server-only'
 import { getAdminDb } from './firebaseAdmin'
 
 // 1. Types for Sanitized Public Data
@@ -25,6 +25,9 @@ export interface PublicPostData {
   smart?: any
   authorName: string
   authorAvatar?: string
+  authorId?: string
+  businessId?: string
+  hasBusinessProfile?: boolean
   createdAt?: number
 }
 
@@ -50,6 +53,7 @@ export interface PublicEventData {
   description: string
   imageUrl?: string
   organizerName?: string
+  organizerId?: string
   createdAt?: number
 }
 
@@ -61,6 +65,7 @@ export interface PublicNeedData {
   area: string
   description: string
   requesterName?: string
+  requesterId?: string
   createdAt?: number
 }
 
@@ -134,6 +139,10 @@ export async function getPublicPost(id: string): Promise<PublicPostData | null> 
       images.push(data.imageUrl)
     }
 
+    const authorId = data.userId || data.uid || data.authorId || undefined
+    const businessId = data.businessId || undefined
+    const hasBusinessProfile = Boolean(data.hasBusinessProfile || data.businessId)
+
     return {
       id,
       text: String(data.text || data.content || '').trim(),
@@ -142,8 +151,11 @@ export async function getPublicPost(id: string): Promise<PublicPostData | null> 
       images,
       postType: String(data.postType || 'normal'),
       smart: data.smart || undefined,
-      authorName: String(data.authorName || data.userName || 'Community Member').trim(),
+      authorName: String(data.authorName || data.userName || (hasBusinessProfile && data.businessName ? data.businessName : 'Community Member')).trim(),
       authorAvatar: data.authorAvatar || data.userAvatar || undefined,
+      authorId: authorId ? String(authorId).trim() : undefined,
+      businessId: businessId ? String(businessId).trim() : undefined,
+      hasBusinessProfile,
       createdAt: typeof data.createdAt === 'number' ? data.createdAt : undefined,
     }
   } catch (err) {
@@ -204,12 +216,15 @@ export async function getPublicEvent(id: string): Promise<PublicEventData | null
           description: postVal.event?.description || postVal.text || '',
           imageUrl: postVal.imageUrl || (postVal.imageUrls && postVal.imageUrls[0]) || '',
           organizerName: postVal.authorName || postVal.userName || 'Community Organizer',
+          organizerId: postVal.userId || postVal.uid || postVal.authorId || undefined,
           createdAt: postVal.createdAt,
         }
       }
     }
 
     if (!data || data.isRestricted || data.isDeleted || data.status === 'cancelled') return null
+
+    const organizerId = data.organizerId || data.createdBy || data.userId || data.uid || undefined
 
     return {
       id,
@@ -221,6 +236,7 @@ export async function getPublicEvent(id: string): Promise<PublicEventData | null
       description: String(data.description || '').trim(),
       imageUrl: data.imageUrl || undefined,
       organizerName: data.organizerName ? String(data.organizerName).trim() : undefined,
+      organizerId: organizerId ? String(organizerId).trim() : undefined,
       createdAt: typeof data.createdAt === 'number' ? data.createdAt : undefined,
     }
   } catch (err) {
@@ -240,6 +256,8 @@ export async function getPublicNeed(id: string): Promise<PublicNeedData | null> 
     const data = snap.val()
     if (data.isRestricted || data.isDeleted || data.status === 'closed') return null
 
+    const requesterId = data.userId || data.uid || data.requesterId || undefined
+
     return {
       id,
       title: String(data.title || 'Community Need Request').trim(),
@@ -248,6 +266,7 @@ export async function getPublicNeed(id: string): Promise<PublicNeedData | null> 
       area: String(data.area || 'Local Community').trim(),
       description: String(data.description || '').trim(),
       requesterName: data.userName || data.requesterName || undefined,
+      requesterId: requesterId ? String(requesterId).trim() : undefined,
       createdAt: typeof data.createdAt === 'number' ? data.createdAt : undefined,
     }
   } catch (err) {

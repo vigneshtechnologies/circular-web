@@ -117,7 +117,7 @@ export default async function PublicPostPage({ params }: Props) {
             <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-muted text-muted-foreground">
               <Sparkles className="size-8" />
             </div>
-            <h1 className="mt-4 text-xl font-bold text-navy">Community Post Not Found</h1>
+            <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Community Post Not Found</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               This post does not exist, is private, or has been removed.
             </p>
@@ -136,16 +136,36 @@ export default async function PublicPostPage({ params }: Props) {
     )
   }
 
+  const isBusinessAuthor = Boolean(post.hasBusinessProfile && post.businessId)
+  const authorType: 'Person' | 'Organization' = isBusinessAuthor ? 'Organization' : 'Person'
+  const authorUrl = isBusinessAuthor
+    ? `https://circularapp.in/business/${post.businessId}`
+    : post.authorId
+      ? `https://circularapp.in/user/${post.authorId}`
+      : undefined
+
+  const authorProfilePath = isBusinessAuthor
+    ? `/business/${post.businessId}`
+    : post.authorId
+      ? `/user/${post.authorId}`
+      : undefined
+
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'SocialMediaPosting',
-    headline: post.text ? post.text.substring(0, 100) : `Post by ${post.authorName}`,
+    headline: post.text ? (post.text.length > 100 ? `${post.text.substring(0, 100)}...` : post.text) : `Post by ${post.authorName}`,
     articleBody: post.text || '',
     url: `https://circularapp.in/post/${id}`,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://circularapp.in/post/${id}`,
+    },
     datePublished: post.createdAt ? new Date(post.createdAt).toISOString() : undefined,
     author: {
-      '@type': 'Person',
+      '@type': authorType,
       name: post.authorName,
+      ...(authorUrl ? { url: authorUrl } : {}),
+      ...(post.authorAvatar ? { image: post.authorAvatar } : {}),
     },
     publisher: {
       '@type': 'Organization',
@@ -216,16 +236,33 @@ export default async function PublicPostPage({ params }: Props) {
             {/* Header */}
             <div className="flex items-center justify-between border-b border-border pb-4">
               <div className="flex items-center gap-3">
-                <div className="relative size-12 overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/20">
-                  <Image
-                    src={post.authorAvatar || '/circular-logo.png'}
-                    alt={post.authorName}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+                {authorProfilePath ? (
+                  <Link href={authorProfilePath} className="relative size-12 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/20 hover:opacity-90 transition-opacity">
+                    <Image
+                      src={post.authorAvatar || '/circular-logo.png'}
+                      alt={post.authorName}
+                      fill
+                      className="object-cover"
+                    />
+                  </Link>
+                ) : (
+                  <div className="relative size-12 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-2 ring-primary/20">
+                    <Image
+                      src={post.authorAvatar || '/circular-logo.png'}
+                      alt={post.authorName}
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
                 <div>
-                  <h1 className="text-base font-bold text-navy">{post.authorName}</h1>
+                  {authorProfilePath ? (
+                    <Link href={authorProfilePath} className="hover:underline">
+                      <h1 className="text-base font-bold text-slate-900 dark:text-white">{post.authorName}</h1>
+                    </Link>
+                  ) : (
+                    <h1 className="text-base font-bold text-slate-900 dark:text-white">{post.authorName}</h1>
+                  )}
                   <div className="flex items-center gap-2 text-xs text-muted-foreground">
                     <MapPin className="size-3 text-primary" />
                     <span>{post.area}</span>

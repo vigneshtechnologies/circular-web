@@ -36,7 +36,7 @@ export default function TermsOfServicePage() {
             <span className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
               <ShieldCheck className="size-4" />
             </span>
-            <span className="font-bold tracking-tight text-navy">
+            <span className="font-bold tracking-tight text-slate-900 dark:text-white">
               Circular <span className="text-primary">Legal</span>
             </span>
           </div>
@@ -51,7 +51,7 @@ export default function TermsOfServicePage() {
             <FileText className="size-3.5" />
             Official Agreement
           </div>
-          <h1 className="mt-4 text-3xl font-bold tracking-tight text-navy md:text-4xl">
+          <h1 className="mt-4 text-3xl font-bold tracking-tight text-slate-900 dark:text-white md:text-4xl">
             Terms of Service
           </h1>
           <p className="mt-2 text-sm text-muted-foreground">
@@ -62,7 +62,7 @@ export default function TermsOfServicePage() {
         {/* Legal Text Sections */}
         <div className="prose prose-slate max-w-none space-y-8 text-sm leading-relaxed text-muted-foreground md:text-base">
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">1. Acceptance of Terms</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">1. Acceptance of Terms</h2>
             <p className="mt-3">
               Welcome to <strong>Circular – Local Social &amp; Business</strong> (“Circular”, “the Application”, “we”, “us”, or “our”), operated by <strong>Vignesh Technologies</strong>, located in Rajapalayam, Tamil Nadu, India.
             </p>
@@ -72,7 +72,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">2. Eligibility &amp; Account Registration</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">2. Eligibility &amp; Account Registration</h2>
             <p className="mt-3">
               To use Circular, you must be at least 13 years of age (or the minimum legal age required in your region). By registering an account:
             </p>
@@ -85,7 +85,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">3. User Responsibilities &amp; User-Generated Content</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">3. User Responsibilities &amp; User-Generated Content</h2>
             <p className="mt-3">
               Circular enables users to publish content, including posts, text, photos, reviews, comments, listings, and messages (“User Content”).
             </p>
@@ -98,7 +98,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">4. Posts, Comments &amp; Community Interactions</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">4. Posts, Comments &amp; Community Interactions</h2>
             <p className="mt-3">
               Circular provides community feeds to discover local updates, news, and events. When interacting on Circular:
             </p>
@@ -110,7 +110,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">5. Local Business Profiles, Ratings &amp; Reviews</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">5. Local Business Profiles, Ratings &amp; Reviews</h2>
             <p className="mt-3">
               Local business owners and service providers may create and manage Business Profiles to connect with local customers.
             </p>
@@ -123,7 +123,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">6. Local Jobs, Need Board &amp; Community Events</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">6. Local Jobs, Need Board &amp; Community Events</h2>
             <p className="mt-3">
               Circular offers community discovery tools for local opportunities:
             </p>
@@ -135,14 +135,14 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">7. Messaging &amp; In-App Communications</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">7. Messaging &amp; In-App Communications</h2>
             <p className="mt-3">
               Circular offers direct messaging for community and business communication. Direct messaging must not be used for harassment, transmission of unauthorized advertisements, fraud, or offensive materials.
             </p>
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">8. Prohibited Activities</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">8. Prohibited Activities</h2>
             <p className="mt-3">When using Circular, you agree NOT to:</p>
             <ul className="mt-2 list-disc space-y-1.5 pl-5">
               <li>Post content that is illegal, defamatory, hateful, threatening, sexually explicit, fraudulent, or harmful.</li>
@@ -155,7 +155,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">9. Reporting, Moderation &amp; Account Suspension</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">9. Reporting, Moderation &amp; Account Suspension</h2>
             <p className="mt-3">
               Circular provides built-in reporting tools allowing community members to report inappropriate posts, comments, businesses, jobs, and accounts.
             </p>
@@ -165,7 +165,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">10. Account Deletion &amp; Data Removal</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">10. Account Deletion &amp; Data Removal</h2>
             <p className="mt-3">
               Users may request full account deletion at any time directly in the mobile app under <strong>Settings &gt; Account Privacy &gt; Delete Account</strong>.
             </p>
@@ -175,7 +175,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">11. Disclaimers &amp; Limitation of Liability</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">11. Disclaimers &amp; Limitation of Liability</h2>
             <p className="mt-3">
               Circular is provided on an “AS IS” and “AS AVAILABLE” basis without warranties of any kind, whether express or implied.
             </p>
@@ -185,7 +185,7 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">12. Privacy Policy Reference</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">12. Privacy Policy Reference</h2>
             <p className="mt-3">
               Your privacy is important to us. Please review our official{' '}
               <a
@@ -210,18 +210,18 @@ export default function TermsOfServicePage() {
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">13. Modifications to Terms</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">13. Modifications to Terms</h2>
             <p className="mt-3">
               We may revise these Terms of Service periodically. When revisions occur, the “Last Updated” date at the top of this document will be updated. Your continued use of Circular following the posting of revised Terms constitutes your acceptance of the changes.
             </p>
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm md:p-8">
-            <h2 className="text-xl font-bold text-navy">14. Contact Information</h2>
+            <h2 className="text-xl font-bold text-slate-900 dark:text-white">14. Contact Information</h2>
             <p className="mt-3">
               For any questions, legal notices, or feedback regarding these Terms of Service, please contact us:
             </p>
-            <div className="mt-4 flex flex-col gap-2 rounded-xl bg-muted/50 p-4 text-navy">
+            <div className="mt-4 flex flex-col gap-2 rounded-xl bg-muted/50 p-4 text-slate-900 dark:text-white">
               <div className="font-semibold">Vignesh Technologies</div>
               <div className="flex items-center gap-2 text-muted-foreground">
                 <MapPin className="size-4 shrink-0 text-primary" />

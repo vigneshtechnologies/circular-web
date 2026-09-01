@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import Image from 'next/image'
+import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
@@ -258,14 +259,14 @@ export default function CircularRootPage() {
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
               <MapPin className="size-5" />
             </div>
             <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-extrabold text-navy truncate">Home Feed</h1>
+              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">Local Feed</h1>
               <div className="text-[11px] font-semibold text-muted-foreground truncate flex items-center gap-1">
-                <span>Showing posts in</span>
-                <span className="text-primary font-bold">{displayLocation}</span>
+                <span>Showing updates in</span>
+                <span className="text-blue-600 dark:text-blue-400 font-bold">{displayLocation}</span>
               </div>
             </div>
           </div>
@@ -295,10 +296,37 @@ export default function CircularRootPage() {
         {/* Compact Stories / Status Launcher Bar */}
         <StoriesBar />
 
+        {/* Quick Discovery Buttons (Local Jobs, Need Nearby, Bulletin) */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-3 py-0.5">
+          <Link
+            href="/jobs"
+            className="flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-2.5 text-center text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-sm transition-all hover:bg-emerald-500/15 hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            <span className="truncate">Local Jobs</span>
+          </Link>
+
+          <Link
+            href="/needs"
+            className="flex items-center justify-center gap-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-2.5 py-2.5 text-center text-xs font-bold text-amber-600 dark:text-amber-400 shadow-sm transition-all hover:bg-amber-500/15 hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <div className="size-2 rounded-full bg-amber-500 animate-pulse" />
+            <span className="truncate">Need Nearby</span>
+          </Link>
+
+          <Link
+            href="/businesses"
+            className="flex items-center justify-center gap-1.5 rounded-2xl border border-purple-500/20 bg-purple-500/10 px-2.5 py-2.5 text-center text-xs font-bold text-purple-600 dark:text-purple-400 shadow-sm transition-all hover:bg-purple-500/15 hover:scale-[1.01] active:scale-[0.99]"
+          >
+            <div className="size-2 rounded-full bg-purple-500 animate-pulse" />
+            <span className="truncate">Bulletin</span>
+          </Link>
+        </div>
+
         {/* Quick Post Prompt Card */}
         <div
           onClick={() => setIsComposerOpen(true)}
-          className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:border-primary/40 hover:bg-muted/40"
+          className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:border-purple-500/40 hover:bg-muted/40"
         >
           <div className="relative size-8 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
             <Image
@@ -313,7 +341,7 @@ export default function CircularRootPage() {
           </div>
           <button
             type="button"
-            className="rounded-xl bg-blue-600 text-white px-3 py-1.5 text-xs font-bold shadow-sm shrink-0"
+            className="rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm shrink-0 hover:opacity-95"
           >
             Post
           </button>
@@ -330,7 +358,7 @@ export default function CircularRootPage() {
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Sparkles className="size-6" />
             </div>
-            <h3 className="mt-3 text-sm sm:text-base font-bold text-navy">
+            <h3 className="mt-3 text-sm sm:text-base font-bold text-slate-900 dark:text-white">
               No posts found within {selectedRadius} km
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">
@@ -343,16 +371,16 @@ export default function CircularRootPage() {
                 <button
                   type="button"
                   onClick={() => handleSelectRadius(25)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-foreground shadow-sm hover:bg-muted"
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm hover:bg-muted"
                 >
-                  <Navigation className="size-3.5 text-primary" />
+                  <Navigation className="size-3.5 text-blue-600 dark:text-blue-400" />
                   <span>Expand to 25 km</span>
                 </button>
               )}
               <button
                 type="button"
                 onClick={() => setIsComposerOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-3.5 py-1.5 text-xs font-bold text-white shadow hover:opacity-95"
               >
                 <span>Create Post</span>
               </button>

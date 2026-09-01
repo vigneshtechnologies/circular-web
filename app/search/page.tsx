@@ -254,8 +254,8 @@ export default function SearchPage() {
                 onClick={() => setActiveTab(tab.key)}
                 className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
                   activeTab === tab.key
-                    ? 'bg-blue-600 text-white shadow-sm font-bold'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                    ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/20 font-bold'
+                    : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted'
                 }`}
               >
                 {tab.label}
@@ -269,7 +269,7 @@ export default function SearchPage() {
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-6">
         {isSearching ? (
           <div className="flex flex-col items-center justify-center py-16 text-center text-xs text-muted-foreground gap-2">
-            <Loader2 className="size-6 animate-spin text-primary" />
+            <Loader2 className="size-6 animate-spin text-purple-600" />
             <span>Searching community database...</span>
           </div>
         ) : totalResultsCount === 0 && q ? (
@@ -277,7 +277,7 @@ export default function SearchPage() {
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
               <SearchIcon className="size-6" />
             </div>
-            <h3 className="mt-3 text-sm font-bold text-navy">No results found for "{searchTerm}"</h3>
+            <h3 className="mt-3 text-sm font-bold text-slate-900 dark:text-white">No results found for "{searchTerm}"</h3>
             <p className="mt-1 text-xs text-muted-foreground">
               Try searching with another keyword or explore categories.
             </p>
@@ -288,30 +288,30 @@ export default function SearchPage() {
             {(activeTab === 'all' || activeTab === 'businesses') && filteredBusinesses.length > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <Store className="size-4 text-purple-600" />
+                  <Store className="size-4 text-purple-600 dark:text-purple-400" />
                   <span>Local Businesses ({filteredBusinesses.length})</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredBusinesses.map((b) => {
-                    const photo = getBusinessPhoto(b, photosRecord, publicProfiles) || '/circular-logo.png'
+                    const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
                     const bizName = b.name || (b as any).businessName || 'Local Business'
                     const bizCat = b.category || (b as any).businessCategory || 'Local Shop'
                     return (
                       <Link
                         key={b.id}
                         href={`/business/${b.id}`}
-                        className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                        className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-purple-500/40 hover:shadow-md"
                       >
                         <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-purple-500/10 ring-1 ring-border">
                           <Image src={photo} alt={bizName} fill className="object-cover" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="truncate text-xs sm:text-sm font-bold text-navy group-hover:text-primary">
+                          <h4 className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                             {bizName}
                           </h4>
                           <p className="truncate text-xs text-muted-foreground mt-0.5">{bizCat}</p>
                           {b.area && (
-                            <span className="text-[10px] font-semibold text-primary mt-1 inline-block">
+                            <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 mt-1 inline-block">
                               📍 {b.area}
                             </span>
                           )}
@@ -327,7 +327,7 @@ export default function SearchPage() {
             {(activeTab === 'all' || activeTab === 'people') && filteredPeople.length > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <Users className="size-4 text-blue-600" />
+                  <Users className="size-4 text-blue-600 dark:text-blue-400" />
                   <span>People ({filteredPeople.length})</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -337,13 +337,13 @@ export default function SearchPage() {
                       <Link
                         key={p.uid}
                         href={`/user/${p.uid}`}
-                        className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                        className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-purple-500/40 hover:shadow-md"
                       >
                         <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
                           <Image src={avatar} alt={p.name} fill className="object-cover" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="truncate text-xs sm:text-sm font-bold text-navy group-hover:text-primary">
+                          <h4 className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                             {p.name}
                           </h4>
                           <p className="truncate text-[11px] text-muted-foreground">@{p.username || 'member'}</p>
@@ -364,7 +364,7 @@ export default function SearchPage() {
             {(activeTab === 'all' || activeTab === 'jobs') && filteredJobs.length > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <Briefcase className="size-4 text-indigo-600" />
+                  <Briefcase className="size-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Job Openings ({filteredJobs.length})</span>
                 </div>
                 <div className="space-y-2.5">
@@ -372,13 +372,13 @@ export default function SearchPage() {
                     <Link
                       key={j.id}
                       href={`/job/${j.id}`}
-                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-emerald-500/40 hover:shadow-md"
                     >
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs sm:text-sm font-bold text-navy group-hover:text-primary">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
                           {j.title}
                         </h4>
-                        <span className="rounded-full bg-indigo-500/10 px-2 py-0.5 text-[10px] font-bold text-indigo-600">
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                           {j.jobType}
                         </span>
                       </div>
@@ -386,7 +386,7 @@ export default function SearchPage() {
                         {j.businessName} • {j.area}
                       </p>
                       {j.salary && (
-                        <span className="text-xs font-bold text-emerald-600 mt-2 inline-block">
+                        <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 mt-2 inline-block">
                           {j.salary}
                         </span>
                       )}
@@ -400,7 +400,7 @@ export default function SearchPage() {
             {(activeTab === 'all' || activeTab === 'needs') && filteredNeeds.length > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <HandHeart className="size-4 text-pink-600" />
+                  <HandHeart className="size-4 text-amber-600 dark:text-amber-400" />
                   <span>Community Needs ({filteredNeeds.length})</span>
                 </div>
                 <div className="space-y-2.5">
@@ -408,13 +408,13 @@ export default function SearchPage() {
                     <Link
                       key={n.id}
                       href={`/need/${n.id}`}
-                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-amber-500/40 hover:shadow-md"
                     >
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs sm:text-sm font-bold text-navy group-hover:text-primary">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400">
                           {n.title}
                         </h4>
-                        <span className="rounded-full bg-pink-500/10 px-2 py-0.5 text-[10px] font-bold text-pink-600">
+                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
                           {n.urgency}
                         </span>
                       </div>
@@ -432,11 +432,51 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* 5. Posts Section */}
+            {/* 5. Events Section */}
+            {(activeTab === 'all' || activeTab === 'events') && filteredEvents.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+                  <Calendar className="size-4 text-orange-600 dark:text-orange-400" />
+                  <span>Community Events ({filteredEvents.length})</span>
+                </div>
+                <div className="space-y-2.5">
+                  {filteredEvents.map((e) => (
+                    <Link
+                      key={e.id}
+                      href={`/event/${e.id}`}
+                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-orange-500/40 hover:shadow-md"
+                    >
+                      <div className="flex items-center justify-between">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400">
+                          {e.title}
+                        </h4>
+                        <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                          {e.eventDate || 'Upcoming'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                        {e.description}
+                      </p>
+                      <div className="flex items-center gap-2 text-[10px] text-muted-foreground mt-2">
+                        <span>📍 {e.venue || e.area}</span>
+                        {e.eventTime && (
+                          <>
+                            <span>•</span>
+                            <span>🕒 {e.eventTime}</span>
+                          </>
+                        )}
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 6. Posts Section */}
             {(activeTab === 'all' || activeTab === 'posts') && filteredPosts.length > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <FileText className="size-4 text-blue-600" />
+                  <FileText className="size-4 text-blue-600 dark:text-blue-400" />
                   <span>Posts &amp; Updates ({filteredPosts.length})</span>
                 </div>
                 <div className="space-y-3.5">

@@ -90,16 +90,26 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
 
   const displayArea = getUserCommunityLocation(userProfile)
 
+  const getCategoryClass = (category?: string) => {
+    const cat = (category || '').toLowerCase()
+    if (cat.includes('food') || cat.includes('restaurant')) return 'text-orange-600 dark:text-orange-400 font-semibold'
+    if (cat.includes('shop') || cat.includes('store')) return 'text-pink-600 dark:text-pink-400 font-semibold'
+    if (cat.includes('edu') || cat.includes('school')) return 'text-purple-600 dark:text-purple-400 font-semibold'
+    if (cat.includes('med') || cat.includes('health')) return 'text-rose-600 dark:text-rose-400 font-semibold'
+    if (cat.includes('tech') || cat.includes('software')) return 'text-indigo-600 dark:text-indigo-400 font-semibold'
+    return 'text-blue-600 dark:text-blue-400 font-semibold'
+  }
+
   const content = (
     <>
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
               <Store className="size-5" />
             </div>
             <div>
-              <h1 className="text-base font-extrabold text-navy">Business Directory</h1>
+              <h1 className="text-base font-extrabold text-slate-900 dark:text-white">Business Directory</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
                 Discover verified shops, services &amp; local businesses in {displayArea}
               </p>
@@ -114,7 +124,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search by business name, product, or area..."
-            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none"
+            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-purple-500 focus:bg-card focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -135,8 +145,8 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
               onClick={() => setSelectedCategory(cat)}
               className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
                 selectedCategory === cat
-                  ? 'bg-blue-600 text-white shadow-sm font-bold'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/20 font-bold'
+                  : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted'
               }`}
             >
               {cat}
@@ -148,7 +158,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6">
         {dataLoading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center text-xs text-muted-foreground gap-2">
-            <Loader2 className="size-6 animate-spin text-primary" />
+            <Loader2 className="size-6 animate-spin text-purple-600" />
             <span>Loading verified businesses...</span>
           </div>
         ) : filtered.length === 0 ? (
@@ -156,7 +166,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600">
               <Store className="size-6" />
             </div>
-            <h3 className="mt-3 text-sm font-bold text-navy">No businesses found</h3>
+            <h3 className="mt-3 text-sm font-bold text-slate-900 dark:text-white">No businesses found</h3>
             <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
               {searchQuery
                 ? `No businesses match "${searchQuery}".`
@@ -166,7 +176,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {filtered.map((b) => {
-              const photo = getBusinessPhoto(b, photosRecord, publicProfiles) || '/circular-logo.png'
+              const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
               const hasRating = typeof b.rating === 'number' && b.rating > 0
               const isRecent = b.createdAt && Date.now() - b.createdAt < 14 * 24 * 60 * 60 * 1000
               const bizName = b.name || b.businessName || 'Local Business'
@@ -176,7 +186,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
                 <Link
                   key={b.id}
                   href={`/business/${b.id}`}
-                  className="group flex flex-col rounded-3xl border border-border bg-card p-4 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+                  className="group flex flex-col rounded-3xl border border-border bg-card p-4 shadow-sm transition-all hover:border-purple-500/40 hover:shadow-md"
                 >
                   <div className="flex items-center gap-3">
                     <div className="relative size-14 shrink-0 overflow-hidden rounded-2xl bg-purple-500/10 ring-1 ring-border">
@@ -189,14 +199,14 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
-                        <h3 className="truncate text-sm font-bold text-navy group-hover:text-primary">
+                        <h3 className="truncate text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                           {bizName}
                         </h3>
                         {b.isVerified && (
                           <CheckCircle2 className="size-3.5 text-emerald-500 fill-emerald-500/20 shrink-0" />
                         )}
                       </div>
-                      <p className="truncate text-xs text-muted-foreground">{bizCategory}</p>
+                      <p className={`truncate text-xs ${getCategoryClass(bizCategory)}`}>{bizCategory}</p>
 
                       <div className="mt-1 flex items-center gap-2 text-[11px]">
                         {hasRating ? (
@@ -205,14 +215,14 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
                             <span>{b.rating!.toFixed(1)}</span>
                           </span>
                         ) : isRecent ? (
-                          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600">
+                          <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
                             New
                           </span>
                         ) : null}
 
                         {b.area && (
                           <span className="flex items-center gap-0.5 text-muted-foreground truncate">
-                            <MapPin className="size-3 text-primary" />
+                            <MapPin className="size-3 text-blue-600 dark:text-blue-400" />
                             <span className="truncate">{b.area}</span>
                           </span>
                         )}

@@ -22,6 +22,7 @@ import {
   BarChart2,
   CheckCircle2,
   Check,
+  Eye,
 } from 'lucide-react'
 
 interface PostCardProps {
@@ -103,12 +104,26 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
     setLightboxOpen(true)
   }
 
+  // Category style resolver
+  const getCategoryBadgeClass = (category?: string) => {
+    const cat = (category || '').toLowerCase()
+    if (cat.includes('food') || cat.includes('restaurant')) return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
+    if (cat.includes('shop') || cat.includes('store')) return 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20'
+    if (cat.includes('edu') || cat.includes('school')) return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
+    if (cat.includes('job')) return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+    if (cat.includes('event')) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+    if (cat.includes('need')) return 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
+    if (cat.includes('offer')) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+    if (cat.includes('med') || cat.includes('health')) return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
+    return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+  }
+
   return (
-    <article className="rounded-3xl border border-border bg-card p-4 md:p-5 shadow-sm transition-all hover:border-primary/30">
+    <article className="rounded-3xl border border-border bg-card p-4 md:p-5 shadow-sm transition-all hover:border-purple-500/30">
       {/* Top Author Row */}
       <div className="flex items-center justify-between">
         <Link href={`/user/${post.userId}`} className="flex items-center gap-3 group min-w-0">
-          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border group-hover:ring-primary">
+          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border group-hover:ring-purple-500">
             <Image
               src={authorAvatar}
               alt={authorName}
@@ -118,7 +133,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
-              <span className="truncate text-xs sm:text-sm font-bold text-navy group-hover:text-primary">
+              <span className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                 {authorName}
               </span>
               {post.businessTrustLabel && (
@@ -130,7 +145,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
               {locationName && (
                 <>
                   <span>•</span>
-                  <span className="flex items-center gap-0.5 text-primary font-semibold truncate">
+                  <span className="flex items-center gap-0.5 text-blue-600 dark:text-blue-400 font-semibold truncate">
                     <MapPin className="size-3" />
                     {locationName}
                   </span>
@@ -141,7 +156,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
         </Link>
 
         {post.category && (
-          <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground shrink-0">
+          <span className={`rounded-full border px-2.5 py-0.5 text-[10px] font-bold shrink-0 ${getCategoryBadgeClass(post.category)}`}>
             {post.category}
           </span>
         )}
@@ -149,7 +164,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
 
       {/* Main Text Body */}
       {post.text && (
-        <p className="mt-3 text-xs sm:text-sm text-foreground leading-relaxed whitespace-pre-line break-words">
+        <p className="mt-3 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line break-words">
           {post.text}
         </p>
       )}
@@ -212,7 +227,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
             <Calendar className="size-4" />
             <span>COMMUNITY EVENT</span>
           </div>
-          <h3 className="text-sm sm:text-base font-extrabold text-navy">{post.event.title}</h3>
+          <h3 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white">{post.event.title}</h3>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs text-muted-foreground">
             {(post.event.eventDate || post.event.startAt) && (
               <div className="flex items-center gap-1.5">
@@ -245,7 +260,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
             <BarChart2 className="size-4" />
             <span>COMMUNITY POLL</span>
           </div>
-          <h3 className="text-xs sm:text-sm font-bold text-navy">{post.poll.question}</h3>
+          <h3 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white">{post.poll.question}</h3>
           <div className="space-y-2">
             {Array.isArray(post.poll.options)
               ? post.poll.options.map((opt: any, idx: number) => {
@@ -276,37 +291,46 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
       )}
 
       {/* Bottom Engagement Row */}
-      <div className="mt-4 flex items-center justify-between border-t border-border pt-3">
-        <div className="flex items-center gap-6">
+      <div className="mt-4 flex items-center justify-between border-t border-border/80 pt-3">
+        <div className="flex items-center gap-5 sm:gap-6">
           <button
             type="button"
             onClick={handleLike}
+            aria-label="Like post"
             className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
               liked ? 'text-rose-600' : 'text-muted-foreground hover:text-foreground'
             }`}
           >
-            <Heart className={`size-4 ${liked ? 'fill-rose-600 text-rose-600' : ''}`} />
+            <Heart className={`size-4 transition-transform active:scale-125 ${liked ? 'fill-rose-600 text-rose-600' : ''}`} />
             <span>{likesCount}</span>
           </button>
 
           <button
             type="button"
             onClick={() => onOpenComments && onOpenComments(post.id)}
+            aria-label="View comments"
             className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
           >
             <MessageCircle className="size-4" />
             <span>{post.commentsCount || 0}</span>
           </button>
+
+          <button
+            type="button"
+            onClick={handleShare}
+            aria-label="Share post"
+            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
+          >
+            <Share2 className="size-4" />
+            {sharedToast && <span className="text-[10px] text-primary font-bold">Copied</span>}
+          </button>
         </div>
 
-        <button
-          type="button"
-          onClick={handleShare}
-          className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
-        >
-          <Share2 className="size-4" />
-          <span>{sharedToast ? 'Link Copied!' : 'Share'}</span>
-        </button>
+        {/* Views */}
+        <div className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground/75" title="Total Views">
+          <Eye className="size-3.5" />
+          <span>{(post as any).viewsCount || (post as any).views || 1}</span>
+        </div>
       </div>
 
       {/* Lightbox Modal */}

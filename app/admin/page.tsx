@@ -142,7 +142,7 @@ export default function AdminPage() {
           <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <AlertCircle className="size-7" />
           </div>
-          <h1 className="mt-4 text-lg font-bold text-navy">Access Denied</h1>
+          <h1 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">Access Denied</h1>
           <p className="mt-2 text-xs text-muted-foreground">
             You do not have administrative privileges to access this area.
           </p>
@@ -162,7 +162,7 @@ export default function AdminPage() {
             <Shield className="size-5" />
           </div>
           <div>
-            <h1 className="text-base font-extrabold text-navy">Admin Command Center</h1>
+            <h1 className="text-base font-extrabold text-slate-900 dark:text-white">Admin Command Center</h1>
             <p className="text-[11px] font-semibold text-muted-foreground">
               Moderation, broadcast &amp; platform management
             </p>
@@ -178,7 +178,7 @@ export default function AdminPage() {
               <FileText className="size-4 text-primary" />
               <span>Posts</span>
             </div>
-            <p className="mt-2 text-2xl font-black text-navy">{stats.posts}</p>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats.posts}</p>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -186,7 +186,7 @@ export default function AdminPage() {
               <Store className="size-4 text-emerald-500" />
               <span>Businesses</span>
             </div>
-            <p className="mt-2 text-2xl font-black text-navy">{stats.businesses}</p>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats.businesses}</p>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -194,7 +194,7 @@ export default function AdminPage() {
               <Users className="size-4 text-purple-500" />
               <span>Users</span>
             </div>
-            <p className="mt-2 text-2xl font-black text-navy">{stats.users}</p>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats.users}</p>
           </div>
 
           <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
@@ -202,7 +202,7 @@ export default function AdminPage() {
               <AlertCircle className="size-4 text-rose-500" />
               <span>Reports</span>
             </div>
-            <p className="mt-2 text-2xl font-black text-navy">{stats.reports}</p>
+            <p className="mt-2 text-2xl font-black text-slate-900 dark:text-white">{stats.reports}</p>
           </div>
         </div>
 
@@ -210,7 +210,7 @@ export default function AdminPage() {
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="flex items-center gap-2 mb-4">
             <Megaphone className="size-5 text-primary" />
-            <h2 className="text-sm font-bold text-navy">Send Admin Announcement Broadcast</h2>
+            <h2 className="text-sm font-bold text-slate-900 dark:text-white">Send Admin Announcement Broadcast</h2>
           </div>
 
           {broadcastSuccess && (
@@ -258,12 +258,12 @@ export default function AdminPage() {
 
         {/* Post Moderation */}
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-navy">Recent Posts Moderation</h2>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Recent Posts Moderation</h2>
           <div className="space-y-3 max-h-80 overflow-y-auto">
             {recentPosts.map((post) => (
               <div key={post.id} className="flex items-center justify-between rounded-2xl border border-border p-3">
                 <div className="min-w-0 flex-1 pr-4">
-                  <p className="text-xs font-bold text-navy">{post.userName || 'Member'}</p>
+                  <p className="text-xs font-bold text-slate-900 dark:text-white">{post.userName || 'Member'}</p>
                   <p className="line-clamp-2 text-xs text-muted-foreground">{post.text}</p>
                 </div>
                 <button
@@ -280,12 +280,12 @@ export default function AdminPage() {
 
         {/* Business Moderation */}
         <section className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
-          <h2 className="text-sm font-bold text-navy">Business Verification Management</h2>
+          <h2 className="text-sm font-bold text-slate-900 dark:text-white">Business Verification Management</h2>
           <div className="space-y-3 max-h-80 overflow-y-auto">
             {recentBusinesses.map((b) => (
               <div key={b.id} className="flex items-center justify-between rounded-2xl border border-border p-3">
                 <div>
-                  <h4 className="text-xs font-bold text-navy">{b.name}</h4>
+                  <h4 className="text-xs font-bold text-slate-900 dark:text-white">{b.name}</h4>
                   <p className="text-[11px] text-muted-foreground">{b.category} • {b.area || getUserCommunityLocation(userProfile)}</p>
                 </div>
                 <button

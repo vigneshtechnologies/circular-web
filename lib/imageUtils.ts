@@ -7,7 +7,26 @@ export function getUserAvatar(user: any, publicProfiles?: Record<string, any>): 
   if (!user) return ''
   if (typeof user === 'string') return user.trim()
 
-  // 1. Check publicProfiles map if userId is available
+  // 1. Direct user object fields (custom upload > Google photoURL)
+  const directCandidates = [
+    user.profileImage,
+    user.avatar,
+    user.photoURL,
+    user.photoUrl,
+    user.imageUrl,
+    user.profilePhoto,
+    user.profilePic,
+    user.photo,
+    user.image,
+  ]
+
+  for (const c of directCandidates) {
+    if (typeof c === 'string' && c.trim().length > 0) {
+      return c.trim()
+    }
+  }
+
+  // 2. Check publicProfiles map if userId is available
   const uid = user.userId || user.uid || user.id || ''
   if (uid && publicProfiles && publicProfiles[uid]) {
     const prof = publicProfiles[uid]
@@ -25,46 +44,25 @@ export function getUserAvatar(user: any, publicProfiles?: Record<string, any>): 
     }
   }
 
-  // 2. Direct user object fields
-  const candidates = [
-    user.profileImage,
-    user.avatar,
-    user.photoUrl,
-    user.photoURL,
-    user.imageUrl,
-    user.profilePhoto,
-    user.profilePic,
-    user.photo,
-    user.logoUrl,
-    user.image,
-  ]
-
-  for (const c of candidates) {
-    if (typeof c === 'string' && c.trim().length > 0) {
-      return c.trim()
-    }
-  }
-
   return ''
 }
 
 export function getBusinessPhoto(
   business: any,
-  photosRecord?: Record<string, any>,
-  publicProfiles?: Record<string, any>
+  photosRecord?: Record<string, any>
 ): string {
   if (!business) return ''
   if (typeof business === 'string') return business.trim()
 
-  // 1. Direct explicit image fields on business
+  // 1. Direct explicit image fields on business (Logo / Profile image)
   const directCandidates = [
+    business.logoUrl,
+    business.businessLogo,
+    business.logo,
     business.imageUrl,
     business.photoUrl,
     business.photoURL,
     business.profileImage,
-    business.logo,
-    business.logoUrl,
-    business.businessLogo,
     business.businessImage,
     business.image,
     business.picture,
@@ -101,19 +99,6 @@ export function getBusinessPhoto(
         const photo = first?.imageUrl || first?.url || first?.photoUrl || first?.photoURL || ''
         if (typeof photo === 'string' && photo.trim().length > 0) return photo.trim()
       }
-    }
-  }
-
-  // 4. Owner publicProfile image fallback
-  const ownerId = business.ownerId || business.userId || business.id || ''
-  if (ownerId && publicProfiles && publicProfiles[ownerId]) {
-    const ownerImg =
-      publicProfiles[ownerId].profileImage ||
-      publicProfiles[ownerId].avatar ||
-      publicProfiles[ownerId].photoURL ||
-      ''
-    if (typeof ownerImg === 'string' && ownerImg.trim().length > 0) {
-      return ownerImg.trim()
     }
   }
 

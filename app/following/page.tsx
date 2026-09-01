@@ -253,11 +253,11 @@ export default function FollowingFeedPage() {
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-primary/10 text-primary">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
               <Users className="size-5" />
             </div>
             <div>
-              <h1 className="text-base font-extrabold text-navy">Following Feed</h1>
+              <h1 className="text-base font-extrabold text-slate-900 dark:text-white">Following Feed</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
                 Updates from {followingUids.length} creators &amp; businesses you follow
               </p>
@@ -267,7 +267,7 @@ export default function FollowingFeedPage() {
           <button
             type="button"
             onClick={() => setIsComposerOpen(true)}
-            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-blue-700 active:scale-95"
+            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm hover:opacity-95 active:scale-95"
           >
             <PlusCircle className="size-4" />
             <span>Post</span>
@@ -279,23 +279,23 @@ export default function FollowingFeedPage() {
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-4">
         {feedLoading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center text-xs text-muted-foreground gap-2">
-            <Loader2 className="size-6 animate-spin text-primary" />
+            <Loader2 className="size-6 animate-spin text-purple-600" />
             <p className="font-semibold">Loading followed updates...</p>
           </div>
         ) : !hasFollowingRelationships ? (
           /* Empty State A: User is not following anyone yet */
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center space-y-3">
-            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+            <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-purple-500/10 text-purple-600">
               <Users className="size-7" />
             </div>
-            <h3 className="text-base font-bold text-navy">You're not following anyone yet</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">You're not following anyone yet</h3>
             <p className="mx-auto max-w-sm text-xs text-muted-foreground leading-relaxed">
               Follow your favorite local businesses, creators, and neighbors to see all their updates, offers, and announcements in one place!
             </p>
             <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/businesses"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow transition-all hover:bg-blue-700"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-4 py-2 text-xs font-bold text-white shadow transition-all hover:opacity-95"
               >
                 <Store className="size-4" />
                 <span>Discover Businesses</span>
@@ -304,7 +304,7 @@ export default function FollowingFeedPage() {
                 href="/search"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-bold text-foreground shadow-sm hover:bg-muted"
               >
-                <Compass className="size-4 text-primary" />
+                <Compass className="size-4 text-sky-600" />
                 <span>Search Community</span>
               </Link>
             </div>
@@ -315,14 +315,14 @@ export default function FollowingFeedPage() {
             <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
               <Sparkles className="size-7" />
             </div>
-            <h3 className="text-base font-bold text-navy">No recent posts from accounts you follow</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">No recent posts from accounts you follow</h3>
             <p className="mx-auto max-w-sm text-xs text-muted-foreground leading-relaxed">
               The {followingUids.length} accounts you follow haven't posted new updates yet. Check the main community feed or discover more local creators!
             </p>
             <div className="pt-3 flex flex-wrap items-center justify-center gap-3">
               <Link
                 href="/"
-                className="inline-flex items-center gap-1.5 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow transition-all hover:bg-blue-700"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-4 py-2 text-xs font-bold text-white shadow transition-all hover:opacity-95"
               >
                 <span>Home Community Feed</span>
               </Link>
@@ -330,7 +330,7 @@ export default function FollowingFeedPage() {
                 href="/businesses"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-bold text-foreground shadow-sm hover:bg-muted"
               >
-                <Store className="size-4" />
+                <Store className="size-4 text-purple-600" />
                 <span>Browse Directory</span>
               </Link>
             </div>

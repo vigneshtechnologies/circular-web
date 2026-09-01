@@ -29,7 +29,7 @@ export function OpenInCircularBanner({
         <Smartphone className="size-6" />
       </div>
 
-      <h3 className="mt-4 text-xl font-black tracking-tight text-navy md:text-2xl">
+      <h3 className="mt-4 text-xl font-black tracking-tight text-slate-900 dark:text-white md:text-2xl">
         {title ? `View ${title} in the Circular App` : 'Open in the Circular App'}
       </h3>
 

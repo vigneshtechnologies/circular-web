@@ -114,11 +114,11 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
               <Briefcase className="size-5" />
             </div>
             <div>
-              <h1 className="text-base font-extrabold text-navy">Local Jobs</h1>
+              <h1 className="text-base font-extrabold text-slate-900 dark:text-white">Local Jobs</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
                 Find staff &amp; career opportunities in {displayArea}
               </p>
@@ -131,7 +131,7 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
               if (!user) router.push('/login')
               else setIsPostJobOpen(true)
             }}
-            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
+            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95 active:scale-95"
           >
             <PlusCircle className="size-4" />
             <span>Post Job</span>
@@ -145,7 +145,7 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search roles, business, or keywords..."
-            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none"
+            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-emerald-500 focus:bg-card focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -166,8 +166,8 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
               onClick={() => setSelectedType(type)}
               className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
                 selectedType === type
-                  ? 'bg-blue-600 text-white shadow-sm font-bold'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200'
+                  ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/20 font-bold'
+                  : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted'
               }`}
             >
               {type}
@@ -179,10 +179,10 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-4">
         {filtered.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-emerald-500/10 text-emerald-600">
               <Briefcase className="size-6" />
             </div>
-            <h3 className="mt-3 text-base font-bold text-navy">No jobs found</h3>
+            <h3 className="mt-3 text-base font-bold text-slate-900 dark:text-white">No jobs found</h3>
             <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
               {searchQuery
                 ? `No jobs match "${searchQuery}".`
@@ -194,30 +194,30 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
             <Link
               key={job.id}
               href={`/job/${job.id}`}
-              className="block rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+              className="group block rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:border-emerald-500/40 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-navy">{job.title}</h3>
-                  <p className="text-xs font-semibold text-primary">{job.businessName || 'Local Business'}</p>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{job.title}</h3>
+                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">{job.businessName || 'Local Business'}</p>
                 </div>
-                <span className="rounded-xl bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-600">
+                <span className="rounded-xl bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                   {job.jobType || 'Full-time'}
                 </span>
               </div>
 
-              <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-foreground/80">
+              <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
                 {job.description}
               </p>
 
               <div className="mt-4 flex flex-wrap items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <MapPin className="size-3.5 text-primary" />
+                    <MapPin className="size-3.5 text-blue-600 dark:text-blue-400" />
                     <span>{job.area || getUserCommunityLocation(userProfile)}</span>
                   </span>
                   {job.salary && (
-                    <span className="font-semibold text-foreground">?? {job.salary}</span>
+                    <span className="font-semibold text-emerald-600 dark:text-emerald-400">{job.salary}</span>
                   )}
                 </div>
                 <span className="text-[11px]">
@@ -233,7 +233,7 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-base font-bold text-navy">Post a Job Opening</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Post a Job Opening</h2>
               <button
                 type="button"
                 onClick={() => setIsPostJobOpen(false)}

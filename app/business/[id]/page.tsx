@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import Link from 'next/link'
 import Image from 'next/image'
-import { Store, Star, MapPin, CheckCircle2, Compass, Tag } from 'lucide-react'
+import { Store, Star, MapPin, CheckCircle2, Compass, Tag, Phone } from 'lucide-react'
 import { CircularHeader } from '@/components/circular-header'
 import { CircularFooter } from '@/components/circular-footer'
 import { OpenInCircularBanner } from '@/components/public/open-in-circular-banner'
@@ -111,7 +111,7 @@ export default async function PublicBusinessPage({ params }: Props) {
             <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-muted text-muted-foreground">
               <Store className="size-8" />
             </div>
-            <h1 className="mt-4 text-xl font-bold text-navy">Business Profile Not Found</h1>
+            <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Business Profile Not Found</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               This business listing does not exist or may have been removed.
             </p>
@@ -222,7 +222,7 @@ export default async function PublicBusinessPage({ params }: Props) {
                 </div>
                 <div>
                   <div className="flex items-center gap-2">
-                    <h1 className="text-xl font-bold text-navy md:text-2xl">
+                    <h1 className="text-xl font-bold text-slate-900 dark:text-white md:text-2xl">
                       {business.name}
                     </h1>
                     {business.isVerified && (
@@ -231,7 +231,7 @@ export default async function PublicBusinessPage({ params }: Props) {
                       </span>
                     )}
                   </div>
-                  <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  <p className="mt-1 text-xs font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
                     {business.category} • {business.area}
                   </p>
                   {business.rating && (
@@ -243,17 +243,26 @@ export default async function PublicBusinessPage({ params }: Props) {
                 </div>
               </div>
 
-              <div className="flex items-center gap-1.5 rounded-full bg-purple-500/10 px-3.5 py-1 text-xs font-semibold text-purple-600 shrink-0 self-start">
-                <Store className="size-3.5" />
-                <span>{business.category}</span>
+              <div className="flex items-center gap-2 shrink-0 self-start">
+                <a
+                  href={`tel:${(business as any).phone || ''}`}
+                  className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 px-3.5 py-2 text-xs font-bold text-white shadow-sm hover:opacity-95"
+                >
+                  <Phone className="size-3.5" />
+                  <span>Call</span>
+                </a>
+                <div className="inline-flex items-center gap-1.5 rounded-full bg-purple-500/10 px-3.5 py-2 text-xs font-semibold text-purple-600 dark:text-purple-400">
+                  <Store className="size-3.5" />
+                  <span>{business.category}</span>
+                </div>
               </div>
             </div>
 
             {/* Description */}
             {business.description && (
               <div className="mt-6 border-t border-border pt-6">
-                <h2 className="text-sm font-bold uppercase tracking-wider text-navy">About this Business</h2>
-                <p className="mt-2 text-sm leading-relaxed text-muted-foreground sm:text-base whitespace-pre-line">
+                <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">About this Business</h2>
+                <p className="mt-2 text-sm leading-relaxed text-slate-700 dark:text-slate-300 sm:text-base whitespace-pre-line">
                   {business.description}
                 </p>
               </div>
@@ -263,23 +272,23 @@ export default async function PublicBusinessPage({ params }: Props) {
             <div className="mt-6 grid grid-cols-2 gap-3 border-t border-border pt-6 sm:grid-cols-3">
               <div className="rounded-xl bg-muted/50 p-3 text-center sm:text-left">
                 <div className="text-xs text-muted-foreground">Locality</div>
-                <div className="mt-1 flex items-center justify-center gap-1 text-xs font-bold text-navy sm:justify-start">
-                  <MapPin className="size-3.5 text-primary" />
+                <div className="mt-1 flex items-center justify-center gap-1 text-xs font-bold text-slate-900 dark:text-white sm:justify-start">
+                  <MapPin className="size-3.5 text-blue-600 dark:text-blue-400" />
                   <span>{business.area}</span>
                 </div>
               </div>
 
               <div className="rounded-xl bg-muted/50 p-3 text-center sm:text-left">
                 <div className="text-xs text-muted-foreground">Category</div>
-                <div className="mt-1 flex items-center justify-center gap-1 text-xs font-bold text-navy sm:justify-start">
-                  <Tag className="size-3.5 text-purple-600" />
+                <div className="mt-1 flex items-center justify-center gap-1 text-xs font-bold text-slate-900 dark:text-white sm:justify-start">
+                  <Tag className="size-3.5 text-purple-600 dark:text-purple-400" />
                   <span>{business.category}</span>
                 </div>
               </div>
 
               <div className="col-span-2 rounded-xl bg-muted/50 p-3 text-center sm:col-span-1 sm:text-left">
                 <div className="text-xs text-muted-foreground">Interactive Actions</div>
-                <div className="mt-1 flex items-center justify-center gap-1 text-xs font-bold text-emerald-600 sm:justify-start">
+                <div className="mt-1 flex items-center justify-center gap-1 text-xs font-bold text-emerald-600 dark:text-emerald-400 sm:justify-start">
                   <Compass className="size-3.5" />
                   <span>Chat &amp; Reviews in App</span>
                 </div>

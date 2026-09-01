@@ -105,7 +105,7 @@ export default async function PublicEventPage({ params }: Props) {
             <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-muted text-muted-foreground">
               <Calendar className="size-8" />
             </div>
-            <h1 className="mt-4 text-xl font-bold text-navy">Event Not Found</h1>
+            <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Event Not Found</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               This event does not exist, has finished, or was cancelled.
             </p>
@@ -124,12 +124,18 @@ export default async function PublicEventPage({ params }: Props) {
     )
   }
 
+  const organizerUrl = event.organizerId ? `https://circularapp.in/user/${event.organizerId}` : undefined
+
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'Event',
     name: event.title,
     description: event.description || `${event.title} community event on Circular.`,
     url: `https://circularapp.in/event/${id}`,
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': `https://circularapp.in/event/${id}`,
+    },
     eventStatus: 'https://schema.org/EventScheduled',
     eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode',
     location: {
@@ -149,6 +155,7 @@ export default async function PublicEventPage({ params }: Props) {
           organizer: {
             '@type': 'Person',
             name: event.organizerName,
+            ...(organizerUrl ? { url: organizerUrl } : {}),
           },
         }
       : {}),
@@ -209,7 +216,7 @@ export default async function PublicEventPage({ params }: Props) {
                   <Calendar className="size-3.5" />
                   <span>Community Event</span>
                 </div>
-                <h1 className="mt-3 text-2xl font-bold text-navy">{event.title}</h1>
+                <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">{event.title}</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <MapPin className="size-3.5 text-primary" />
@@ -240,7 +247,7 @@ export default async function PublicEventPage({ params }: Props) {
 
             {/* Description */}
             <div className="py-6">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-navy">About this Event</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">About this Event</h2>
               <p className="mt-2 text-sm leading-relaxed text-foreground sm:text-base whitespace-pre-line">
                 {event.description}
               </p>

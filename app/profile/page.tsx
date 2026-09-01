@@ -151,18 +151,18 @@ export default function ProfilePage() {
 
   return (
     <AppShell currentArea={displayLocality}>
-      {/* Header Profile Cover */}
-      <div className="relative h-36 bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600 md:h-48" />
+      {/* Header Profile Cover (Refined Accent Banner) */}
+      <div className="relative h-24 sm:h-28 bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600" />
 
       <div className="mx-auto max-w-3xl px-4 md:px-6">
         {/* Profile Card Header */}
-        <div className="relative -mt-16 rounded-3xl border border-border bg-card p-6 shadow-lg">
+        <div className="relative -mt-12 rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-md">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
               <button
                 type="button"
                 onClick={() => setImageViewerSrc(avatarUrl)}
-                className="group relative size-24 shrink-0 overflow-hidden rounded-3xl bg-primary/10 ring-4 ring-card shadow-xl focus:outline-none"
+                className="group relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-2xl sm:rounded-3xl bg-purple-500/10 ring-4 ring-card shadow-lg focus:outline-none"
                 title="View profile photo"
               >
                 <Image
@@ -174,9 +174,9 @@ export default function ProfilePage() {
               </button>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-black tracking-tight text-navy truncate">{userProfile?.name || 'Circular Member'}</h1>
+                  <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white truncate">{userProfile?.name || 'Circular Member'}</h1>
                   {isAdmin && (
-                    <span className="flex items-center gap-1 rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold text-primary">
+                    <span className="flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-600 dark:text-purple-400">
                       <Shield className="size-3" />
                       <span>Admin</span>
                     </span>
@@ -184,7 +184,7 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-xs font-semibold text-muted-foreground">@{userProfile?.username || 'member'}</p>
                 <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="size-3.5 text-primary shrink-0" />
+                  <MapPin className="size-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
                   <span className="truncate">{displayLocality}</span>
                 </div>
               </div>
@@ -218,7 +218,7 @@ export default function ProfilePage() {
           </div>
 
           {userProfile?.bio && (
-            <p className="mt-4 text-xs leading-relaxed text-foreground/90 whitespace-pre-line border-t border-border/60 pt-3">
+            <p className="mt-4 text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line border-t border-border/60 pt-3">
               {userProfile.bio}
             </p>
           )}
@@ -226,15 +226,15 @@ export default function ProfilePage() {
           {/* Stats Bar */}
           <div className="mt-5 flex items-center gap-6 border-t border-border pt-4 text-xs">
             <div>
-              <span className="font-black text-navy">{myPosts.length}</span>{' '}
+              <span className="font-black text-slate-900 dark:text-white">{myPosts.length}</span>{' '}
               <span className="text-muted-foreground">Posts</span>
             </div>
             <div>
-              <span className="font-black text-navy">{followersCount}</span>{' '}
+              <span className="font-black text-slate-900 dark:text-white">{followersCount}</span>{' '}
               <span className="text-muted-foreground">Followers</span>
             </div>
             <div>
-              <span className="font-black text-navy">{followingCount}</span>{' '}
+              <span className="font-black text-slate-900 dark:text-white">{followingCount}</span>{' '}
               <span className="text-muted-foreground">Following</span>
             </div>
           </div>
@@ -247,7 +247,7 @@ export default function ProfilePage() {
             onClick={() => setActiveTab('posts')}
             className={`border-b-2 px-6 py-3 text-xs font-bold transition-colors ${
               activeTab === 'posts'
-                ? 'border-primary text-primary'
+                ? 'border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-400'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -258,7 +258,7 @@ export default function ProfilePage() {
             onClick={() => setActiveTab('businesses')}
             className={`border-b-2 px-6 py-3 text-xs font-bold transition-colors ${
               activeTab === 'businesses'
-                ? 'border-primary text-primary'
+                ? 'border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-400'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -298,7 +298,7 @@ export default function ProfilePage() {
                     <Image src={b.logoUrl || b.imageUrl || '/circular-logo.png'} alt={b.name} fill className="object-cover" />
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-navy">{b.name}</h4>
+                    <h4 className="text-xs font-bold text-slate-900 dark:text-white">{b.name}</h4>
                     <p className="text-[11px] text-muted-foreground">{b.category}</p>
                   </div>
                 </Link>
@@ -313,7 +313,7 @@ export default function ProfilePage() {
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-base font-bold text-navy">Edit Your Profile</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Edit Your Profile</h2>
               <button type="button" onClick={() => setIsEditOpen(false)} className="rounded-lg p-1 text-muted-foreground hover:bg-muted">
                 <X className="size-5" />
               </button>

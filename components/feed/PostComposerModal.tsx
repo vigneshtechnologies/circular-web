@@ -368,14 +368,14 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
     }
   }
 
-  // Define the Android-matching 13 Format Catalog
+  // Define the Android-matching 13 Format Catalog with distinct colourful identities
   const mainFormats = [
     {
       key: 'normal' as PostFormat,
       title: 'Normal Post',
       desc: 'Share text and photos with nearby people.',
       icon: PenSquare,
-      color: 'from-blue-500 to-indigo-600',
+      color: 'from-blue-600 to-indigo-600',
     },
     {
       key: 'link' as PostFormat,
@@ -389,14 +389,14 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
       title: 'Event',
       desc: 'Publish a nearby event with date, venue and attendance.',
       icon: Calendar,
-      color: 'from-emerald-500 to-teal-600',
+      color: 'from-orange-500 to-amber-600',
     },
     {
       key: 'poll' as PostFormat,
       title: 'Poll',
       desc: 'Use choices to gather opinions and community votes.',
       icon: BarChart2,
-      color: 'from-amber-500 to-orange-600',
+      color: 'from-purple-600 to-pink-600',
     },
   ]
 
@@ -406,54 +406,63 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
       title: 'List',
       desc: 'A clean numbered list.',
       icon: List,
+      color: 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400',
     },
     {
       key: 'checklist' as PostFormat,
       title: 'Checklist',
       desc: 'Each user can privately tick completed items.',
       icon: CheckSquare,
+      color: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
     },
     {
       key: 'table' as PostFormat,
       title: 'Table',
       desc: 'Sortable rows and columns for organised local info.',
       icon: TableIcon,
+      color: 'bg-blue-500/10 text-blue-600 dark:text-blue-400',
     },
     {
       key: 'comparison' as PostFormat,
       title: 'Comparison',
       desc: 'Compare fees, products, services or facilities.',
       icon: GitCompare,
+      color: 'bg-purple-500/10 text-purple-600 dark:text-purple-400',
     },
     {
       key: 'priceList' as PostFormat,
       title: 'Price List',
       desc: 'Business menu or product pricing with status.',
       icon: Tag,
+      color: 'bg-amber-500/10 text-amber-600 dark:text-amber-400',
     },
     {
       key: 'schedule' as PostFormat,
       title: 'Schedule',
       desc: 'Timetable, bus timing, programme or appointment schedule.',
       icon: Clock,
+      color: 'bg-orange-500/10 text-orange-600 dark:text-orange-400',
     },
     {
       key: 'availability' as PostFormat,
       title: 'Availability',
       desc: 'Live available, limited, delayed or unavailable status.',
       icon: Activity,
+      color: 'bg-teal-500/10 text-teal-600 dark:text-teal-400',
     },
     {
       key: 'progress' as PostFormat,
       title: 'Progress Tracker',
       desc: 'Show a target and current progress automatically.',
       icon: Gauge,
+      color: 'bg-pink-500/10 text-pink-600 dark:text-pink-400',
     },
     {
       key: 'notice' as PostFormat,
       title: 'Notice / Article',
       desc: 'A clear long-form announcement with title and sections.',
       icon: FileText,
+      color: 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400',
     },
   ]
 
@@ -473,7 +482,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
               </button>
             )}
             <div>
-              <h2 className="text-base font-extrabold text-navy">
+              <h2 className="text-base font-extrabold text-slate-900 dark:text-white">
                 {selectedFormat === 'selection'
                   ? 'Create on Circular'
                   : `Create ${selectedFormat.toUpperCase()}`}
@@ -519,7 +528,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                       key={fmt.key}
                       type="button"
                       onClick={() => setSelectedFormat(fmt.key)}
-                      className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-all hover:border-primary/50 hover:bg-muted/40 hover:shadow-sm active:scale-[0.99]"
+                      className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 text-left transition-all hover:border-purple-500/50 hover:bg-muted/40 hover:shadow-sm active:scale-[0.99]"
                     >
                       <div
                         className={`flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br ${fmt.color} text-white shadow-sm`}
@@ -527,7 +536,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                         <fmt.icon className="size-5" />
                       </div>
                       <div className="min-w-0">
-                        <div className="text-xs font-bold text-navy group-hover:text-primary">
+                        <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                           {fmt.title}
                         </div>
                         <div className="text-[11px] text-muted-foreground mt-0.5 leading-relaxed">
@@ -550,12 +559,12 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                       key={fmt.key}
                       type="button"
                       onClick={() => setSelectedFormat(fmt.key)}
-                      className="group flex flex-col items-start rounded-2xl border border-border bg-card p-3 text-left transition-all hover:border-primary/50 hover:bg-muted/40 hover:shadow-sm active:scale-[0.99]"
+                      className="group flex flex-col items-start rounded-2xl border border-border bg-card p-3 text-left transition-all hover:border-purple-500/50 hover:bg-muted/40 hover:shadow-sm active:scale-[0.99]"
                     >
-                      <div className="flex size-8 items-center justify-center rounded-xl bg-primary/10 text-primary mb-2">
+                      <div className={`flex size-8 items-center justify-center rounded-xl ${fmt.color} mb-2`}>
                         <fmt.icon className="size-4" />
                       </div>
-                      <div className="text-xs font-bold text-navy group-hover:text-primary">
+                      <div className="text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
                         {fmt.title}
                       </div>
                       <div className="text-[10px] text-muted-foreground line-clamp-2 mt-0.5">
@@ -575,13 +584,13 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                   <button
                     type="button"
                     onClick={() => setSelectedFormat('need')}
-                    className="flex items-center gap-3 rounded-2xl border border-pink-500/20 bg-pink-500/5 p-3.5 text-left transition-all hover:bg-pink-500/10"
+                    className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-left transition-all hover:bg-amber-500/10"
                   >
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-pink-600 text-white shadow-sm">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm">
                       <HandHeart className="size-5" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-pink-600">Need Request</div>
+                      <div className="text-xs font-bold text-amber-600 dark:text-amber-400">Need Request</div>
                       <div className="text-[11px] text-muted-foreground">
                         Ask neighbors for urgent assistance or items.
                       </div>
@@ -591,15 +600,15 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                   <button
                     type="button"
                     onClick={() => setSelectedFormat('job')}
-                    className="flex items-center gap-3 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-3.5 text-left transition-all hover:bg-indigo-500/10"
+                    className="flex items-center gap-3 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3.5 text-left transition-all hover:bg-emerald-500/10"
                   >
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-indigo-600 text-white shadow-sm">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-sm">
                       <Briefcase className="size-5" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-indigo-600">Job Opening</div>
+                      <div className="text-xs font-bold text-emerald-600 dark:text-emerald-400">Job Opening</div>
                       <div className="text-[11px] text-muted-foreground">
-                        Hire local talent for your shop or business.
+                        Post an employment or contract opportunity.
                       </div>
                     </div>
                   </button>
@@ -1098,7 +1107,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="flex items-center gap-2 rounded-xl bg-blue-600 px-5 py-2 text-xs font-bold text-white shadow-sm transition-all hover:bg-blue-700 disabled:opacity-50"
+                  className="flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-5 py-2.5 text-xs font-bold text-white shadow-md transition-all hover:opacity-95 active:scale-[0.98] disabled:opacity-50"
                 >
                   {submitting ? (
                     <>

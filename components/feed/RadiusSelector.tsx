@@ -43,11 +43,11 @@ export function RadiusSelector({
             onRequestLocation()
           }
         }}
-        className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-bold text-navy shadow-sm transition-all hover:border-primary/40 hover:bg-muted/80"
+        className="flex items-center gap-1.5 rounded-xl border border-border bg-card px-2.5 py-1.5 text-xs font-bold text-slate-900 dark:text-white shadow-sm transition-all hover:border-purple-500/40 hover:bg-muted/80"
         title={hasUserLocation ? `Filtering posts within ${selectedRadius} km` : 'Click to enable location-based distance filter'}
       >
         {hasUserLocation ? (
-          <Navigation className="size-3.5 text-primary fill-primary/20" />
+          <Navigation className="size-3.5 text-blue-600 dark:text-blue-400 fill-blue-500/20" />
         ) : (
           <MapPinOff className="size-3.5 text-amber-500" />
         )}
@@ -62,7 +62,7 @@ export function RadiusSelector({
           </div>
 
           {!hasUserLocation && (
-            <div className="px-2.5 py-1.5 text-[10px] text-amber-600 bg-amber-500/10 rounded-lg mb-1 leading-tight">
+            <div className="px-2.5 py-1.5 text-[10px] text-amber-600 dark:text-amber-400 bg-amber-500/10 rounded-lg mb-1 leading-tight">
               Location access required for exact distance calculation.
             </div>
           )}
@@ -80,7 +80,7 @@ export function RadiusSelector({
                   }}
                   className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                     isSelected
-                      ? 'bg-blue-600 text-white font-bold shadow-sm'
+                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold shadow-sm'
                       : 'text-foreground hover:bg-muted font-medium'
                   }`}
                 >

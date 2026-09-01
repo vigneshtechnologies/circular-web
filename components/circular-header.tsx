@@ -26,10 +26,10 @@ export function CircularHeader() {
             />
           </div>
           <div>
-            <span className="text-xl font-black tracking-tight text-navy">
+            <span className="text-xl font-black tracking-tight text-slate-900 dark:text-white">
               Circular
             </span>
-            <span className="block text-[10px] font-semibold uppercase tracking-wider text-muted-foreground">
+            <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-500 dark:text-slate-400">
               Local Social &amp; Business
             </span>
           </div>
@@ -39,31 +39,35 @@ export function CircularHeader() {
         <nav className="hidden items-center gap-5 lg:gap-6 md:flex">
           <Link
             href="/businesses"
-            className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary"
+            className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-colors hover:text-purple-600 dark:hover:text-purple-400"
           >
-            Businesses
+            <Store className="size-4 text-purple-600 dark:text-purple-400" />
+            <span>Businesses</span>
           </Link>
           <Link
             href="/jobs"
-            className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary"
+            className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-colors hover:text-emerald-600 dark:hover:text-emerald-400"
           >
-            Jobs
+            <Briefcase className="size-4 text-emerald-600 dark:text-emerald-400" />
+            <span>Jobs</span>
           </Link>
           <Link
             href="/events"
-            className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary"
+            className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-colors hover:text-orange-600 dark:hover:text-orange-400"
           >
-            Events
+            <Calendar className="size-4 text-orange-600 dark:text-orange-400" />
+            <span>Events</span>
           </Link>
           <Link
             href="/needs"
-            className="text-sm font-semibold text-muted-foreground transition-colors hover:text-primary"
+            className="flex items-center gap-1.5 text-sm font-semibold text-slate-600 dark:text-slate-300 transition-colors hover:text-amber-600 dark:hover:text-amber-400"
           >
-            Need Board
+            <HelpCircle className="size-4 text-amber-600 dark:text-amber-400" />
+            <span>Need Board</span>
           </Link>
           <Link
             href="/terms"
-            className="text-sm font-medium text-muted-foreground transition-colors hover:text-primary"
+            className="text-sm font-medium text-slate-500 dark:text-slate-400 transition-colors hover:text-primary"
           >
             Terms
           </Link>
@@ -75,7 +79,7 @@ export function CircularHeader() {
             href={PLAY_STORE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="hidden items-center gap-2 rounded-xl bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-md transition-all hover:bg-primary/90 hover:shadow-lg md:inline-flex"
+            className="hidden items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-4 py-2 text-sm font-bold text-white shadow-md transition-all hover:opacity-95 hover:shadow-lg active:scale-[0.98] md:inline-flex"
           >
             <Smartphone className="size-4" />
             <span>Download App</span>
@@ -95,44 +99,44 @@ export function CircularHeader() {
 
       {/* Mobile Dropdown */}
       {mobileMenuOpen && (
-        <div className="border-b border-border bg-background px-4 py-4 md:hidden">
+        <div className="border-b border-border bg-card px-4 py-4 md:hidden">
           <div className="flex flex-col gap-2">
             <Link
               href="/businesses"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-purple-500/10"
             >
-              <Store className="size-4 text-primary" />
+              <Store className="size-4 text-purple-600" />
               <span>Local Businesses</span>
             </Link>
             <Link
               href="/jobs"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-emerald-500/10"
             >
-              <Briefcase className="size-4 text-primary" />
+              <Briefcase className="size-4 text-emerald-600" />
               <span>Jobs &amp; Openings</span>
             </Link>
             <Link
               href="/events"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-orange-500/10"
             >
-              <Calendar className="size-4 text-primary" />
+              <Calendar className="size-4 text-orange-600" />
               <span>Community Events</span>
             </Link>
             <Link
               href="/needs"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-amber-500/10"
             >
-              <HelpCircle className="size-4 text-primary" />
+              <HelpCircle className="size-4 text-amber-600" />
               <span>Need Board</span>
             </Link>
             <Link
               href="/terms"
               onClick={() => setMobileMenuOpen(false)}
-              className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
+              className="flex items-center gap-2.5 rounded-xl px-3 py-2 text-sm font-medium text-foreground hover:bg-muted"
             >
               <FileText className="size-4 text-primary" />
               <span>Terms of Service</span>
@@ -142,7 +146,7 @@ export function CircularHeader() {
               href={PLAY_STORE_URL}
               target="_blank"
               rel="noopener noreferrer"
-              className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-center text-sm font-bold text-primary-foreground shadow"
+              className="mt-2 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-4 py-2.5 text-center text-sm font-bold text-white shadow"
             >
               <Smartphone className="size-4" />
               <span>Download on Google Play</span>

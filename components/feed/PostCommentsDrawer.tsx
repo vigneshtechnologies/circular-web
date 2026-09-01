@@ -75,7 +75,7 @@ export function PostCommentsDrawer({ postId, onClose }: PostCommentsDrawerProps)
         <div className="flex items-center justify-between border-b border-border p-4">
           <div className="flex items-center gap-2">
             <MessageSquare className="size-5 text-primary" />
-            <h3 className="text-base font-bold text-navy">Comments</h3>
+            <h3 className="text-base font-bold text-slate-900 dark:text-white">Comments</h3>
             <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground">
               {comments.length}
             </span>
@@ -108,7 +108,7 @@ export function PostCommentsDrawer({ postId, onClose }: PostCommentsDrawerProps)
                 </div>
                 <div className="flex-1 rounded-2xl bg-muted/50 p-3">
                   <div className="flex items-center justify-between">
-                    <span className="text-xs font-bold text-navy">{c.userName}</span>
+                    <span className="text-xs font-bold text-slate-900 dark:text-white">{c.userName}</span>
                     <span className="text-[10px] text-muted-foreground">
                       {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>

@@ -103,7 +103,7 @@ export default async function PublicJobPage({ params }: Props) {
             <div className="mx-auto flex size-16 items-center justify-center rounded-3xl bg-muted text-muted-foreground">
               <Briefcase className="size-8" />
             </div>
-            <h1 className="mt-4 text-xl font-bold text-navy">Job Opening Not Found</h1>
+            <h1 className="mt-4 text-xl font-bold text-slate-900 dark:text-white">Job Opening Not Found</h1>
             <p className="mt-1 text-xs text-muted-foreground">
               This job opening does not exist, has expired, or was removed.
             </p>
@@ -213,7 +213,7 @@ export default async function PublicJobPage({ params }: Props) {
                   <Briefcase className="size-3.5" />
                   <span>{job.jobType}</span>
                 </div>
-                <h1 className="mt-3 text-2xl font-bold text-navy">{job.title}</h1>
+                <h1 className="mt-3 text-2xl font-bold text-slate-900 dark:text-white">{job.title}</h1>
                 <div className="mt-2 flex flex-wrap items-center gap-4 text-xs text-muted-foreground">
                   <span className="flex items-center gap-1">
                     <Building className="size-3.5 text-primary" />
@@ -235,7 +235,7 @@ export default async function PublicJobPage({ params }: Props) {
 
             {/* Description */}
             <div className="py-6">
-              <h2 className="text-sm font-bold uppercase tracking-wider text-navy">Job Requirements &amp; Description</h2>
+              <h2 className="text-sm font-bold uppercase tracking-wider text-slate-900 dark:text-white">Job Requirements &amp; Description</h2>
               <p className="mt-2 text-sm leading-relaxed text-foreground sm:text-base whitespace-pre-line">
                 {job.description}
               </p>

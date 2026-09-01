@@ -169,7 +169,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ conversatio
   if (!isParticipant) {
     return (
       <div className="flex min-h-screen flex-col items-center justify-center bg-background p-4 text-center">
-        <h2 className="text-lg font-bold text-navy">Private Conversation</h2>
+        <h2 className="text-lg font-bold text-slate-900 dark:text-white">Private Conversation</h2>
         <p className="mt-1 text-xs text-muted-foreground">You do not have access to this conversation.</p>
         <Link href="/messages" className="mt-4 rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow">
           Back to Messages
@@ -216,7 +216,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ conversatio
               />
             </div>
             <div>
-              <h2 className="text-sm font-bold text-navy group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-xs">
+              <h2 className="text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary transition-colors truncate max-w-[200px] sm:max-w-xs">
                 {otherName}
               </h2>
               {otherUsername ? (
@@ -254,7 +254,7 @@ export default function ChatRoomPage({ params }: { params: Promise<{ conversatio
             <div className="flex size-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
               <Send className="size-6" />
             </div>
-            <h3 className="text-sm font-bold text-navy mt-2">Start conversation with {otherName}</h3>
+            <h3 className="text-sm font-bold text-slate-900 dark:text-white mt-2">Start conversation with {otherName}</h3>
             <p className="max-w-xs text-muted-foreground">
               Send a friendly greeting or inquiry. Messages are private and delivered in real-time.
             </p>

@@ -102,7 +102,7 @@ export function LinkPreviewCard({
           <ExternalLink className="size-3 text-muted-foreground group-hover:text-primary ml-auto" />
         </div>
 
-        <h4 className="text-xs sm:text-sm font-bold text-navy group-hover:text-primary line-clamp-1">
+        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-primary line-clamp-1">
           {title}
         </h4>
 

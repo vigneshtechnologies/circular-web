@@ -102,11 +102,11 @@ export default function EventsClientContainer({ initialEvents }: EventsClientPro
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
               <Calendar className="size-5" />
             </div>
             <div>
-              <h1 className="text-base font-extrabold text-navy">Community Events</h1>
+              <h1 className="text-base font-extrabold text-slate-900 dark:text-white">Community Events</h1>
               <p className="text-[11px] font-semibold text-muted-foreground">
                 Discover festivals, camps &amp; gatherings in {displayArea}
               </p>
@@ -119,7 +119,7 @@ export default function EventsClientContainer({ initialEvents }: EventsClientPro
               if (!user) router.push('/login')
               else setIsCreateEventOpen(true)
             }}
-            className="flex items-center gap-1.5 rounded-xl bg-blue-600 px-3 py-1.5 text-xs font-bold text-white shadow-sm transition hover:bg-blue-700"
+            className="flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-3.5 py-1.5 text-xs font-bold text-white shadow-sm transition hover:opacity-95 active:scale-95"
           >
             <PlusCircle className="size-4" />
             <span>Post Event</span>
@@ -133,7 +133,7 @@ export default function EventsClientContainer({ initialEvents }: EventsClientPro
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search events, venue, or keywords..."
-            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none"
+            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-orange-500 focus:bg-card focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -150,10 +150,10 @@ export default function EventsClientContainer({ initialEvents }: EventsClientPro
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-4">
         {filtered.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-orange-500/10 text-orange-600">
               <Calendar className="size-6" />
             </div>
-            <h3 className="mt-3 text-base font-bold text-navy">No events found</h3>
+            <h3 className="mt-3 text-base font-bold text-slate-900 dark:text-white">No events found</h3>
             <p className="mt-1 text-xs text-muted-foreground max-w-md mx-auto leading-relaxed">
               {searchQuery
                 ? `No events match "${searchQuery}".`
@@ -165,30 +165,30 @@ export default function EventsClientContainer({ initialEvents }: EventsClientPro
             <Link
               key={event.id}
               href={`/event/${event.id}`}
-              className="block rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:border-purple-500/40 hover:shadow-md"
+              className="group block rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:border-orange-500/40 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-navy">{event.title}</h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400">{event.title}</h3>
                   <p className="text-xs text-muted-foreground">Venue: {event.venue}</p>
                 </div>
-                <span className="rounded-xl bg-purple-500/10 px-3 py-1 text-[11px] font-bold text-purple-600">
+                <span className="rounded-xl bg-orange-500/10 px-3 py-1 text-[11px] font-bold text-orange-600 dark:text-orange-400">
                   Event
                 </span>
               </div>
 
-              <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-foreground/80">
+              <p className="mt-3 line-clamp-3 text-xs leading-relaxed text-slate-700 dark:text-slate-300">
                 {event.description}
               </p>
 
               <div className="mt-4 flex flex-wrap items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <MapPin className="size-3.5 text-primary" />
+                  <MapPin className="size-3.5 text-blue-600 dark:text-blue-400" />
                   <span>{event.area || getUserCommunityLocation(userProfile)}</span>
                 </span>
                 {(event.date || event.eventDate) && (
-                  <span className="flex items-center gap-1 font-semibold text-purple-600">
-                    <Clock className="size-3.5 text-purple-500 shrink-0" />
+                  <span className="flex items-center gap-1 font-semibold text-orange-600 dark:text-orange-400">
+                    <Clock className="size-3.5 text-orange-500 shrink-0" />
                     <span>{event.date || event.eventDate} {event.time || event.eventTime || ''}</span>
                   </span>
                 )}
@@ -202,7 +202,7 @@ export default function EventsClientContainer({ initialEvents }: EventsClientPro
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm">
           <div className="w-full max-w-lg rounded-3xl border border-border bg-card p-6 shadow-2xl">
             <div className="flex items-center justify-between border-b border-border pb-3">
-              <h2 className="text-base font-bold text-navy">Create an Event</h2>
+              <h2 className="text-base font-bold text-slate-900 dark:text-white">Create an Event</h2>
               <button
                 type="button"
                 onClick={() => setIsCreateEventOpen(false)}

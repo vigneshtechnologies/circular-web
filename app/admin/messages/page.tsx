@@ -246,7 +246,7 @@ export default function AdminMessagesPage() {
           <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-destructive/10 text-destructive">
             <AlertCircle className="size-7" />
           </div>
-          <h1 className="mt-4 text-lg font-bold text-navy">Access Denied</h1>
+          <h1 className="mt-4 text-lg font-bold text-slate-900 dark:text-white">Access Denied</h1>
           <p className="mt-2 text-xs text-muted-foreground">
             You do not have administrator permissions to access Admin Messages.
           </p>
@@ -274,7 +274,7 @@ export default function AdminMessagesPage() {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h1 className="text-base font-extrabold text-navy">ADMIN MESSAGES</h1>
+                <h1 className="text-base font-extrabold text-slate-900 dark:text-white">ADMIN MESSAGES</h1>
                 <span className="rounded-full bg-blue-600/10 px-2 py-0.5 text-[10px] font-black text-blue-600">
                   Oversight
                 </span>
@@ -339,7 +339,7 @@ export default function AdminMessagesPage() {
               {searchQuery && (
                 <div className="mt-2 flex items-center justify-between text-[11px] px-1 text-muted-foreground">
                   <span>
-                    Found <strong className="text-navy">{filtered.length}</strong> matching{' '}
+                    Found <strong className="text-slate-900 dark:text-white">{filtered.length}</strong> matching{' '}
                     {filtered.length === 1 ? 'chat' : 'chats'}
                   </span>
                   <button
@@ -375,13 +375,13 @@ export default function AdminMessagesPage() {
               ) : conversations.length === 0 ? (
                 <div className="py-16 text-center text-xs text-muted-foreground p-4">
                   <MessageSquare className="size-8 mx-auto text-muted-foreground/50 mb-2" />
-                  <p className="font-bold text-navy">No conversations on platform</p>
+                  <p className="font-bold text-slate-900 dark:text-white">No conversations on platform</p>
                   <p className="mt-1 text-[11px]">User-to-user conversations will appear here once started.</p>
                 </div>
               ) : filtered.length === 0 ? (
                 <div className="py-16 text-center text-xs text-muted-foreground p-4">
                   <Search className="size-8 mx-auto text-muted-foreground/50 mb-2" />
-                  <p className="font-bold text-navy">No matching conversations</p>
+                  <p className="font-bold text-slate-900 dark:text-white">No matching conversations</p>
                   <p className="mt-1 text-[11px]">No chats matched &quot;{searchQuery}&quot;.</p>
                   <button
                     type="button"
@@ -433,7 +433,7 @@ export default function AdminMessagesPage() {
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <h4 className="text-xs font-bold text-navy truncate">{title}</h4>
+                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{title}</h4>
                           <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-1">
                             <Clock className="size-3" />
                             {conv.updatedAt
@@ -489,7 +489,7 @@ export default function AdminMessagesPage() {
 
                     <div className="min-w-0">
                       <div className="flex items-center gap-1.5 flex-wrap">
-                        <span className="text-xs font-black text-navy">Conversation:</span>
+                        <span className="text-xs font-black text-slate-900 dark:text-white">Conversation:</span>
                         <span className="text-xs font-mono text-muted-foreground bg-muted px-1.5 py-0.5 rounded truncate max-w-[200px]">
                           {selectedConv.id}
                         </span>
@@ -555,7 +555,7 @@ export default function AdminMessagesPage() {
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-navy">{senderName}</span>
+                              <span className="text-[11px] font-bold text-slate-900 dark:text-white">{senderName}</span>
                               <span className="text-[9px] text-muted-foreground">
                                 {new Date(m.createdAt || m.timestamp || Date.now()).toLocaleTimeString([], {
                                   hour: '2-digit',
@@ -583,7 +583,7 @@ export default function AdminMessagesPage() {
                 <div className="flex size-14 items-center justify-center rounded-3xl bg-primary/10 text-primary">
                   <Shield className="size-7 text-blue-600" />
                 </div>
-                <h3 className="mt-4 text-base font-bold text-navy">Select a Conversation</h3>
+                <h3 className="mt-4 text-base font-bold text-slate-900 dark:text-white">Select a Conversation</h3>
                 <p className="mt-1 max-w-xs text-xs text-muted-foreground leading-relaxed">
                   Choose a conversation from the left to inspect participant messages, timestamps, and account details.
                 </p>
