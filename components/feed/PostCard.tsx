@@ -93,11 +93,12 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
   const locationName = getPostLocation(post)
 
   // Image list
-  const allImages = post.imageUrls && post.imageUrls.length > 0
+  const allImages = (post.imageUrls && post.imageUrls.length > 0
     ? post.imageUrls
     : post.imageUrl
     ? [post.imageUrl]
     : []
+  ).filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index)

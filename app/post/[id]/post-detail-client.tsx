@@ -60,7 +60,12 @@ export function PostDetailClient({ id, initialPost }: PostDetailClientProps) {
       imageUrls: initialPost.images,
       postType: initialPost.postType,
       smart: initialPost.smart,
+      linkPreview: initialPost.linkPreview,
+      event: initialPost.event,
+      poll: initialPost.poll,
       createdAt: initialPost.createdAt,
+      likesCount: initialPost.likesCount || 0,
+      commentsCount: initialPost.commentsCount || 0,
     } as Post
   })
 
@@ -223,11 +228,12 @@ export function PostDetailClient({ id, initialPost }: PostDetailClientProps) {
       })
     : 'Recent'
 
-  const allImages = post?.imageUrls && post.imageUrls.length > 0
+  const allImages = (post?.imageUrls && post.imageUrls.length > 0
     ? post.imageUrls
     : post?.imageUrl
     ? [post.imageUrl]
     : []
+  ).filter((img): img is string => typeof img === 'string' && img.trim().length > 0)
 
   const openLightbox = (index: number) => {
     setLightboxIndex(index)

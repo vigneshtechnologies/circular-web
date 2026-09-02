@@ -69,12 +69,13 @@ export function LinkPreviewCard({
       className="group mt-3 block overflow-hidden rounded-2xl border border-border bg-card transition-all hover:border-primary/50 hover:shadow-md"
     >
       {/* Thumbnail if present */}
-      {preview.imageUrl && !imgFailed && (
+      {preview.imageUrl && preview.imageUrl.trim().length > 0 && !imgFailed && (
         <div className="relative h-44 w-full bg-slate-900 overflow-hidden">
           <Image
-            src={preview.imageUrl}
+            src={preview.imageUrl.trim()}
             alt={title}
             fill
+            unoptimized
             className="object-cover transition-transform duration-300 group-hover:scale-105"
             onError={() => setImgFailed(true)}
           />

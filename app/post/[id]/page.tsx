@@ -38,7 +38,9 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     ? `${post.text.substring(0, 150)}... Shared by ${post.authorName} on Circular.`
     : `View this ${post.category} post shared by ${post.authorName} in ${post.area} on Circular.`
   const canonicalUrl = `https://circularapp.in/post/${id}`
-  const photo = (post.images && post.images.length > 0) ? post.images[0] : '/circular-logo.png'
+  const photo = (post.images && post.images.length > 0)
+    ? post.images[0]
+    : post.linkPreview?.imageUrl || '/circular-logo.png'
 
   return {
     title,
@@ -82,6 +84,12 @@ export default async function PublicPostPage({ params }: Props) {
       ? `https://circularapp.in/user/${post?.authorId}`
       : undefined
 
+  const validImages = (post?.images && post.images.length > 0)
+    ? post.images
+    : post?.linkPreview?.imageUrl
+    ? [post.linkPreview.imageUrl]
+    : undefined
+
   const structuredData = post ? {
     '@context': 'https://schema.org',
     '@type': 'SocialMediaPosting',
@@ -108,7 +116,7 @@ export default async function PublicPostPage({ params }: Props) {
         url: 'https://circularapp.in/circular-logo.png',
       },
     },
-    ...(post.images && post.images.length > 0 ? { image: post.images } : {}),
+    ...(validImages ? { image: validImages } : {}),
   } : null
 
   const postHeadline = post?.text

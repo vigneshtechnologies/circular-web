@@ -23,12 +23,17 @@ export interface PublicPostData {
   images: string[]
   postType: string
   smart?: any
+  linkPreview?: any
+  event?: any
+  poll?: any
   authorName: string
   authorAvatar?: string
   authorId?: string
   businessId?: string
   hasBusinessProfile?: boolean
   createdAt?: number
+  likesCount?: number
+  commentsCount?: number
 }
 
 export interface PublicJobData {
@@ -134,9 +139,9 @@ export async function getPublicPost(id: string): Promise<PublicPostData | null> 
 
     const images: string[] = []
     if (Array.isArray(data.imageUrls)) {
-      data.imageUrls.forEach((u: any) => typeof u === 'string' && images.push(u))
-    } else if (typeof data.imageUrl === 'string') {
-      images.push(data.imageUrl)
+      data.imageUrls.forEach((u: any) => typeof u === 'string' && u.trim().length > 0 && images.push(u.trim()))
+    } else if (typeof data.imageUrl === 'string' && data.imageUrl.trim().length > 0) {
+      images.push(data.imageUrl.trim())
     }
 
     const authorId = data.userId || data.uid || data.authorId || undefined
@@ -151,12 +156,17 @@ export async function getPublicPost(id: string): Promise<PublicPostData | null> 
       images,
       postType: String(data.postType || 'normal'),
       smart: data.smart || undefined,
+      linkPreview: data.linkPreview || undefined,
+      event: data.event || undefined,
+      poll: data.poll || undefined,
       authorName: String(data.authorName || data.userName || (hasBusinessProfile && data.businessName ? data.businessName : 'Community Member')).trim(),
       authorAvatar: data.authorAvatar || data.userAvatar || undefined,
       authorId: authorId ? String(authorId).trim() : undefined,
       businessId: businessId ? String(businessId).trim() : undefined,
       hasBusinessProfile,
       createdAt: typeof data.createdAt === 'number' ? data.createdAt : undefined,
+      likesCount: typeof data.likesCount === 'number' ? data.likesCount : 0,
+      commentsCount: typeof data.commentsCount === 'number' ? data.commentsCount : 0,
     }
   } catch (err) {
     console.warn(`[getPublicPost] Error fetching post #${id}:`, err)
