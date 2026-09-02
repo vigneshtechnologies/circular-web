@@ -118,11 +118,15 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
     return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
   }
 
+  const authorHref = post.hasBusinessProfile && post.businessId
+    ? `/business/${post.businessId}`
+    : `/user/${post.userId}`
+
   return (
     <article className="rounded-3xl border border-border bg-card p-4 md:p-5 shadow-sm transition-all hover:border-purple-500/30">
       {/* Top Author Row */}
       <div className="flex items-center justify-between">
-        <Link href={`/user/${post.userId}`} className="flex items-center gap-3 group min-w-0">
+        <Link href={authorHref} className="flex items-center gap-3 group min-w-0">
           <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border group-hover:ring-purple-500">
             <Image
               src={authorAvatar}
@@ -141,7 +145,9 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
               )}
             </div>
             <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
-              <span>{postDate}</span>
+              <Link href={`/post/${post.id}`} className="hover:underline hover:text-foreground">
+                <span>{postDate}</span>
+              </Link>
               {locationName && (
                 <>
                   <span>•</span>
@@ -162,11 +168,13 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
         )}
       </div>
 
-      {/* Main Text Body */}
+      {/* Main Text Body (Clickable to /post/{id}) */}
       {post.text && (
-        <p className="mt-3 text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line break-words">
-          {post.text}
-        </p>
+        <Link href={`/post/${post.id}`} className="block mt-3 group/post">
+          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line break-words group-hover/post:text-primary transition-colors cursor-pointer">
+            {post.text}
+          </p>
+        </Link>
       )}
 
       {/* Image Grid with Clickable Lightbox */}

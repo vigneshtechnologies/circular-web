@@ -109,6 +109,8 @@ export interface Post {
   userName?: string
   profileImage?: string
   businessName?: string
+  businessId?: string
+  hasBusinessProfile?: boolean
   businessTrustLabel?: string
   showBusinessDetails?: boolean
   text?: string
