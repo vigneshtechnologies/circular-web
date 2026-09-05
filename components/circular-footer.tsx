@@ -13,7 +13,7 @@ const ACCOUNT_DELETION_URL =
 
 export function CircularFooter() {
   return (
-    <footer className="border-t border-border bg-navy text-slate-900 dark:text-white-foreground">
+    <footer className="border-t border-border bg-slate-900 dark:bg-[#070a10] text-slate-300">
       <div className="mx-auto max-w-6xl px-4 py-14 md:px-6">
         <div className="grid gap-10 sm:grid-cols-2 lg:grid-cols-4">
           {/* Brand Col */}
@@ -31,12 +31,12 @@ export function CircularFooter() {
                 <span className="text-xl font-black tracking-tight text-white">
                   Circular
                 </span>
-                <span className="block text-[10px] font-semibold uppercase tracking-wider text-slate-900 dark:text-white-foreground/70">
+                <span className="block text-[10px] font-bold uppercase tracking-wider text-slate-400">
                   Local Social &amp; Business
                 </span>
               </div>
             </div>
-            <p className="mt-4 text-sm leading-relaxed text-slate-900 dark:text-white-foreground/70">
+            <p className="mt-4 text-sm leading-relaxed text-slate-400">
               Discover nearby shops, events, jobs, offers, and connect with your neighborhood on Circular.
             </p>
             <div className="mt-6">
@@ -44,7 +44,7 @@ export function CircularFooter() {
                 href={PLAY_STORE_URL}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 rounded-xl bg-primary px-4 py-2.5 text-xs font-bold text-white shadow transition-all hover:bg-primary/90"
+                className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 px-4 py-2.5 text-xs font-bold text-white shadow transition-all hover:opacity-95"
               >
                 <Smartphone className="size-4" />
                 <span>Get on Google Play</span>
@@ -55,10 +55,10 @@ export function CircularFooter() {
           {/* Discovery Links */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">Discovery</h3>
-            <ul className="mt-4 flex flex-col gap-2.5 text-sm text-slate-900 dark:text-white-foreground/70">
+            <ul className="mt-4 flex flex-col gap-2.5 text-sm text-slate-400">
               <li>
                 <Link href="/" className="transition-colors hover:text-white">
-                  Home
+                  Home Feed
                 </Link>
               </li>
               <li>
@@ -87,7 +87,7 @@ export function CircularFooter() {
           {/* Legal & Safety */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">Legal &amp; Safety</h3>
-            <ul className="mt-4 flex flex-col gap-2.5 text-sm text-slate-900 dark:text-white-foreground/70">
+            <ul className="mt-4 flex flex-col gap-2.5 text-sm text-slate-400">
               <li>
                 <Link href="/terms" className="transition-colors hover:text-white">
                   Terms of Service
@@ -127,7 +127,7 @@ export function CircularFooter() {
                 <a
                   href="/.well-known/assetlinks.json"
                   target="_blank"
-                  className="text-xs text-slate-900 dark:text-white-foreground/50 hover:text-white"
+                  className="text-xs text-slate-500 hover:text-white"
                 >
                   Digital Asset Links
                 </a>
@@ -138,13 +138,13 @@ export function CircularFooter() {
           {/* Contact */}
           <div>
             <h3 className="text-sm font-bold uppercase tracking-wider text-white">Contact &amp; Support</h3>
-            <ul className="mt-4 flex flex-col gap-3 text-sm text-slate-900 dark:text-white-foreground/70">
+            <ul className="mt-4 flex flex-col gap-3 text-sm text-slate-400">
               <li className="flex items-start gap-2.5">
-                <MapPin className="mt-0.5 size-4 shrink-0 text-primary" />
+                <MapPin className="mt-0.5 size-4 shrink-0 text-purple-400" />
                 <span>Rajapalayam, Tamil Nadu, India</span>
               </li>
               <li className="flex items-center gap-2.5">
-                <Mail className="size-4 shrink-0 text-primary" />
+                <Mail className="size-4 shrink-0 text-pink-400" />
                 <a
                   href="mailto:vigneshtechnologyservice@gmail.com"
                   className="transition-colors hover:text-white"
@@ -153,7 +153,7 @@ export function CircularFooter() {
                 </a>
               </li>
               <li className="flex items-center gap-2.5">
-                <ShieldCheck className="size-4 shrink-0 text-primary" />
+                <ShieldCheck className="size-4 shrink-0 text-emerald-400" />
                 <span>Developed by Vignesh Technologies</span>
               </li>
             </ul>
@@ -161,7 +161,7 @@ export function CircularFooter() {
         </div>
 
         {/* Bottom bar */}
-        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-navy-foreground/10 pt-6 text-xs text-slate-900 dark:text-white-foreground/60 sm:flex-row">
+        <div className="mt-12 flex flex-col items-center justify-between gap-4 border-t border-slate-800 pt-6 text-xs text-slate-400 sm:flex-row">
           <p>&copy; {new Date().getFullYear()} Circular • Vignesh Technologies. All rights reserved.</p>
           <div className="flex items-center gap-1">
             <span>Made with</span>

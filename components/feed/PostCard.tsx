@@ -11,6 +11,7 @@ import { getUserAvatar, getPostLocation } from '@/lib/imageUtils'
 import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
 import { SmartPostRenderer } from '@/components/smartPosts/SmartPostRenderer'
 import { LinkPreviewCard } from '@/components/links/LinkPreviewCard'
+import { getCategoryBadgeClass } from '@/lib/categoryColors'
 import {
   Heart,
   MessageCircle,
@@ -105,19 +106,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
     setLightboxOpen(true)
   }
 
-  // Category style resolver
-  const getCategoryBadgeClass = (category?: string) => {
-    const cat = (category || '').toLowerCase()
-    if (cat.includes('food') || cat.includes('restaurant')) return 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border-orange-500/20'
-    if (cat.includes('shop') || cat.includes('store')) return 'bg-pink-500/10 text-pink-600 dark:text-pink-400 border-pink-500/20'
-    if (cat.includes('edu') || cat.includes('school')) return 'bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20'
-    if (cat.includes('job')) return 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
-    if (cat.includes('event')) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-    if (cat.includes('need')) return 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20'
-    if (cat.includes('offer')) return 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
-    if (cat.includes('med') || cat.includes('health')) return 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20'
-    return 'bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
-  }
+  // Category badge class imported from centralized @/lib/categoryColors
 
   const authorHref = post.hasBusinessProfile && post.businessId
     ? `/business/${post.businessId}`
@@ -128,7 +117,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
       {/* Top Author Row */}
       <div className="flex items-center justify-between">
         <Link href={authorHref} className="flex items-center gap-3 group min-w-0">
-          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border group-hover:ring-purple-500">
+          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-purple-500/10 ring-1 ring-border group-hover:ring-purple-500">
             <Image
               src={authorAvatar}
               alt={authorName}
@@ -307,7 +296,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
             onClick={handleLike}
             aria-label="Like post"
             className={`flex items-center gap-1.5 text-xs font-semibold transition-colors ${
-              liked ? 'text-rose-600' : 'text-muted-foreground hover:text-foreground'
+              liked ? 'text-rose-600' : 'text-muted-foreground hover:text-rose-600 dark:hover:text-rose-400'
             }`}
           >
             <Heart className={`size-4 transition-transform active:scale-125 ${liked ? 'fill-rose-600 text-rose-600' : ''}`} />
@@ -318,7 +307,7 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
             type="button"
             onClick={() => onOpenComments && onOpenComments(post.id)}
             aria-label="View comments"
-            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-foreground transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-purple-600 dark:hover:text-purple-400 transition-colors"
           >
             <MessageCircle className="size-4" />
             <span>{post.commentsCount || 0}</span>
@@ -328,15 +317,15 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
             type="button"
             onClick={handleShare}
             aria-label="Share post"
-            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-primary transition-colors"
+            className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground hover:text-orange-500 dark:hover:text-orange-400 transition-colors"
           >
             <Share2 className="size-4" />
-            {sharedToast && <span className="text-[10px] text-primary font-bold">Copied</span>}
+            {sharedToast && <span className="text-[10px] text-orange-600 dark:text-orange-400 font-bold">Copied</span>}
           </button>
         </div>
 
         {/* Views */}
-        <div className="flex items-center gap-1 text-[11px] font-semibold text-muted-foreground/75" title="Total Views">
+        <div className="flex items-center gap-1 text-[11px] font-semibold text-teal-600/80 dark:text-teal-400/80" title="Total Views">
           <Eye className="size-3.5" />
           <span>{(post as any).viewsCount || (post as any).views || 1}</span>
         </div>

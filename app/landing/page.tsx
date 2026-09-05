@@ -160,7 +160,7 @@ export default function CircularLandingPage() {
         </section>
 
         {/* CTA Banner */}
-        <section className="bg-navy py-14 text-white">
+        <section className="bg-slate-900 dark:bg-[#070a10] py-14 text-white border-y border-border">
           <div className="mx-auto max-w-4xl px-4 text-center space-y-6">
             <h2 className="text-2xl sm:text-3xl font-black">Ready to explore Circular?</h2>
             <p className="text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
@@ -169,7 +169,7 @@ export default function CircularLandingPage() {
             <div className="flex flex-col sm:flex-row items-center justify-center gap-4">
               <Link
                 href="/"
-                className="w-full sm:w-auto rounded-2xl bg-primary px-8 py-3.5 text-sm font-bold text-white shadow hover:bg-primary/90"
+                className="w-full sm:w-auto rounded-2xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 px-8 py-3.5 text-sm font-bold text-white shadow-md hover:opacity-95"
               >
                 Open Circular Web App
               </Link>

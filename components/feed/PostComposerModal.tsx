@@ -14,6 +14,8 @@ import {
   SmartListItem,
   LinkPreviewData,
 } from '@/lib/types'
+import { buildWebLinkPreview, getInstagramMediaInfo, fetchLinkPreview } from '@/lib/linkPreview'
+import { LinkPreviewCard } from '@/components/links/LinkPreviewCard'
 import {
   X,
   ArrowLeft,
@@ -83,6 +85,8 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
   const [linkTitle, setLinkTitle] = useState('')
   const [linkDesc, setLinkDesc] = useState('')
   const [linkImage, setLinkImage] = useState('')
+  const [linkPreview, setLinkPreview] = useState<LinkPreviewData | null>(null)
+  const [loadingPreview, setLoadingPreview] = useState(false)
 
   // Event format states
   const [eventTitle, setEventTitle] = useState('')
@@ -129,6 +133,58 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
     }
   }, [userProfile])
 
+  // Debounced link preview fetching
+  useEffect(() => {
+    if (selectedFormat !== 'link') return
+    const trimmed = linkUrl.trim()
+    if (!trimmed || !trimmed.includes('.')) {
+      setLinkPreview(null)
+      setLoadingPreview(false)
+      return
+    }
+
+    let isCancelled = false
+    setLoadingPreview(true)
+
+    const timer = setTimeout(async () => {
+      try {
+        const previewData = await fetchLinkPreview(trimmed)
+        if (!isCancelled) {
+          setLinkPreview(previewData)
+          if (
+            !linkTitle ||
+            linkTitle === 'Instagram Reel' ||
+            linkTitle === 'Instagram Video' ||
+            linkTitle === 'Instagram Post'
+          ) {
+            setLinkTitle(previewData.title || '')
+          }
+          if (
+            !linkDesc ||
+            linkDesc === 'Preview unavailable' ||
+            linkDesc === 'View post on Instagram'
+          ) {
+            setLinkDesc(previewData.description || '')
+          }
+        }
+      } catch (e) {
+        if (!isCancelled) {
+          const fallback = buildWebLinkPreview(trimmed)
+          setLinkPreview(fallback)
+        }
+      } finally {
+        if (!isCancelled) {
+          setLoadingPreview(false)
+        }
+      }
+    }, 450)
+
+    return () => {
+      isCancelled = true
+      clearTimeout(timer)
+    }
+  }, [linkUrl, selectedFormat])
+
   if (!isOpen) return null
 
   const resetForm = () => {
@@ -141,6 +197,8 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
     setLinkTitle('')
     setLinkDesc('')
     setLinkImage('')
+    setLinkPreview(null)
+    setLoadingPreview(false)
     setEventTitle('')
     setEventDate('')
     setEventTime('')
@@ -206,14 +264,12 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
       } else if (selectedFormat === 'link') {
         if (!linkUrl.trim()) throw new Error('Please provide a valid link URL.')
         const postRef = push(ref(db, 'posts'))
+        const basePreview = linkPreview || buildWebLinkPreview(linkUrl)
         const preview: LinkPreviewData = {
-          originalUrl: linkUrl.trim(),
-          canonicalUrl: linkUrl.trim(),
-          title: linkTitle.trim() || linkUrl.trim(),
-          description: linkDesc.trim(),
-          imageUrl: linkImage.trim() || undefined,
-          domain: new URL(linkUrl.startsWith('http') ? linkUrl : `https://${linkUrl}`).hostname,
-          previewStatus: 'ready',
+          ...basePreview,
+          title: linkTitle.trim() || basePreview.title || linkUrl.trim(),
+          description: linkDesc.trim() || basePreview.description || '',
+          imageUrl: linkImage.trim() || basePreview.imageUrl || undefined,
         }
         const postData: Partial<Post> = {
           id: postRef.key as string,
@@ -382,7 +438,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
       title: 'Share a Link',
       desc: 'Create a rich website, video, Maps or Play Store preview.',
       icon: LinkIcon,
-      color: 'from-sky-500 to-cyan-600',
+      color: 'from-purple-600 to-violet-600',
     },
     {
       key: 'event' as PostFormat,
@@ -396,7 +452,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
       title: 'Poll',
       desc: 'Use choices to gather opinions and community votes.',
       icon: BarChart2,
-      color: 'from-purple-600 to-pink-600',
+      color: 'from-pink-500 to-rose-500',
     },
   ]
 
@@ -584,13 +640,13 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                   <button
                     type="button"
                     onClick={() => setSelectedFormat('need')}
-                    className="flex items-center gap-3 rounded-2xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-left transition-all hover:bg-amber-500/10"
+                    className="flex items-center gap-3 rounded-2xl border border-pink-500/20 bg-pink-500/5 p-3.5 text-left transition-all hover:bg-pink-500/10"
                   >
-                    <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 text-white shadow-sm">
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-gradient-to-br from-pink-500 to-rose-600 text-white shadow-sm">
                       <HandHeart className="size-5" />
                     </div>
                     <div>
-                      <div className="text-xs font-bold text-amber-600 dark:text-amber-400">Need Request</div>
+                      <div className="text-xs font-bold text-pink-600 dark:text-pink-400">Need Request</div>
                       <div className="text-[11px] text-muted-foreground">
                         Ask neighbors for urgent assistance or items.
                       </div>
@@ -710,15 +766,41 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                 <div className="space-y-3">
                   <div>
                     <label className="block text-xs font-semibold text-foreground mb-1">Link URL *</label>
-                    <input
-                      type="url"
-                      required
-                      value={linkUrl}
-                      onChange={(e) => setLinkUrl(e.target.value)}
-                      placeholder="https://..."
-                      className="w-full rounded-xl border border-border bg-card p-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
-                    />
+                    <div className="relative">
+                      <input
+                        type="url"
+                        required
+                        value={linkUrl}
+                        onChange={(e) => setLinkUrl(e.target.value)}
+                        placeholder="https://..."
+                        className="w-full rounded-xl border border-border bg-card p-2.5 pr-8 text-xs text-foreground focus:border-primary focus:outline-none"
+                      />
+                      {loadingPreview && (
+                        <div className="absolute right-2.5 top-2.5 text-primary animate-spin">
+                          <Loader2 className="size-4" />
+                        </div>
+                      )}
+                    </div>
                   </div>
+
+                  {/* Live Link Preview Card */}
+                  {linkPreview && (
+                    <div className="pt-1">
+                      <label className="block text-[11px] font-semibold text-muted-foreground mb-1">
+                        Link Preview Card
+                      </label>
+                      <div className="pointer-events-none">
+                        <LinkPreviewCard
+                          preview={{
+                            ...linkPreview,
+                            title: linkTitle.trim() || linkPreview.title,
+                            description: linkDesc.trim() || linkPreview.description,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
+
                   <div>
                     <label className="block text-xs font-semibold text-foreground mb-1">Link Title</label>
                     <input

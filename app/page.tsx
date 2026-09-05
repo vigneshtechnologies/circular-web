@@ -24,7 +24,7 @@ import {
 import { ref, get, query, orderByChild, limitToLast, endAt } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
-import { Sparkles, MapPin, Loader2, ArrowDown, Navigation } from 'lucide-react'
+import { Sparkles, MapPin, Loader2, ArrowDown, Navigation, Briefcase, HandHeart, Store } from 'lucide-react'
 
 const INITIAL_PAGE_SIZE = 30
 const NEXT_PAGE_SIZE = 30
@@ -192,18 +192,20 @@ export default function CircularRootPage() {
 
   if (loading) {
     return (
-      <div className="flex min-h-screen flex-col items-center justify-center bg-navy text-white">
-        <div className="relative size-20 overflow-hidden rounded-3xl bg-white/10 p-2 ring-2 ring-primary shadow-2xl animate-pulse">
-          <Image
-            src="/circular-logo.png"
-            alt="Circular Logo"
-            fill
-            className="object-cover"
-            priority
-          />
+      <div className="flex min-h-screen flex-col items-center justify-center bg-background text-foreground">
+        <div className="relative size-20 overflow-hidden rounded-3xl bg-gradient-to-tr from-blue-600 via-purple-600 to-pink-500 p-1 shadow-2xl animate-pulse ring-2 ring-purple-500/30">
+          <div className="relative size-full rounded-2xl overflow-hidden bg-card">
+            <Image
+              src="/circular-logo.png"
+              alt="Circular Logo"
+              fill
+              className="object-cover"
+              priority
+            />
+          </div>
         </div>
-        <h1 className="mt-4 text-2xl font-black tracking-tight">Circular</h1>
-        <p className="mt-1 text-xs text-slate-400">Connecting your local community...</p>
+        <h1 className="mt-4 text-2xl font-black tracking-tight text-slate-900 dark:text-white">Circular</h1>
+        <p className="mt-1 text-xs font-semibold text-muted-foreground">Local Social &amp; Business</p>
       </div>
     )
   }
@@ -259,14 +261,14 @@ export default function CircularRootPage() {
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-blue-500/10 text-blue-600 dark:text-blue-400">
-              <MapPin className="size-5" />
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/15 via-purple-500/15 to-pink-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+              <MapPin className="size-4.5 stroke-[2.2]" />
             </div>
             <div className="min-w-0">
               <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">Local Feed</h1>
               <div className="text-[11px] font-semibold text-muted-foreground truncate flex items-center gap-1">
                 <span>Showing updates in</span>
-                <span className="text-blue-600 dark:text-blue-400 font-bold">{displayLocation}</span>
+                <span className="text-purple-600 dark:text-purple-400 font-bold">{displayLocation}</span>
               </div>
             </div>
           </div>
@@ -296,29 +298,35 @@ export default function CircularRootPage() {
         {/* Compact Stories / Status Launcher Bar */}
         <StoriesBar />
 
-        {/* Quick Discovery Buttons (Local Jobs, Need Nearby, Bulletin) */}
+        {/* Quick Discovery Buttons (Local Jobs, Need Nearby, Bulletin) with Individual Colour Identity */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 py-0.5">
           <Link
             href="/jobs"
-            className="flex items-center justify-center gap-1.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-2.5 py-2.5 text-center text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-sm transition-all hover:bg-emerald-500/15 hover:scale-[1.01] active:scale-[0.99]"
+            className="group flex items-center justify-center gap-1.5 sm:gap-2 rounded-2xl border border-emerald-500/30 bg-emerald-500/10 dark:bg-emerald-950/25 px-2 sm:px-3 py-2.5 text-center text-xs font-bold text-emerald-700 dark:text-emerald-400 shadow-xs transition-all hover:bg-emerald-500/20 hover:scale-[1.01] active:scale-[0.99]"
           >
-            <div className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+            <div className="flex size-5 items-center justify-center rounded-md bg-emerald-500 text-white shrink-0 shadow-xs">
+              <Briefcase className="size-3 stroke-[2.5]" />
+            </div>
             <span className="truncate">Local Jobs</span>
           </Link>
 
           <Link
             href="/needs"
-            className="flex items-center justify-center gap-1.5 rounded-2xl border border-amber-500/20 bg-amber-500/10 px-2.5 py-2.5 text-center text-xs font-bold text-amber-600 dark:text-amber-400 shadow-sm transition-all hover:bg-amber-500/15 hover:scale-[1.01] active:scale-[0.99]"
+            className="group flex items-center justify-center gap-1.5 sm:gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 dark:bg-amber-950/25 px-2 sm:px-3 py-2.5 text-center text-xs font-bold text-amber-700 dark:text-amber-400 shadow-xs transition-all hover:bg-amber-500/20 hover:scale-[1.01] active:scale-[0.99]"
           >
-            <div className="size-2 rounded-full bg-amber-500 animate-pulse" />
+            <div className="flex size-5 items-center justify-center rounded-md bg-amber-500 text-white shrink-0 shadow-xs">
+              <HandHeart className="size-3 stroke-[2.5]" />
+            </div>
             <span className="truncate">Need Nearby</span>
           </Link>
 
           <Link
             href="/businesses"
-            className="flex items-center justify-center gap-1.5 rounded-2xl border border-purple-500/20 bg-purple-500/10 px-2.5 py-2.5 text-center text-xs font-bold text-purple-600 dark:text-purple-400 shadow-sm transition-all hover:bg-purple-500/15 hover:scale-[1.01] active:scale-[0.99]"
+            className="group flex items-center justify-center gap-1.5 sm:gap-2 rounded-2xl border border-purple-500/30 bg-purple-500/10 dark:bg-purple-950/25 px-2 sm:px-3 py-2.5 text-center text-xs font-bold text-purple-700 dark:text-purple-400 shadow-xs transition-all hover:bg-purple-500/20 hover:scale-[1.01] active:scale-[0.99]"
           >
-            <div className="size-2 rounded-full bg-purple-500 animate-pulse" />
+            <div className="flex size-5 items-center justify-center rounded-md bg-purple-500 text-white shrink-0 shadow-xs">
+              <Store className="size-3 stroke-[2.5]" />
+            </div>
             <span className="truncate">Bulletin</span>
           </Link>
         </div>

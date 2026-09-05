@@ -8,6 +8,7 @@ import { db } from '@/lib/firebase'
 import { useAuth } from '@/context/AuthContext'
 import { BusinessProfile, NeedPost } from '@/lib/types'
 import { getBusinessPhoto } from '@/lib/imageUtils'
+import { getCategoryDef } from '@/lib/categoryColors'
 import { Store, HandHeart, Smartphone, CheckCircle2, ChevronRight, Loader2, AlertCircle } from 'lucide-react'
 
 export function RightSidebar({
@@ -110,14 +111,14 @@ export function RightSidebar({
       <div className="rounded-2xl border border-border bg-card p-4 shadow-sm">
         <div className="flex items-center justify-between border-b border-border pb-2.5">
           <div className="flex items-center gap-2">
-            <Store className="size-4 text-purple-600 dark:text-purple-400" />
+            <Store className="size-4 text-orange-600 dark:text-orange-400" />
             <h3 className="text-xs font-bold uppercase tracking-wider text-slate-900 dark:text-white">
               Local Businesses
             </h3>
           </div>
           <Link
             href="/businesses"
-            className="text-[11px] font-semibold text-purple-600 dark:text-purple-400 hover:underline"
+            className="text-[11px] font-semibold text-orange-600 dark:text-orange-400 hover:underline"
           >
             View all
           </Link>
@@ -126,7 +127,7 @@ export function RightSidebar({
         <div className="mt-3 flex flex-col gap-3">
           {loadingBiz ? (
             <div className="flex items-center justify-center py-4 text-xs text-muted-foreground gap-2">
-              <Loader2 className="size-3.5 animate-spin text-purple-600" />
+              <Loader2 className="size-3.5 animate-spin text-orange-600" />
               <span>Loading businesses...</span>
             </div>
           ) : bizError ? (
@@ -152,7 +153,7 @@ export function RightSidebar({
                   className="group flex items-center justify-between rounded-xl p-1.5 transition-colors hover:bg-muted/70"
                 >
                   <div className="flex items-center gap-2.5 min-w-0">
-                    <div className="relative size-10 shrink-0 overflow-hidden rounded-xl bg-purple-500/10 ring-1 ring-border">
+                    <div className="relative size-10 shrink-0 overflow-hidden rounded-xl bg-orange-500/10 ring-1 ring-border">
                       <Image
                         src={photo}
                         alt={bizName}
@@ -162,7 +163,7 @@ export function RightSidebar({
                     </div>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-1">
-                        <span className="truncate text-xs font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
+                        <span className="truncate text-xs font-bold text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400">
                           {bizName}
                         </span>
                         {b.isVerified && (
@@ -187,7 +188,7 @@ export function RightSidebar({
                       </div>
                     </div>
                   </div>
-                  <ChevronRight className="size-4 text-muted-foreground group-hover:text-purple-600 dark:group-hover:text-purple-400 shrink-0 ml-1" />
+                  <ChevronRight className="size-4 text-muted-foreground group-hover:text-orange-600 dark:group-hover:text-orange-400 shrink-0 ml-1" />
                 </Link>
               )
             })
@@ -221,26 +222,37 @@ export function RightSidebar({
           ) : needs.length === 0 ? (
             <p className="text-xs text-muted-foreground py-3 text-center">No open requests right now.</p>
           ) : (
-            needs.map((n) => (
-              <Link
-                key={n.id}
-                href={`/need/${n.id}`}
-                className="group rounded-xl border border-border/60 bg-muted/30 p-2.5 transition-colors hover:border-pink-500/40 hover:bg-muted"
-              >
-                <div className="flex items-center justify-between text-[10px]">
-                  <span className="font-semibold text-muted-foreground">{n.userName || 'Neighbor'}</span>
-                  <span className="rounded-full bg-pink-500/10 px-2 py-0.5 font-bold text-pink-600 dark:text-pink-400">
-                    {n.urgency || 'Open'}
-                  </span>
-                </div>
-                <h4 className="mt-1 text-xs font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 line-clamp-1">
-                  {n.title}
-                </h4>
-                <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
-                  {n.description}
-                </p>
-              </Link>
-            ))
+            needs.map((n) => {
+              const u = (n.urgency || '').toLowerCase()
+              const urgencyStyle = u.includes('urgent')
+                ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20'
+                : u.includes('high')
+                ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400 border border-orange-500/20'
+                : u.includes('med')
+                ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20'
+                : 'bg-teal-500/10 text-teal-600 dark:text-teal-400 border border-teal-500/20'
+
+              return (
+                <Link
+                  key={n.id}
+                  href={`/need/${n.id}`}
+                  className="group rounded-xl border border-border/60 bg-muted/30 p-2.5 transition-colors hover:border-pink-500/40 hover:bg-muted"
+                >
+                  <div className="flex items-center justify-between text-[10px]">
+                    <span className="font-semibold text-muted-foreground">{n.userName || 'Neighbor'}</span>
+                    <span className={`rounded-full px-2 py-0.5 font-bold ${urgencyStyle}`}>
+                      {n.urgency || 'Open'}
+                    </span>
+                  </div>
+                  <h4 className="mt-1 text-xs font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400 line-clamp-1">
+                    {n.title}
+                  </h4>
+                  <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                    {n.description}
+                  </p>
+                </Link>
+              )
+            })
           )}
         </div>
       </div>

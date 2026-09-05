@@ -95,7 +95,7 @@ export default function NotificationsPage() {
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3.5 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400">
               <Bell className="size-5" />
             </div>
             <div>
@@ -135,7 +135,7 @@ export default function NotificationsPage() {
             onClick={() => setFilter('unread')}
             className={`rounded-xl px-3 py-1 text-xs font-semibold transition-all ${
               filter === 'unread'
-                ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-sm font-bold'
+                ? 'bg-pink-600 text-white shadow-sm font-bold border-pink-600'
                 : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted'
             }`}
           >
@@ -147,7 +147,7 @@ export default function NotificationsPage() {
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-2.5">
         {filtered.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-pink-500/10 text-pink-600">
               <Bell className="size-6" />
             </div>
             <h3 className="mt-3 text-base font-bold text-slate-900 dark:text-white">No notifications</h3>

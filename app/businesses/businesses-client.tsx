@@ -13,6 +13,7 @@ import { db } from '@/lib/firebase'
 import { getBusinessPhoto } from '@/lib/imageUtils'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { PublicBusinessData } from '@/lib/serverPublicData'
+import { getCategoryBadgeClass, getCategoryPillClass } from '@/lib/categoryColors'
 import { Store, MapPin, Star, CheckCircle2, Search, X, Loader2 } from 'lucide-react'
 
 const OFFICIAL_BUSINESS_CATEGORIES = [
@@ -97,7 +98,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
     if (cat.includes('edu') || cat.includes('school')) return 'text-purple-600 dark:text-purple-400 font-semibold'
     if (cat.includes('med') || cat.includes('health')) return 'text-rose-600 dark:text-rose-400 font-semibold'
     if (cat.includes('tech') || cat.includes('software')) return 'text-indigo-600 dark:text-indigo-400 font-semibold'
-    return 'text-blue-600 dark:text-blue-400 font-semibold'
+    return 'text-slate-600 dark:text-slate-400 font-semibold'
   }
 
   const content = (
@@ -105,7 +106,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-purple-500/10 text-purple-600 dark:text-purple-400">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400">
               <Store className="size-5" />
             </div>
             <div>
@@ -143,11 +144,7 @@ export default function BusinessesClientContainer({ initialBusinesses }: Busines
               key={cat}
               type="button"
               onClick={() => setSelectedCategory(cat)}
-              className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
-                selectedCategory === cat
-                  ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/20 font-bold'
-                  : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted'
-              }`}
+              className={`shrink-0 rounded-xl px-3 py-1.5 text-xs transition-all ${getCategoryPillClass(cat, selectedCategory === cat)}`}
             >
               {cat}
             </button>

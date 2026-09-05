@@ -100,7 +100,7 @@ export default function NeedsClientContainer({ initialNeeds }: NeedsClientProps)
       <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-2.5">
-            <div className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+            <div className="flex size-9 items-center justify-center rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400">
               <HandHeart className="size-5" />
             </div>
             <div>
@@ -131,7 +131,7 @@ export default function NeedsClientContainer({ initialNeeds }: NeedsClientProps)
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search needs, blood requests, items..."
-            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-amber-500 focus:bg-card focus:outline-none"
+            className="w-full rounded-2xl border border-border bg-muted/60 py-2 pl-10 pr-10 text-xs text-foreground placeholder-muted-foreground focus:border-pink-500 focus:bg-card focus:outline-none"
           />
           {searchQuery && (
             <button
@@ -165,7 +165,7 @@ export default function NeedsClientContainer({ initialNeeds }: NeedsClientProps)
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-4">
         {filtered.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
-            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-pink-500/10 text-pink-600">
               <HandHeart className="size-6" />
             </div>
             <h3 className="mt-3 text-base font-bold text-slate-900 dark:text-white">No requests on the board</h3>
@@ -180,11 +180,11 @@ export default function NeedsClientContainer({ initialNeeds }: NeedsClientProps)
             <Link
               key={need.id}
               href={`/need/${need.id}`}
-              className="group block rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:border-amber-500/40 hover:shadow-md"
+              className="group block rounded-3xl border border-border bg-card p-5 shadow-sm transition-all hover:border-pink-500/40 hover:shadow-md"
             >
               <div className="flex items-start justify-between">
                 <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400">{need.title}</h3>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-pink-600 dark:group-hover:text-pink-400">{need.title}</h3>
                   <p className="text-xs text-muted-foreground">Posted by {need.requesterName || need.userName || 'Member'}</p>
                 </div>
                 <span
@@ -206,7 +206,7 @@ export default function NeedsClientContainer({ initialNeeds }: NeedsClientProps)
 
               <div className="mt-4 flex items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <MapPin className="size-3.5 text-blue-600 dark:text-blue-400" />
+                  <MapPin className="size-3.5 text-pink-600 dark:text-pink-400" />
                   <span>{need.area || getUserCommunityLocation(userProfile)}</span>
                 </span>
                 <span className="text-[11px]">
@@ -296,7 +296,7 @@ export default function NeedsClientContainer({ initialNeeds }: NeedsClientProps)
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-xl bg-pink-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-pink-700 disabled:opacity-50"
                 >
                   {submitting ? 'Posting...' : 'Publish Need'}
                 </button>

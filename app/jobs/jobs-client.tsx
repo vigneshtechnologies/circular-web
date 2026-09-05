@@ -199,7 +199,7 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
               <div className="flex items-start justify-between">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">{job.title}</h3>
-                  <p className="text-xs font-semibold text-blue-600 dark:text-blue-400">{job.businessName || 'Local Business'}</p>
+                  <p className="text-xs font-semibold text-slate-700 dark:text-slate-300">{job.businessName || 'Local Business'}</p>
                 </div>
                 <span className="rounded-xl bg-emerald-500/10 px-3 py-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400">
                   {job.jobType || 'Full-time'}
@@ -213,7 +213,7 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
               <div className="mt-4 flex flex-wrap items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                 <div className="flex items-center gap-3">
                   <span className="flex items-center gap-1">
-                    <MapPin className="size-3.5 text-blue-600 dark:text-blue-400" />
+                    <MapPin className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                     <span>{job.area || getUserCommunityLocation(userProfile)}</span>
                   </span>
                   {job.salary && (
@@ -328,7 +328,7 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-xl bg-emerald-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-emerald-700 disabled:opacity-50"
                 >
                   {submitting ? 'Posting...' : 'Publish Job'}
                 </button>

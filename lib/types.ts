@@ -34,6 +34,9 @@ export type LinkPreviewData = {
   title?: string
   description?: string
   imageUrl?: string
+  imageFallbackUrl?: string
+  mediaType?: 'photo' | 'video' | 'reel' | 'link'
+  instagramType?: 'photo' | 'video' | 'reel'
   siteName?: string
   domain?: string
   fetchedAt?: number

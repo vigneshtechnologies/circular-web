@@ -10,6 +10,7 @@ import { ref, get, query, orderByChild, equalTo, onValue, update } from 'firebas
 import { db } from '@/lib/firebase'
 import { Post, BusinessProfile, UserProfile } from '@/lib/types'
 import { PostCard } from '@/components/feed/PostCard'
+import { PostGridTile } from '@/components/profile/PostGridTile'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
 import { getUserAvatar } from '@/lib/imageUtils'
@@ -25,8 +26,12 @@ import {
   Sparkles,
   ArrowLeft,
   Loader2,
-  Check
+  Check,
+  LayoutGrid,
+  List,
 } from 'lucide-react'
+
+const VIEW_PREF_KEY = 'circular_profile_view'
 
 type PageProps = {
   params: Promise<{ id: string }>
@@ -62,7 +67,27 @@ export default function UserProfilePage({ params }: PageProps) {
   const [imageViewerSrc, setImageViewerSrc] = useState<string | null>(null)
   const [copiedShare, setCopiedShare] = useState(false)
 
+  // Grid/Feed toggle
+  const [viewMode, setViewMode] = useState<'feed' | 'grid'>('grid')
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+
+  // Restore viewMode from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_PREF_KEY)
+      if (saved === 'feed' || saved === 'grid') setViewMode(saved)
+    } catch {}
+  }, [])
+
+  // Persist viewMode to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_PREF_KEY, viewMode)
+    } catch {}
+  }, [viewMode])
+
   // 1. Load User Profile from publicProfiles and users node
+
   useEffect(() => {
     if (!targetUserId) return
     setLoading(true)
@@ -483,18 +508,83 @@ export default function UserProfilePage({ params }: PageProps) {
                 </div>
                 <h3 className="text-sm font-bold text-slate-900 dark:text-white">No public posts yet</h3>
                 <p className="text-xs text-muted-foreground">
-                  {displayName} hasn't posted any updates to the community yet.
+                  {displayName} hasn&apos;t posted any updates to the community yet.
                 </p>
               </div>
             ) : (
-              userPosts.map((post) => (
-                <PostCard
-                  key={post.id}
-                  post={post}
-                  onOpenComments={(pId) => setActiveCommentsPostId(pId)}
-                />
-              ))
+              <>
+                {/* Grid/Feed Toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {userPosts.length} {userPosts.length === 1 ? 'post' : 'posts'}
+                  </span>
+                  <div className="flex overflow-hidden rounded-xl border border-border">
+                    <button
+                      type="button"
+                      onClick={() => { setViewMode('grid'); setSelectedPostId(null) }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+                        viewMode === 'grid'
+                          ? 'bg-primary text-white'
+                          : 'bg-card text-muted-foreground hover:bg-muted'
+                      }`}
+                      title="Grid view"
+                    >
+                      <LayoutGrid className="size-3.5" />
+                      <span>Grid</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setViewMode('feed'); setSelectedPostId(null) }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+                        viewMode === 'feed'
+                          ? 'bg-primary text-white'
+                          : 'bg-card text-muted-foreground hover:bg-muted'
+                      }`}
+                      title="Feed view"
+                    >
+                      <List className="size-3.5" />
+                      <span>Feed</span>
+                    </button>
+                  </div>
+                </div>
+
+                {viewMode === 'grid' ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                      {userPosts.map((post) => (
+                        <PostGridTile
+                          key={post.id}
+                          post={post}
+                          onClick={() => setSelectedPostId(selectedPostId === post.id ? null : post.id)}
+                        />
+                      ))}
+                    </div>
+                    {/* Expanded post card below grid */}
+                    {selectedPostId && (() => {
+                      const expandedPost = userPosts.find((p) => p.id === selectedPostId)
+                      if (!expandedPost) return null
+                      return (
+                        <div className="mt-2 rounded-3xl border border-primary/30 bg-card shadow-md transition-all">
+                          <PostCard
+                            post={expandedPost}
+                            onOpenComments={(pId) => setActiveCommentsPostId(pId)}
+                          />
+                        </div>
+                      )
+                    })()}
+                  </>
+                ) : (
+                  userPosts.map((post) => (
+                    <PostCard
+                      key={post.id}
+                      post={post}
+                      onOpenComments={(pId) => setActiveCommentsPostId(pId)}
+                    />
+                  ))
+                )}
+              </>
             )
+
           ) : userBusinesses.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center text-xs text-muted-foreground">
               No registered businesses listed.

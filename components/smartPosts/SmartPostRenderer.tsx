@@ -79,7 +79,7 @@ export function SmartPostRenderer({ postId, smart, compact = false }: SmartPostR
                   )}
                 </button>
               ) : (
-                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-bold text-primary">
+                <span className="flex size-5 shrink-0 items-center justify-center rounded-full bg-teal-500/10 text-[10px] font-bold text-teal-600 dark:text-teal-400">
                   {idx + 1}
                 </span>
               )}
@@ -260,7 +260,7 @@ export function SmartPostRenderer({ postId, smart, compact = false }: SmartPostR
       <div className="mt-3 space-y-2">
         <div className="h-3 w-full overflow-hidden rounded-full bg-muted border border-border">
           <div
-            className="h-full bg-gradient-to-r from-blue-600 to-indigo-600 transition-all duration-500"
+            className="h-full bg-gradient-to-r from-orange-500 to-amber-500 transition-all duration-500"
             style={{ width: `${percentage}%` }}
           />
         </div>
@@ -268,7 +268,7 @@ export function SmartPostRenderer({ postId, smart, compact = false }: SmartPostR
           <span>
             {current.toLocaleString('en-IN')} / {target.toLocaleString('en-IN')} {unit}
           </span>
-          <span className="text-primary font-black">{percentage}%</span>
+          <span className="text-orange-600 dark:text-orange-400 font-black">{percentage}%</span>
         </div>
       </div>
     )
@@ -277,7 +277,7 @@ export function SmartPostRenderer({ postId, smart, compact = false }: SmartPostR
   // 4. Render Notice / Article
   const renderNotice = () => {
     return (
-      <div className="mt-3 rounded-xl border-l-4 border-primary bg-primary/5 p-3.5 text-xs text-foreground leading-relaxed">
+      <div className="mt-3 rounded-xl border-l-4 border-pink-500 bg-pink-500/10 p-3.5 text-xs text-foreground leading-relaxed">
         {smart.description}
       </div>
     )

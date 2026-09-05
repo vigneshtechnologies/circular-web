@@ -183,7 +183,7 @@ export default function EventsClientContainer({ initialEvents }: EventsClientPro
 
               <div className="mt-4 flex flex-wrap items-center justify-between border-t border-border pt-3 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <MapPin className="size-3.5 text-blue-600 dark:text-blue-400" />
+                  <MapPin className="size-3.5 text-orange-600 dark:text-orange-400" />
                   <span>{event.area || getUserCommunityLocation(userProfile)}</span>
                 </span>
                 {(event.date || event.eventDate) && (
@@ -280,7 +280,7 @@ export default function EventsClientContainer({ initialEvents }: EventsClientPro
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="rounded-xl bg-blue-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-blue-700 disabled:opacity-50"
+                  className="rounded-xl bg-orange-600 px-4 py-2 text-xs font-bold text-white shadow hover:bg-orange-700 disabled:opacity-50"
                 >
                   {submitting ? 'Creating...' : 'Publish Event'}
                 </button>

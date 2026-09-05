@@ -59,12 +59,16 @@ export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
       icon: Home,
       label: 'Home',
       activeColor: 'text-blue-600 dark:text-blue-400',
+      activeBg: 'bg-blue-500/15 dark:bg-blue-500/20',
+      dotColor: 'bg-blue-600 dark:bg-blue-400',
     },
     {
       href: '/following',
       icon: Users,
       label: 'Following',
       activeColor: 'text-purple-600 dark:text-purple-400',
+      activeBg: 'bg-purple-500/15 dark:bg-purple-500/20',
+      dotColor: 'bg-purple-600 dark:bg-purple-400',
     },
     {
       isAction: true,
@@ -74,29 +78,33 @@ export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
       href: '/search',
       icon: Search,
       label: 'Search',
-      activeColor: 'text-sky-600 dark:text-sky-400',
+      activeColor: 'text-teal-600 dark:text-teal-400',
+      activeBg: 'bg-teal-500/15 dark:bg-teal-500/20',
+      dotColor: 'bg-teal-600 dark:bg-teal-400',
     },
     {
       href: '/profile',
       icon: User,
       label: 'Profile',
-      activeColor: 'text-violet-600 dark:text-violet-400',
+      activeColor: 'text-pink-600 dark:text-pink-400',
+      activeBg: 'bg-pink-500/15 dark:bg-pink-500/20',
+      dotColor: 'bg-pink-600 dark:bg-pink-400',
     },
   ]
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card/95 pb-safe pt-2 backdrop-blur-md md:hidden shadow-lg">
-      {navTabs.map((tab, idx) => {
+    <nav className="fixed bottom-0 left-0 right-0 z-50 flex items-center justify-around border-t border-border bg-card/95 pb-safe pt-1.5 backdrop-blur-md md:hidden shadow-lg">
+      {navTabs.map((tab) => {
         if (tab.isAction) {
           return (
             <button
               key="post-action-btn"
               type="button"
               onClick={onOpenPostComposer}
-              className="flex flex-col items-center gap-0.5 px-2 py-1 -mt-3"
+              className="flex flex-col items-center gap-0.5 px-2 py-0.5 -mt-3.5 group"
               aria-label="Create Post"
             >
-              <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-600 via-purple-600 to-pink-600 shadow-md shadow-purple-500/30 active:scale-95 transition-transform ring-2 ring-card">
+              <div className="flex size-11 items-center justify-center rounded-2xl bg-gradient-to-tr from-blue-600 via-purple-600 to-pink-500 shadow-md shadow-purple-500/30 active:scale-95 group-hover:shadow-lg transition-transform ring-2 ring-card">
                 <PlusCircle className="size-5 text-white stroke-[2.5]" />
               </div>
               <span className="text-[10px] font-bold text-purple-600 dark:text-purple-400">Post</span>
@@ -111,20 +119,31 @@ export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
           <Link
             key={tab.href}
             href={tab.href!}
-            className={`relative flex flex-1 flex-col items-center gap-0.5 py-1.5 text-[10px] font-semibold transition-colors ${
-              isActive
-                ? `${tab.activeColor} font-bold`
-                : 'text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200'
-            }`}
+            className="relative flex flex-1 flex-col items-center gap-0.5 py-1 text-[10px] font-semibold transition-colors"
           >
-            <div className="relative">
+            <div
+              className={`relative flex size-8 items-center justify-center rounded-xl transition-all ${
+                isActive
+                  ? `${tab.activeBg} ${tab.activeColor} shadow-xs`
+                  : 'text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-300'
+              }`}
+            >
               <Icon
-                className={`size-5 ${
-                  isActive ? `${tab.activeColor} stroke-[2.5]` : 'text-slate-500 dark:text-slate-400 stroke-[1.8]'
+                className={`size-4.5 transition-transform ${
+                  isActive ? `${tab.activeColor} stroke-[2.4] scale-105` : 'text-slate-400 dark:text-slate-500 stroke-[1.8]'
                 }`}
               />
             </div>
-            <span>{tab.label}</span>
+            <span
+              className={`truncate ${
+                isActive ? `${tab.activeColor} font-bold` : 'text-slate-500 dark:text-slate-400'
+              }`}
+            >
+              {tab.label}
+            </span>
+            {isActive && (
+              <span className={`size-1 rounded-full ${tab.dotColor} -mt-0.5`} />
+            )}
           </Link>
         )
       })}

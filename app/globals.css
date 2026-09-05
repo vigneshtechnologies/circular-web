@@ -3,8 +3,8 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
-  --color-primary: #2563eb;
-  --color-primary-dark: #1d4ed8;
+  --color-primary: #8b5cf6;
+  --color-primary-dark: #7c3aed;
   --color-primary-foreground: #ffffff;
   --color-navy: var(--color-foreground);
   --color-border: var(--border-color);
@@ -13,12 +13,13 @@
   --color-muted-foreground: var(--muted-fg);
   --color-foreground: var(--fg-color);
   --color-background: var(--bg-color);
+  --color-blue: #2563eb;
   --color-purple: #8b5cf6;
   --color-pink: #ec4899;
   --color-orange: #f97316;
   --color-emerald: #10b981;
   --color-amber: #f59e0b;
-  --color-teal: #06b6d4;
+  --color-teal: #0d9488;
   --color-sky: #0284c7;
   --color-rose: #f43f5e;
   --color-indigo: #6366f1;
@@ -35,12 +36,12 @@
 }
 
 .dark {
-  --border-color: #1e293b;
-  --card-bg: #111827;
-  --muted-bg: #1e293b;
+  --border-color: #212838;
+  --card-bg: #10141e;
+  --muted-bg: #161b26;
   --muted-fg: #94a3b8;
   --fg-color: #f8fafc;
-  --bg-color: #0b0f17;
+  --bg-color: #080b14;
 }
 
 @layer base {

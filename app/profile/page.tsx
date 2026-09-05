@@ -10,11 +10,14 @@ import { ref, get, query, orderByChild, equalTo, update, onValue } from 'firebas
 import { db } from '@/lib/firebase'
 import { Post, BusinessProfile } from '@/lib/types'
 import { PostCard } from '@/components/feed/PostCard'
+import { PostGridTile } from '@/components/profile/PostGridTile'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { getUserAvatar } from '@/lib/imageUtils'
-import { MapPin, Edit3, Settings, Sparkles, X, Shield, Share2, Check } from 'lucide-react'
+import { MapPin, Edit3, Settings, Sparkles, X, Shield, Share2, Check, LayoutGrid, List } from 'lucide-react'
+
+const VIEW_PREF_KEY = 'circular_profile_view'
 
 export default function ProfilePage() {
   const { user, userProfile, isAdmin, refreshProfile, loading, publicProfiles } = useAuth()
@@ -23,6 +26,8 @@ export default function ProfilePage() {
   const [myBusinesses, setMyBusinesses] = useState<BusinessProfile[]>([])
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
+  const [viewMode, setViewMode] = useState<'feed' | 'grid'>('grid')
+  const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
 
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
@@ -38,6 +43,21 @@ export default function ProfilePage() {
   const [photoURL, setPhotoURL] = useState('')
   const [saving, setSaving] = useState(false)
 
+  // Restore viewMode from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(VIEW_PREF_KEY)
+      if (saved === 'feed' || saved === 'grid') setViewMode(saved)
+    } catch {}
+  }, [])
+
+  // Persist viewMode to localStorage
+  useEffect(() => {
+    try {
+      localStorage.setItem(VIEW_PREF_KEY, viewMode)
+    } catch {}
+  }, [viewMode])
+
   useEffect(() => {
     if (userProfile) {
       setName(userProfile.name || '')
@@ -48,6 +68,7 @@ export default function ProfilePage() {
       setPhotoURL(userProfile.photoURL || userProfile.profileImage || '')
     }
   }, [userProfile])
+
 
   useEffect(() => {
     if (!user) return
@@ -137,7 +158,7 @@ export default function ProfilePage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="size-8 animate-spin rounded-full border-2 border-teal-500 border-t-transparent" />
       </div>
     )
   }
@@ -184,7 +205,7 @@ export default function ProfilePage() {
                 </div>
                 <p className="text-xs font-semibold text-muted-foreground">@{userProfile?.username || 'member'}</p>
                 <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="size-3.5 text-blue-600 dark:text-blue-400 shrink-0" />
+                  <MapPin className="size-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                   <span className="truncate">{displayLocality}</span>
                 </div>
               </div>
@@ -247,7 +268,7 @@ export default function ProfilePage() {
             onClick={() => setActiveTab('posts')}
             className={`border-b-2 px-6 py-3 text-xs font-bold transition-colors ${
               activeTab === 'posts'
-                ? 'border-purple-600 text-purple-600 dark:border-purple-400 dark:text-purple-400'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
@@ -274,14 +295,79 @@ export default function ProfilePage() {
                 You haven't posted any updates yet. Share what's happening around you!
               </div>
             ) : (
-              myPosts.map((p) => (
-                <PostCard
-                  key={p.id}
-                  post={p}
-                  onOpenComments={(pId) => setActiveCommentsPostId(pId)}
-                />
-              ))
+              <>
+                {/* Grid/Feed Toggle */}
+                <div className="flex items-center justify-between">
+                  <span className="text-xs font-semibold text-muted-foreground">
+                    {myPosts.length} {myPosts.length === 1 ? 'post' : 'posts'}
+                  </span>
+                  <div className="flex overflow-hidden rounded-xl border border-border">
+                    <button
+                      type="button"
+                      onClick={() => { setViewMode('grid'); setSelectedPostId(null) }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+                        viewMode === 'grid'
+                          ? 'bg-primary text-white'
+                          : 'bg-card text-muted-foreground hover:bg-muted'
+                      }`}
+                      title="Grid view"
+                    >
+                      <LayoutGrid className="size-3.5" />
+                      <span>Grid</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setViewMode('feed'); setSelectedPostId(null) }}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold transition-colors ${
+                        viewMode === 'feed'
+                          ? 'bg-primary text-white'
+                          : 'bg-card text-muted-foreground hover:bg-muted'
+                      }`}
+                      title="Feed view"
+                    >
+                      <List className="size-3.5" />
+                      <span>Feed</span>
+                    </button>
+                  </div>
+                </div>
+
+                {viewMode === 'grid' ? (
+                  <>
+                    <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                      {myPosts.map((p) => (
+                        <PostGridTile
+                          key={p.id}
+                          post={p}
+                          onClick={() => setSelectedPostId(selectedPostId === p.id ? null : p.id)}
+                        />
+                      ))}
+                    </div>
+                    {/* Expanded post card below grid */}
+                    {selectedPostId && (() => {
+                      const expandedPost = myPosts.find((p) => p.id === selectedPostId)
+                      if (!expandedPost) return null
+                      return (
+                        <div className="mt-2 rounded-3xl border border-primary/30 bg-card shadow-md transition-all">
+                          <PostCard
+                            post={expandedPost}
+                            onOpenComments={(pId) => setActiveCommentsPostId(pId)}
+                          />
+                        </div>
+                      )
+                    })()}
+                  </>
+                ) : (
+                  myPosts.map((p) => (
+                    <PostCard
+                      key={p.id}
+                      post={p}
+                      onOpenComments={(pId) => setActiveCommentsPostId(pId)}
+                    />
+                  ))
+                )}
+              </>
             )
+
           ) : myBusinesses.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center text-xs text-muted-foreground">
               You haven't listed any businesses yet.

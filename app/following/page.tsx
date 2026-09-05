@@ -11,6 +11,7 @@ import { Post } from '@/lib/types'
 import { PostCard } from '@/components/feed/PostCard'
 import { PostComposerModal } from '@/components/feed/PostComposerModal'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
+import { StoriesBar } from '@/components/feed/StoriesBar'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { Users, Sparkles, PlusCircle, Loader2, ArrowDown, Store, Compass } from 'lucide-react'
 
@@ -277,6 +278,7 @@ export default function FollowingFeedPage() {
 
       {/* Main Feed Container */}
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-4">
+        <StoriesBar />
         {feedLoading ? (
           <div className="flex flex-col items-center justify-center py-16 text-center text-xs text-muted-foreground gap-2">
             <Loader2 className="size-6 animate-spin text-purple-600" />
@@ -304,7 +306,7 @@ export default function FollowingFeedPage() {
                 href="/search"
                 className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-4 py-2 text-xs font-bold text-foreground shadow-sm hover:bg-muted"
               >
-                <Compass className="size-4 text-sky-600" />
+                <Compass className="size-4 text-teal-600" />
                 <span>Search Community</span>
               </Link>
             </div>

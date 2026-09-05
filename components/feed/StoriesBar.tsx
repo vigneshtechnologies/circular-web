@@ -51,11 +51,11 @@ export function StoriesBar() {
     <div className="flex items-center gap-3 overflow-x-auto no-scrollbar py-1">
       {/* Current User Story Launcher */}
       <div className="flex shrink-0 items-center gap-2 rounded-2xl border border-border bg-card px-3 py-1.5 cursor-pointer group hover:border-purple-500/40 hover:bg-muted/60 transition-all shadow-sm">
-        <div className="relative size-8 rounded-full p-0.5 bg-gradient-to-tr from-blue-600 via-purple-600 to-pink-500 shrink-0">
+        <div className="relative size-9 rounded-full p-0.5 bg-gradient-to-tr from-blue-600 via-purple-600 via-pink-500 to-orange-500 shrink-0 shadow-sm">
           <div className="relative size-full rounded-full overflow-hidden bg-card">
             <Image src={avatar} alt="Your Status" fill className="object-cover" />
           </div>
-          <div className="absolute -bottom-0.5 -right-0.5 flex size-3.5 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow ring-1 ring-card">
+          <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 text-white shadow ring-2 ring-card">
             <Plus className="size-2.5 stroke-[3]" />
           </div>
         </div>

@@ -47,7 +47,7 @@ export function RadiusSelector({
         title={hasUserLocation ? `Filtering posts within ${selectedRadius} km` : 'Click to enable location-based distance filter'}
       >
         {hasUserLocation ? (
-          <Navigation className="size-3.5 text-blue-600 dark:text-blue-400 fill-blue-500/20" />
+          <Navigation className="size-3.5 text-purple-600 dark:text-purple-400 fill-purple-500/20" />
         ) : (
           <MapPinOff className="size-3.5 text-amber-500" />
         )}
@@ -80,7 +80,7 @@ export function RadiusSelector({
                   }}
                   className={`flex w-full items-center justify-between rounded-xl px-3 py-2 text-xs font-semibold transition-colors ${
                     isSelected
-                      ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold shadow-sm'
+                      ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white font-bold shadow-sm'
                       : 'text-foreground hover:bg-muted font-medium'
                   }`}
                 >

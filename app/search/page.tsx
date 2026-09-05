@@ -6,17 +6,18 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
-import { ref, get, query, limitToLast } from 'firebase/database'
+import { ref, get } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post, BusinessProfile, UserProfile, LocalJob, NeedPost, CommunityEvent } from '@/lib/types'
 import { PostCard } from '@/components/feed/PostCard'
 import { getUserAvatar, getBusinessPhoto } from '@/lib/imageUtils'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
-import { Search as SearchIcon, Store, Users, FileText, Briefcase, HandHeart, Calendar, Star, X, Loader2 } from 'lucide-react'
+import { getCategoryBadgeClass } from '@/lib/categoryColors'
+import { Search as SearchIcon, Store, Users, FileText, Briefcase, HandHeart, Calendar, X, Loader2, Sparkles } from 'lucide-react'
 
 export default function SearchPage() {
   const { user, userProfile, publicProfiles, loading } = useAuth()
-  const [activeTab, setActiveTab] = useState<'all' | 'businesses' | 'posts' | 'people' | 'jobs' | 'needs' | 'events'>('all')
+  const [activeTab, setActiveTab] = useState<'all' | 'businesses' | 'people' | 'posts' | 'jobs' | 'needs' | 'events'>('all')
   const [searchTerm, setSearchTerm] = useState('')
   
   const [businesses, setBusinesses] = useState<BusinessProfile[]>([])
@@ -130,7 +131,7 @@ export default function SearchPage() {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center bg-background">
-        <div className="size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+        <div className="size-8 animate-spin rounded-full border-2 border-purple-600 border-t-transparent" />
       </div>
     )
   }
@@ -151,16 +152,6 @@ export default function SearchPage() {
     return name.includes(q) || cat.includes(q) || desc.includes(q) || area.includes(q) || addr.includes(q)
   })
 
-  const filteredPosts = posts.filter((p) => {
-    if (!q) return true
-    const text = (p.text || '').toLowerCase()
-    const author = (p.userName || '').toLowerCase()
-    const biz = (p.businessName || '').toLowerCase()
-    const cat = (p.category || '').toLowerCase()
-    const area = (p.area || '').toLowerCase()
-    return text.includes(q) || author.includes(q) || biz.includes(q) || cat.includes(q) || area.includes(q)
-  })
-
   const filteredPeople = people.filter((u) => {
     if (!q) return true
     const name = (u.name || '').toLowerCase()
@@ -170,6 +161,16 @@ export default function SearchPage() {
     const biz = (u.businessName || '').toLowerCase()
     const area = (u.area || '').toLowerCase()
     return name.includes(q) || username.includes(q) || email.includes(q) || bio.includes(q) || biz.includes(q) || area.includes(q)
+  })
+
+  const filteredPosts = posts.filter((p) => {
+    if (!q) return true
+    const text = (p.text || '').toLowerCase()
+    const author = (p.userName || '').toLowerCase()
+    const biz = (p.businessName || '').toLowerCase()
+    const cat = (p.category || '').toLowerCase()
+    const area = (p.area || '').toLowerCase()
+    return text.includes(q) || author.includes(q) || biz.includes(q) || cat.includes(q) || area.includes(q)
   })
 
   const filteredJobs = jobs.filter((j) => {
@@ -202,21 +203,57 @@ export default function SearchPage() {
 
   const totalResultsCount =
     filteredBusinesses.length +
-    filteredPosts.length +
     filteredPeople.length +
+    filteredPosts.length +
     filteredJobs.length +
     filteredNeeds.length +
     filteredEvents.length
 
+  // Semantic color mapping for top entity filters
   const tabs = [
-    { key: 'all', label: `All (${totalResultsCount})` },
-    { key: 'businesses', label: `Businesses (${filteredBusinesses.length})` },
-    { key: 'posts', label: `Posts (${filteredPosts.length})` },
-    { key: 'people', label: `People (${filteredPeople.length})` },
-    { key: 'jobs', label: `Jobs (${filteredJobs.length})` },
-    { key: 'needs', label: `Needs (${filteredNeeds.length})` },
-    { key: 'events', label: `Events (${filteredEvents.length})` },
-  ] as const
+    {
+      key: 'all' as const,
+      label: `All (${totalResultsCount})`,
+      icon: Sparkles,
+      activeClass: 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/20 font-bold',
+    },
+    {
+      key: 'businesses' as const,
+      label: `Businesses (${filteredBusinesses.length})`,
+      icon: Store,
+      activeClass: 'bg-orange-500 text-white shadow-md shadow-orange-500/20 font-bold border-orange-500',
+    },
+    {
+      key: 'people' as const,
+      label: `People (${filteredPeople.length})`,
+      icon: Users,
+      activeClass: 'bg-purple-600 text-white shadow-md shadow-purple-500/20 font-bold border-purple-600',
+    },
+    {
+      key: 'posts' as const,
+      label: `Posts (${filteredPosts.length})`,
+      icon: FileText,
+      activeClass: 'bg-pink-600 text-white shadow-md shadow-pink-500/20 font-bold border-pink-600',
+    },
+    {
+      key: 'jobs' as const,
+      label: `Jobs (${filteredJobs.length})`,
+      icon: Briefcase,
+      activeClass: 'bg-emerald-600 text-white shadow-md shadow-emerald-500/20 font-bold border-emerald-600',
+    },
+    {
+      key: 'needs' as const,
+      label: `Needs (${filteredNeeds.length})`,
+      icon: HandHeart,
+      activeClass: 'bg-teal-600 text-white shadow-md shadow-teal-500/20 font-bold border-teal-600',
+    },
+    {
+      key: 'events' as const,
+      label: `Events (${filteredEvents.length})`,
+      icon: Calendar,
+      activeClass: 'bg-amber-500 text-white shadow-md shadow-amber-500/20 font-bold border-amber-500',
+    },
+  ]
 
   const displayArea = getUserCommunityLocation(userProfile)
 
@@ -232,35 +269,41 @@ export default function SearchPage() {
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               placeholder="Search businesses, people, jobs, needs, posts..."
-              className="w-full rounded-2xl border border-border bg-muted/60 py-2.5 pl-10 pr-10 text-sm text-foreground placeholder-muted-foreground focus:border-primary focus:bg-card focus:outline-none focus:ring-1 focus:ring-primary"
+              className="w-full rounded-2xl border border-border bg-muted/50 py-2.5 pl-10 pr-10 text-sm text-foreground placeholder-muted-foreground focus:border-purple-500/50 focus:bg-card focus:outline-none focus:ring-1 focus:ring-purple-500/30 transition-colors"
             />
             {searchTerm && (
               <button
                 type="button"
                 onClick={() => setSearchTerm('')}
                 className="absolute right-3 text-muted-foreground hover:text-foreground p-1"
+                aria-label="Clear search input"
               >
                 <X className="size-4" />
               </button>
             )}
           </div>
 
-          {/* Filter Tabs */}
-          <div className="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar">
-            {tabs.map((tab) => (
-              <button
-                key={tab.key}
-                type="button"
-                onClick={() => setActiveTab(tab.key)}
-                className={`shrink-0 rounded-xl px-3 py-1.5 text-xs font-semibold transition-all ${
-                  activeTab === tab.key
-                    ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-md shadow-purple-500/20 font-bold'
-                    : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted'
-                }`}
-              >
-                {tab.label}
-              </button>
-            ))}
+          {/* Individual Semantic Entity Filter Tabs */}
+          <div className="mt-3 flex items-center gap-1.5 overflow-x-auto no-scrollbar py-0.5">
+            {tabs.map((tab) => {
+              const Icon = tab.icon
+              const isSelected = activeTab === tab.key
+              return (
+                <button
+                  key={tab.key}
+                  type="button"
+                  onClick={() => setActiveTab(tab.key)}
+                  className={`shrink-0 flex items-center gap-1.5 rounded-xl px-3 py-1.5 text-xs transition-all ${
+                    isSelected
+                      ? tab.activeClass
+                      : 'bg-card border border-border text-slate-700 dark:text-slate-300 hover:bg-muted font-medium'
+                  }`}
+                >
+                  <Icon className={`size-3.5 ${isSelected ? 'text-white' : 'text-muted-foreground'}`} />
+                  <span>{tab.label}</span>
+                </button>
+              )
+            })}
           </div>
         </div>
       </header>
@@ -284,11 +327,11 @@ export default function SearchPage() {
           </div>
         ) : (
           <>
-            {/* 1. Businesses Section */}
+            {/* 1. Businesses Section (Orange Identity) */}
             {(activeTab === 'all' || activeTab === 'businesses') && filteredBusinesses.length > 0 && (
               <section className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <Store className="size-4 text-purple-600 dark:text-purple-400" />
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-orange-600 dark:text-orange-400">
+                  <Store className="size-4 text-orange-600 dark:text-orange-400" />
                   <span>Local Businesses ({filteredBusinesses.length})</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -296,24 +339,28 @@ export default function SearchPage() {
                     const photo = getBusinessPhoto(b, photosRecord) || '/circular-logo.png'
                     const bizName = b.name || (b as any).businessName || 'Local Business'
                     const bizCat = b.category || (b as any).businessCategory || 'Local Shop'
+                    const badgeStyle = getCategoryBadgeClass(bizCat)
+
                     return (
                       <Link
                         key={b.id}
                         href={`/business/${b.id}`}
-                        className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-purple-500/40 hover:shadow-md"
+                        className="group flex items-start gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-orange-500/40 hover:shadow-md"
                       >
-                        <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-purple-500/10 ring-1 ring-border">
+                        <div className="relative size-12 shrink-0 overflow-hidden rounded-xl bg-orange-500/10 ring-1 ring-border">
                           <Image src={photo} alt={bizName} fill className="object-cover" />
                         </div>
                         <div className="min-w-0 flex-1">
-                          <h4 className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-purple-600 dark:group-hover:text-purple-400">
+                          <h4 className="truncate text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400">
                             {bizName}
                           </h4>
-                          <p className="truncate text-xs text-muted-foreground mt-0.5">{bizCat}</p>
+                          <span className={`inline-block text-[10px] font-bold px-2 py-0.5 rounded-full mt-1 ${badgeStyle}`}>
+                            {bizCat}
+                          </span>
                           {b.area && (
-                            <span className="text-[10px] font-semibold text-blue-600 dark:text-blue-400 mt-1 inline-block">
+                            <p className="text-[10px] font-medium text-muted-foreground mt-1 truncate">
                               📍 {b.area}
-                            </span>
+                            </p>
                           )}
                         </div>
                       </Link>
@@ -323,11 +370,11 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* 2. People Section */}
+            {/* 2. People Section (Purple Identity) */}
             {(activeTab === 'all' || activeTab === 'people') && filteredPeople.length > 0 && (
               <section className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <Users className="size-4 text-blue-600 dark:text-blue-400" />
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-purple-600 dark:text-purple-400">
+                  <Users className="size-4 text-purple-600 dark:text-purple-400" />
                   <span>People ({filteredPeople.length})</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -339,7 +386,7 @@ export default function SearchPage() {
                         href={`/user/${p.uid}`}
                         className="group flex items-center gap-3 rounded-2xl border border-border bg-card p-3.5 shadow-sm transition-all hover:border-purple-500/40 hover:shadow-md"
                       >
-                        <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
+                        <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-purple-500/10 ring-1 ring-border">
                           <Image src={avatar} alt={p.name} fill className="object-cover" />
                         </div>
                         <div className="min-w-0 flex-1">
@@ -360,10 +407,25 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* 3. Jobs Section */}
+            {/* 3. Posts Section (Pink Identity) */}
+            {(activeTab === 'all' || activeTab === 'posts') && filteredPosts.length > 0 && (
+              <section className="space-y-3">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-pink-600 dark:text-pink-400">
+                  <FileText className="size-4 text-pink-600 dark:text-pink-400" />
+                  <span>Posts &amp; Community Updates ({filteredPosts.length})</span>
+                </div>
+                <div className="space-y-3.5">
+                  {filteredPosts.map((post) => (
+                    <PostCard key={post.id} post={post} />
+                  ))}
+                </div>
+              </section>
+            )}
+
+            {/* 4. Jobs Section (Green Identity) */}
             {(activeTab === 'all' || activeTab === 'jobs') && filteredJobs.length > 0 && (
               <section className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
                   <Briefcase className="size-4 text-emerald-600 dark:text-emerald-400" />
                   <span>Job Openings ({filteredJobs.length})</span>
                 </div>
@@ -378,7 +440,7 @@ export default function SearchPage() {
                         <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-emerald-600 dark:group-hover:text-emerald-400">
                           {j.title}
                         </h4>
-                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400">
+                        <span className="rounded-full bg-emerald-500/10 px-2 py-0.5 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
                           {j.jobType}
                         </span>
                       </div>
@@ -396,11 +458,11 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* 4. Needs Section */}
+            {/* 5. Needs Section (Teal Identity) */}
             {(activeTab === 'all' || activeTab === 'needs') && filteredNeeds.length > 0 && (
               <section className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <HandHeart className="size-4 text-amber-600 dark:text-amber-400" />
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-teal-600 dark:text-teal-400">
+                  <HandHeart className="size-4 text-teal-600 dark:text-teal-400" />
                   <span>Community Needs ({filteredNeeds.length})</span>
                 </div>
                 <div className="space-y-2.5">
@@ -408,13 +470,13 @@ export default function SearchPage() {
                     <Link
                       key={n.id}
                       href={`/need/${n.id}`}
-                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-amber-500/40 hover:shadow-md"
+                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-teal-500/40 hover:shadow-md"
                     >
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-teal-600 dark:group-hover:text-teal-400">
                           {n.title}
                         </h4>
-                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400">
+                        <span className="rounded-full bg-teal-500/10 px-2 py-0.5 text-[10px] font-bold text-teal-600 dark:text-teal-400 border border-teal-500/20">
                           {n.urgency}
                         </span>
                       </div>
@@ -432,11 +494,11 @@ export default function SearchPage() {
               </section>
             )}
 
-            {/* 5. Events Section */}
+            {/* 6. Events Section (Amber Identity) */}
             {(activeTab === 'all' || activeTab === 'events') && filteredEvents.length > 0 && (
               <section className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <Calendar className="size-4 text-orange-600 dark:text-orange-400" />
+                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                  <Calendar className="size-4 text-amber-600 dark:text-amber-400" />
                   <span>Community Events ({filteredEvents.length})</span>
                 </div>
                 <div className="space-y-2.5">
@@ -444,13 +506,13 @@ export default function SearchPage() {
                     <Link
                       key={e.id}
                       href={`/event/${e.id}`}
-                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-orange-500/40 hover:shadow-md"
+                      className="group block rounded-2xl border border-border bg-card p-4 shadow-sm transition-all hover:border-amber-500/40 hover:shadow-md"
                     >
                       <div className="flex items-center justify-between">
-                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-orange-600 dark:group-hover:text-orange-400">
+                        <h4 className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white group-hover:text-amber-600 dark:group-hover:text-amber-400">
                           {e.title}
                         </h4>
-                        <span className="rounded-full bg-orange-500/10 px-2 py-0.5 text-[10px] font-bold text-orange-600 dark:text-orange-400">
+                        <span className="rounded-full bg-amber-500/10 px-2 py-0.5 text-[10px] font-bold text-amber-600 dark:text-amber-400 border border-amber-500/20">
                           {e.eventDate || 'Upcoming'}
                         </span>
                       </div>
@@ -467,21 +529,6 @@ export default function SearchPage() {
                         )}
                       </div>
                     </Link>
-                  ))}
-                </div>
-              </section>
-            )}
-
-            {/* 6. Posts Section */}
-            {(activeTab === 'all' || activeTab === 'posts') && filteredPosts.length > 0 && (
-              <section className="space-y-3">
-                <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                  <FileText className="size-4 text-blue-600 dark:text-blue-400" />
-                  <span>Posts &amp; Updates ({filteredPosts.length})</span>
-                </div>
-                <div className="space-y-3.5">
-                  {filteredPosts.map((post) => (
-                    <PostCard key={post.id} post={post} />
                   ))}
                 </div>
               </section>
