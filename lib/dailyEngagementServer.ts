@@ -1,4 +1,3 @@
-import 'server-only'
 import { getAdminDb } from './firebaseAdmin'
 import { getDistanceKm, DEFAULT_RADIUS_KM } from './locationUtils'
 

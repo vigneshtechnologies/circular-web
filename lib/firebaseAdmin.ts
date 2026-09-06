@@ -1,4 +1,3 @@
-import 'server-only'
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app'
 import { getDatabase, Database } from 'firebase-admin/database'
 import { getAuth, Auth } from 'firebase-admin/auth'

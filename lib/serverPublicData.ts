@@ -1,4 +1,3 @@
-import 'server-only'
 import { getAdminDb } from './firebaseAdmin'
 
 // 1. Types for Sanitized Public Data
