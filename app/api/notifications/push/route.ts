@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { getAdminAuth } from '@/lib/firebaseAdmin'
-import { dispatchPeerPushServer, PeerNotificationType } from '@/lib/peerPushServer'
+import type { PeerNotificationType } from '@/lib/peerPushServer'
 
 export const dynamic = 'force-dynamic'
 
 export async function GET() {
-  return NextResponse.json({ status: 'ok', endpoint: 'peer-push' })
+  return NextResponse.json({
+    status: 'ok',
+    endpoint: 'peer-push',
+    hasServiceKey: !!process.env.FIREBASE_SERVICE_ACCOUNT_KEY,
+  })
 }
 
 export async function POST(req: NextRequest) {
@@ -23,6 +26,21 @@ export async function POST(req: NextRequest) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized. Empty Bearer token.' },
         { status: 401 }
+      )
+    }
+
+    let getAdminAuth: any
+    let dispatchPeerPushServer: any
+    try {
+      const adminMod = await import('@/lib/firebaseAdmin')
+      getAdminAuth = adminMod.getAdminAuth
+      const peerMod = await import('@/lib/peerPushServer')
+      dispatchPeerPushServer = peerMod.dispatchPeerPushServer
+    } catch (loadErr: any) {
+      console.error('[PushRoute] Module load failed:', loadErr)
+      return NextResponse.json(
+        { success: false, error: `Module load failed: ${loadErr?.message || String(loadErr)}` },
+        { status: 500 }
       )
     }
 
