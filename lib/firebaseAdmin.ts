@@ -1,6 +1,5 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app'
 import { getDatabase, Database } from 'firebase-admin/database'
-import { getAuth, Auth } from 'firebase-admin/auth'
 
 const FIREBASE_DATABASE_URL = 'https://buzzly-v-default-rtdb.firebaseio.com'
 const DEFAULT_PROJECT_ID = 'buzzly-v'
@@ -75,13 +74,14 @@ export function getAdminDb(): Database | null {
   }
 }
 
-export function getAdminAuth(): Auth | null {
+export async function getAdminAuth(): Promise<any | null> {
   const app = getAdminApp()
   if (!app) return null
   try {
+    const { getAuth } = await import('firebase-admin/auth')
     return getAuth(app)
   } catch (err) {
-    console.warn('[FirebaseAdmin] Failed to get auth instance:', err)
+    console.warn('[FirebaseAdmin] Failed to dynamically get auth instance:', err)
     return null
   }
 }
@@ -91,20 +91,8 @@ export async function verifyFirebaseIdToken(
 ): Promise<{ uid: string; email?: string } | null> {
   if (!idToken || typeof idToken !== 'string') return null
 
-  // 1. Primary: Verify with Firebase Admin SDK if available
-  const authInstance = getAdminAuth()
-  if (authInstance) {
-    try {
-      const decoded = await authInstance.verifyIdToken(idToken)
-      if (decoded && decoded.uid) {
-        return { uid: decoded.uid, email: decoded.email }
-      }
-    } catch (adminErr: any) {
-      console.warn('[VerifyToken] Admin SDK verification notice:', adminErr?.message || adminErr)
-    }
-  }
-
-  // 2. Fallback: Google Identity Toolkit accounts:lookup REST API
+  // 1. Primary & Robust: Google Identity Toolkit accounts:lookup REST API
+  // Works reliably in all Vercel Serverless and Edge environments without ESM dependency issues
   try {
     const apiKey =
       process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
@@ -124,9 +112,25 @@ export async function verifyFirebaseIdToken(
       if (user && user.localId) {
         return { uid: user.localId, email: user.email }
       }
+    } else {
+      const errText = await res.text().catch(() => '')
+      console.warn('[VerifyToken] Identity Toolkit non-OK response:', res.status, errText)
     }
   } catch (restErr) {
     console.error('[VerifyToken] REST verification error:', restErr)
+  }
+
+  // 2. Secondary fallback: Firebase Admin SDK verifyIdToken via dynamic import
+  try {
+    const authInstance = await getAdminAuth()
+    if (authInstance) {
+      const decoded = await authInstance.verifyIdToken(idToken)
+      if (decoded && decoded.uid) {
+        return { uid: decoded.uid, email: decoded.email }
+      }
+    }
+  } catch (adminErr: any) {
+    // Silently continue if dynamic import or admin check fails
   }
 
   return null
