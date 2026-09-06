@@ -4,6 +4,10 @@ import { dispatchPeerPushServer, PeerNotificationType } from '@/lib/peerPushServ
 
 export const dynamic = 'force-dynamic'
 
+export async function GET() {
+  return NextResponse.json({ status: 'ok', endpoint: 'peer-push' })
+}
+
 export async function POST(req: NextRequest) {
   try {
     const authHeader = req.headers.get('authorization')

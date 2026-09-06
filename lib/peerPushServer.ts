@@ -1,4 +1,3 @@
-import 'server-only'
 import { getAdminDb, getAdminAuth } from './firebaseAdmin'
 
 export type PeerNotificationType =
