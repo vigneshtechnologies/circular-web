@@ -1,5 +1,5 @@
 import { get, push, ref, update } from 'firebase/database'
-import { db } from './firebase'
+import { auth, db } from './firebase'
 import { CircularNotificationType } from './types'
 
 export type CreateNotificationInput = {
@@ -132,10 +132,66 @@ export const createUserNotification = async (input: CreateNotificationInput) => 
       }
     }
 
+    // Trigger secure server-side push dispatch for peer notification types
+    const peerPushTypes = new Set([
+      'chat_message',
+      'follow',
+      'post_like',
+      'post_comment',
+      'post_comment_reply',
+      'business_review',
+    ])
+
+    if (peerPushTypes.has(input.type)) {
+      dispatchWebPeerPushNotification({
+        recipientId: input.userId,
+        type: input.type,
+        title: input.title,
+        body: input.body,
+        screen: targetRoute,
+        params: targetParams,
+        conversationId: input.params?.conversationId,
+        postId: input.postId,
+        businessId: input.businessId,
+      }).catch((err) => {
+        console.warn('[WebPush] Notice during peer push dispatch:', err)
+      })
+    }
+
     return notificationId
   } catch (error) {
     console.error('Create notification error on web:', error)
     return null
+  }
+}
+
+export const dispatchWebPeerPushNotification = async (payload: {
+  recipientId: string
+  type: string
+  title: string
+  body: string
+  screen?: string
+  params?: Record<string, any>
+  conversationId?: string
+  postId?: string
+  businessId?: string
+}) => {
+  try {
+    const currentUser = auth.currentUser
+    if (!currentUser) return
+    const idToken = await currentUser.getIdToken()
+    if (!idToken) return
+
+    await fetch('/api/notifications/push', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${idToken}`,
+      },
+      body: JSON.stringify(payload),
+    })
+  } catch (err) {
+    console.warn('[WebPush] Error dispatching peer push:', err)
   }
 }
 

@@ -1,6 +1,7 @@
-﻿import 'server-only'
+import 'server-only'
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app'
 import { getDatabase, Database } from 'firebase-admin/database'
+import { getAuth, Auth } from 'firebase-admin/auth'
 
 const FIREBASE_DATABASE_URL = 'https://buzzly-v-default-rtdb.firebaseio.com'
 const DEFAULT_PROJECT_ID = 'buzzly-v'
@@ -71,6 +72,17 @@ export function getAdminDb(): Database | null {
     return getDatabase(app)
   } catch (err) {
     console.warn('[FirebaseAdmin] Failed to get database instance:', err)
+    return null
+  }
+}
+
+export function getAdminAuth(): Auth | null {
+  const app = getAdminApp()
+  if (!app) return null
+  try {
+    return getAuth(app)
+  } catch (err) {
+    console.warn('[FirebaseAdmin] Failed to get auth instance:', err)
     return null
   }
 }
