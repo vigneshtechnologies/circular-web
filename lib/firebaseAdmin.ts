@@ -1,5 +1,6 @@
 import { getApps, initializeApp, cert, App } from 'firebase-admin/app'
 import { getDatabase, Database } from 'firebase-admin/database'
+import { getAuth, Auth } from 'firebase-admin/auth'
 
 const FIREBASE_DATABASE_URL = 'https://buzzly-v-default-rtdb.firebaseio.com'
 const DEFAULT_PROJECT_ID = 'buzzly-v'
@@ -74,28 +75,59 @@ export function getAdminDb(): Database | null {
   }
 }
 
+export function getAdminAuth(): Auth | null {
+  const app = getAdminApp()
+  if (!app) return null
+  try {
+    return getAuth(app)
+  } catch (err) {
+    console.warn('[FirebaseAdmin] Failed to get auth instance:', err)
+    return null
+  }
+}
+
 export async function verifyFirebaseIdToken(
   idToken: string
 ): Promise<{ uid: string; email?: string } | null> {
   if (!idToken || typeof idToken !== 'string') return null
-  try {
-    const res = await fetch(
-      `https://oauth2.googleapis.com/tokeninfo?id_token=${encodeURIComponent(idToken)}`,
-      { headers: { Accept: 'application/json' } }
-    )
-    if (!res.ok) return null
-    const data = await res.json()
-    // Verify audience matches Firebase project
-    if (data.aud !== DEFAULT_PROJECT_ID) return null
-    // Verify issuer matches Google securetoken
-    if (data.iss !== `https://securetoken.google.com/${DEFAULT_PROJECT_ID}`) return null
-    // Verify expiration
-    if (data.exp && parseInt(data.exp, 10) * 1000 < Date.now()) return null
-    // UID is sub
-    if (!data.sub) return null
-    return { uid: data.sub, email: data.email }
-  } catch (err) {
-    console.error('[VerifyToken] Verification request error:', err)
-    return null
+
+  // 1. Primary: Verify with Firebase Admin SDK if available
+  const authInstance = getAdminAuth()
+  if (authInstance) {
+    try {
+      const decoded = await authInstance.verifyIdToken(idToken)
+      if (decoded && decoded.uid) {
+        return { uid: decoded.uid, email: decoded.email }
+      }
+    } catch (adminErr: any) {
+      console.warn('[VerifyToken] Admin SDK verification notice:', adminErr?.message || adminErr)
+    }
   }
+
+  // 2. Fallback: Google Identity Toolkit accounts:lookup REST API
+  try {
+    const apiKey =
+      process.env.NEXT_PUBLIC_FIREBASE_API_KEY ||
+      process.env.FIREBASE_API_KEY ||
+      'AIzaSyAAj9NI9tHlfgZd3Xi4ie4l6z3c8xfJH_c'
+    const res = await fetch(
+      `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${apiKey}`,
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ idToken }),
+      }
+    )
+    if (res.ok) {
+      const data = await res.json()
+      const user = data.users?.[0]
+      if (user && user.localId) {
+        return { uid: user.localId, email: user.email }
+      }
+    }
+  } catch (restErr) {
+    console.error('[VerifyToken] REST verification error:', restErr)
+  }
+
+  return null
 }
