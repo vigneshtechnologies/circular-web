@@ -17,6 +17,12 @@ export interface UserProfile {
   createdAt?: number
   followersCount?: number
   followingCount?: number
+  latitude?: number
+  longitude?: number
+  isVerified?: boolean
+  lastActiveAt?: number
+  occupation?: string
+  category?: string
 }
 
 export type CircularPostType =
@@ -265,19 +271,62 @@ export interface CommunityEvent {
   attendeesCount?: number
 }
 
+export type CircularNotificationType =
+  | 'admin_broadcast'
+  | 'follow'
+  | 'post_like'
+  | 'post_comment'
+  | 'post_comment_reply'
+  | 'post_report_admin'
+  | 'user_report_admin'
+  | 'business_review'
+  | 'business_report_admin'
+  | 'job_report_admin'
+  | 'need_report_admin'
+  | 'post_removed_admin'
+  | 'business_badge'
+  | 'business_restricted'
+  | 'business_reports_resolved'
+  | 'chat_message'
+  | 'event_new'
+  | 'job_new'
+  | 'need_new'
+  | 'business_update'
+  | 'people_nearby'
+  | 'daily_engagement'
+  | 'like'
+  | 'comment'
+  | 'system'
+  | 'mention'
+
 export interface NotificationItem {
   id: string
-  userId: string
-  type: 'like' | 'comment' | 'follow' | 'system' | 'mention'
+  userId?: string
+  targetUserId?: string
+  type: CircularNotificationType | string
   title: string
+  body?: string
   message: string
+  read: boolean
+  createdAt: number
+  actorId?: string
+  actorName?: string
   senderId?: string
   senderName?: string
   senderAvatar?: string
+  postId?: string
+  businessId?: string
+  businessName?: string
+  jobId?: string
+  needId?: string
+  eventId?: string
+  reportId?: string
+  screen?: string
+  targetRoute?: string
   targetId?: string
   targetType?: string
-  read: boolean
-  createdAt: number
+  params?: Record<string, any>
+  targetParams?: Record<string, any>
 }
 
 export interface ChatConversation {

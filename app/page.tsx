@@ -12,6 +12,7 @@ import { RadiusSelector } from '@/components/feed/RadiusSelector'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { PostComposerModal } from '@/components/feed/PostComposerModal'
 import { StoriesBar } from '@/components/feed/StoriesBar'
+import { PeopleYouMayKnowCard } from '@/components/feed/PeopleYouMayKnowCard'
 import { getUserAvatar } from '@/lib/imageUtils'
 import {
   CIRCULAR_RADIUS_OPTIONS,
@@ -354,6 +355,9 @@ export default function CircularRootPage() {
             Post
           </button>
         </div>
+
+        {/* People You May Know Recommendation Carousel */}
+        <PeopleYouMayKnowCard currentLocation={userCoords} />
 
         {/* Posts List */}
         {feedLoading ? (

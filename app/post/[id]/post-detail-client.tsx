@@ -15,6 +15,7 @@ import { SmartPostRenderer } from '@/components/smartPosts/SmartPostRenderer'
 import { LinkPreviewCard } from '@/components/links/LinkPreviewCard'
 import { OpenInCircularBanner } from '@/components/public/open-in-circular-banner'
 import { getUserAvatar, getPostLocation } from '@/lib/imageUtils'
+import { notifyPostLike, notifyPostComment } from '@/lib/notifications'
 import {
   Heart,
   MessageCircle,
@@ -156,6 +157,16 @@ export function PostDetailClient({ id, initialPost }: PostDetailClientProps) {
       await update(ref(db, `posts/${id}`), {
         likesCount: newCount,
       })
+
+      if (newLiked && post?.userId && post.userId !== user.uid) {
+        notifyPostLike({
+          postId: id,
+          postOwnerId: post.userId,
+          actorId: user.uid,
+          actorName: userProfile?.name || user.displayName || 'Circular Member',
+          postText: post.text,
+        }).catch((err) => console.error('Error notifying post like:', err))
+      }
     } catch (e) {
       console.error(e)
     }
@@ -204,6 +215,19 @@ export function PostDetailClient({ id, initialPost }: PostDetailClientProps) {
 
       await set(commentRef, commentData)
       await runTransaction(ref(db, `posts/${id}/commentsCount`), (curr) => (curr || 0) + 1)
+
+      if (post?.userId && post.userId !== user.uid) {
+        notifyPostComment({
+          postId: id,
+          postOwnerId: post.userId,
+          actorId: user.uid,
+          actorName: userProfile?.name || user.displayName || 'Circular Member',
+          commentText: commentData.text,
+          commentId: commentData.id,
+          postText: post.text,
+        }).catch((err) => console.error('Error notifying comment:', err))
+      }
+
       setNewComment('')
     } catch (err) {
       console.error('Comment error:', err)

@@ -2,10 +2,11 @@
 
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
-import { ref, onValue, off, push, set, runTransaction } from 'firebase/database'
+import { ref, onValue, off, push, set, runTransaction, get } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { PostComment } from '@/lib/types'
 import { useAuth } from '@/context/AuthContext'
+import { notifyPostComment } from '@/lib/notifications'
 import { X, Send, MessageSquare } from 'lucide-react'
 
 interface PostCommentsDrawerProps {
@@ -58,6 +59,22 @@ export function PostCommentsDrawer({ postId, onClose }: PostCommentsDrawerProps)
 
       await set(commentRef, commentData)
       await runTransaction(ref(db, `posts/${postId}/commentsCount`), (curr) => (curr || 0) + 1)
+
+      get(ref(db, `posts/${postId}`)).then((snap) => {
+        const postVal = snap.val()
+        if (postVal?.userId && postVal.userId !== user.uid) {
+          notifyPostComment({
+            postId,
+            postOwnerId: postVal.userId,
+            actorId: user.uid,
+            actorName: userProfile?.name || user.displayName || 'Circular Member',
+            commentText: commentData.text,
+            commentId: commentData.id,
+            postText: postVal.text,
+          }).catch((err) => console.error('Error notifying comment:', err))
+        }
+      }).catch(() => null)
+
       setNewComment('')
     } catch (err) {
       console.error('Comment error:', err)

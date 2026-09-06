@@ -6,13 +6,14 @@ import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
 import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
-import { ref, get } from 'firebase/database'
+import { ref, get, query, orderByChild, limitToLast } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post, BusinessProfile, UserProfile, LocalJob, NeedPost, CommunityEvent } from '@/lib/types'
 import { PostCard } from '@/components/feed/PostCard'
 import { getUserAvatar, getBusinessPhoto } from '@/lib/imageUtils'
-import { getUserCommunityLocation } from '@/lib/locationUtils'
+import { getUserCommunityLocation, getDistanceKm, formatDistanceKm } from '@/lib/locationUtils'
 import { getCategoryBadgeClass } from '@/lib/categoryColors'
+import { PeopleYouMayKnowCard } from '@/components/feed/PeopleYouMayKnowCard'
 import { Search as SearchIcon, Store, Users, FileText, Briefcase, HandHeart, Calendar, X, Loader2, Sparkles } from 'lucide-react'
 
 export default function SearchPage() {
@@ -28,6 +29,22 @@ export default function SearchPage() {
   const [events, setEvents] = useState<CommunityEvent[]>([])
   const [photosRecord, setPhotosRecord] = useState<Record<string, any>>({})
   const [isSearching, setIsSearching] = useState(true)
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null)
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserCoords({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          })
+        },
+        () => {},
+        { timeout: 8000, maximumAge: 120000 }
+      )
+    }
+  }, [])
 
   useEffect(() => {
     if (!user) return
@@ -58,7 +75,7 @@ export default function SearchPage() {
       } catch (err) {}
 
       try {
-        const pSnap = await get(ref(db, 'posts')).catch(() => null)
+        const pSnap = await get(query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(60))).catch(() => null)
         if (isMounted && pSnap && pSnap.exists()) {
           const list: Post[] = []
           pSnap.forEach((c) => { list.push({ id: c.key as string, ...c.val() }) })
@@ -371,15 +388,27 @@ export default function SearchPage() {
             )}
 
             {/* 2. People Section (Purple Identity) */}
+            {activeTab === 'people' && (
+              <PeopleYouMayKnowCard currentLocation={userCoords} className="mb-4" />
+            )}
+
             {(activeTab === 'all' || activeTab === 'people') && filteredPeople.length > 0 && (
               <section className="space-y-3">
                 <div className="flex items-center gap-2 text-xs font-black uppercase tracking-wider text-purple-600 dark:text-purple-400">
                   <Users className="size-4 text-purple-600 dark:text-purple-400" />
-                  <span>People ({filteredPeople.length})</span>
+                  <span>{activeTab === 'people' ? 'All Community Members' : 'People'} ({filteredPeople.length})</span>
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   {filteredPeople.map((p) => {
                     const avatar = getUserAvatar(p, publicProfiles) || '/circular-logo.png'
+                    let distLabel = ''
+                    if (userCoords && typeof p.latitude === 'number' && typeof p.longitude === 'number') {
+                      const d = getDistanceKm(userCoords.latitude, userCoords.longitude, p.latitude, p.longitude)
+                      if (d <= 25) {
+                        distLabel = formatDistanceKm(d)
+                      }
+                    }
+
                     return (
                       <Link
                         key={p.uid}
@@ -394,10 +423,12 @@ export default function SearchPage() {
                             {p.name}
                           </h4>
                           <p className="truncate text-[11px] text-muted-foreground">@{p.username || 'member'}</p>
-                          {p.area && (
-                            <span className="text-[10px] text-muted-foreground mt-0.5 inline-block">
-                              📍 {p.area}
-                            </span>
+                          {(p.area || distLabel) && (
+                            <div className="flex items-center gap-1 text-[10px] text-muted-foreground mt-0.5 truncate">
+                              {p.area && <span>📍 {p.area}</span>}
+                              {p.area && distLabel && <span>•</span>}
+                              {distLabel && <span>{distLabel}</span>}
+                            </div>
                           )}
                         </div>
                       </Link>

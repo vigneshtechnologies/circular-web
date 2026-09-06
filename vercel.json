@@ -1,0 +1,8 @@
+{
+  "crons": [
+    {
+      "path": "/api/cron/daily-engagement",
+      "schedule": "0 4 * * *"
+    }
+  ]
+}

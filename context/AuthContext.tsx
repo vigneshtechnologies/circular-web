@@ -12,6 +12,7 @@ import {
 import { ref, get, set, update } from 'firebase/database'
 import { auth, db, googleProvider } from '@/lib/firebase'
 import { UserProfile } from '@/lib/types'
+import { evaluateWebDailyEngagement } from '@/lib/dailyEngagementClient'
 
 interface AuthContextType {
   user: User | null
@@ -96,6 +97,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           ...publicData,
         }
         setUserProfile(merged)
+        setTimeout(() => {
+          evaluateWebDailyEngagement(auth.currentUser, merged).catch((err) => {
+            console.warn('[DailyEngagement] Web evaluation error:', err)
+          })
+        }, 2000)
       } else {
         // Initialize default profile
         const newProf: UserProfile = {
@@ -111,6 +117,11 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         await set(ref(db, `users/${uid}`), newProf)
         await set(ref(db, `publicProfiles/${uid}`), newProf)
         setUserProfile(newProf)
+        setTimeout(() => {
+          evaluateWebDailyEngagement(auth.currentUser, newProf).catch((err) => {
+            console.warn('[DailyEngagement] Web evaluation error:', err)
+          })
+        }, 2000)
       }
     } catch (e) {
       console.error('Error fetching profile:', e)

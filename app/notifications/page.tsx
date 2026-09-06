@@ -11,7 +11,20 @@ import { AppShell } from '@/components/layout/AppShell'
 import { ref, onValue, off, update, remove } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { NotificationItem } from '@/lib/types'
-import { Bell, Check, Trash2, Heart, MessageSquare, UserPlus, Store, Sparkles } from 'lucide-react'
+import {
+  Bell,
+  Check,
+  Trash2,
+  Heart,
+  MessageSquare,
+  UserPlus,
+  Store,
+  Sparkles,
+  Calendar,
+  Briefcase,
+  HandHeart,
+  Megaphone,
+} from 'lucide-react'
 
 export default function NotificationsPage() {
   const { user, userProfile, loading } = useAuth()
@@ -157,16 +170,39 @@ export default function NotificationsPage() {
           </div>
         ) : (
           filtered.map((n) => {
-            const targetUrl =
-              n.targetType === 'post' && n.targetId
-                ? `/post/${n.targetId}`
-                : n.targetType === 'business' && n.targetId
-                ? `/business/${n.targetId}`
-                : n.targetType === 'chat'
-                ? '/messages'
-                : n.senderId
-                ? `/user/${n.senderId}`
-                : '#'
+            let targetUrl = '#'
+            if (n.targetRoute) {
+              if (n.targetRoute === 'UserProfile') targetUrl = `/user/${n.params?.userId || n.actorId || n.targetUserId || ''}`
+              else if (n.targetRoute === 'PostDetail' || n.targetRoute === 'Comments') targetUrl = `/post/${n.params?.postId || n.postId || ''}`
+              else if (n.targetRoute === 'EventDetails') targetUrl = `/event/${n.params?.postId || n.postId || n.eventId || ''}`
+              else if (n.targetRoute === 'JobDetails') targetUrl = `/job/${n.params?.jobId || n.jobId || ''}`
+              else if (n.targetRoute === 'NeedDetails') targetUrl = `/need/${n.params?.needId || n.needId || ''}`
+              else if (n.targetRoute === 'BusinessProfile') targetUrl = `/business/${n.params?.businessId || n.businessId || ''}`
+              else if (n.targetRoute === 'Chat') targetUrl = '/messages'
+              else if (n.targetRoute === 'Search') targetUrl = '/search'
+            } else if (n.postId || n.targetType === 'post' || n.type === 'post_like' || n.type === 'post_comment' || n.type === 'like' || n.type === 'comment') {
+              const pId = n.postId || n.targetId
+              if (pId) targetUrl = `/post/${pId}`
+            } else if (n.eventId || n.type === 'event' || n.type === 'event_new') {
+              const eId = n.eventId || n.postId || n.targetId
+              if (eId) targetUrl = `/event/${eId}`
+            } else if (n.jobId || n.type === 'job' || n.type === 'job_new') {
+              const jId = n.jobId || n.targetId
+              if (jId) targetUrl = `/job/${jId}`
+            } else if (n.needId || n.type === 'need' || n.type === 'need_new') {
+              const nId = n.needId || n.targetId
+              if (nId) targetUrl = `/need/${nId}`
+            } else if (n.businessId || n.type === 'business_review' || n.type === 'business_badge' || n.type === 'business_update') {
+              const bId = n.businessId || n.targetId
+              if (bId) targetUrl = `/business/${bId}`
+            } else if (n.type === 'chat_message' || n.targetType === 'chat') {
+              targetUrl = '/messages'
+            } else if (n.actorId || n.senderId || n.type === 'follow') {
+              const uId = n.actorId || n.senderId || n.targetUserId
+              if (uId) targetUrl = `/user/${uId}`
+            }
+
+            const messageText = n.message || n.body || ''
 
             return (
               <div
@@ -189,7 +225,7 @@ export default function NotificationsPage() {
                   </div>
                   <div className="min-w-0 flex-1">
                     <h4 className="text-xs font-bold text-slate-900 dark:text-white">{n.title}</h4>
-                    <p className="text-xs leading-relaxed text-foreground/80">{n.message}</p>
+                    <p className="text-xs leading-relaxed text-foreground/80">{messageText}</p>
                     <span className="mt-1 block text-[10px] text-muted-foreground">
                       {n.createdAt ? new Date(n.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Recent'}
                     </span>

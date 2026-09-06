@@ -14,6 +14,9 @@ import { PostGridTile } from '@/components/profile/PostGridTile'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
 import { getUserAvatar } from '@/lib/imageUtils'
+import { notifyFollow } from '@/lib/notifications'
+import { getMutualConnections, MutualConnectionsResult } from '@/lib/peopleDiscoveryService'
+import { getDistanceKm, formatDistanceKm } from '@/lib/locationUtils'
 import {
   User,
   MapPin,
@@ -29,6 +32,9 @@ import {
   Check,
   LayoutGrid,
   List,
+  Users,
+  ChevronRight,
+  X,
 } from 'lucide-react'
 
 const VIEW_PREF_KEY = 'circular_profile_view'
@@ -42,7 +48,7 @@ export default function UserProfilePage({ params }: PageProps) {
   const targetUserId = resolvedParams.id
   const router = useRouter()
 
-  const { user: currentUser, publicProfiles } = useAuth()
+  const { user: currentUser, userProfile, publicProfiles } = useAuth()
   const isOwnProfile = Boolean(currentUser && currentUser.uid === targetUserId)
 
   // State
@@ -70,6 +76,76 @@ export default function UserProfilePage({ params }: PageProps) {
   // Grid/Feed toggle
   const [viewMode, setViewMode] = useState<'feed' | 'grid'>('grid')
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+
+  // Mutual connections & distance
+  const [mutualInfo, setMutualInfo] = useState<MutualConnectionsResult | null>(null)
+  const [showMutualsModal, setShowMutualsModal] = useState(false)
+  const [mutualProfiles, setMutualProfiles] = useState<any[]>([])
+  const [loadingMutuals, setLoadingMutuals] = useState(false)
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null)
+
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserCoords({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          })
+        },
+        () => {},
+        { timeout: 8000, maximumAge: 120000 }
+      )
+    }
+  }, [])
+
+  useEffect(() => {
+    if (!currentUser?.uid || !targetUserId || currentUser.uid === targetUserId) {
+      setMutualInfo(null)
+      return
+    }
+
+    let isMounted = true
+    getMutualConnections(currentUser.uid, targetUserId)
+      .then((res) => {
+        if (isMounted) setMutualInfo(res)
+      })
+      .catch(() => {})
+
+    return () => {
+      isMounted = false
+    }
+  }, [currentUser?.uid, targetUserId])
+
+  const handleOpenMutuals = async () => {
+    if (!mutualInfo || mutualInfo.count === 0) return
+    setShowMutualsModal(true)
+    if (mutualProfiles.length === 0 && mutualInfo.connectionUids.length > 0) {
+      setLoadingMutuals(true)
+      try {
+        const loaded: any[] = []
+        for (const mUid of mutualInfo.connectionUids.slice(0, 30)) {
+          const snap = await get(ref(db, `publicProfiles/${mUid}`))
+          if (snap.exists()) {
+            loaded.push({ uid: mUid, ...snap.val() })
+          }
+        }
+        setMutualProfiles(loaded)
+      } catch {} finally {
+        setLoadingMutuals(false)
+      }
+    }
+  }
+
+  const approxDistance = React.useMemo(() => {
+    if (userCoords && profile && typeof profile.latitude === 'number' && typeof profile.longitude === 'number') {
+      const d = getDistanceKm(userCoords.latitude, userCoords.longitude, profile.latitude, profile.longitude)
+      if (d <= 25) {
+        return formatDistanceKm(d)
+      }
+    }
+    return null
+  }, [userCoords, profile])
 
   // Restore viewMode from localStorage on mount
   useEffect(() => {
@@ -245,6 +321,14 @@ export default function UserProfilePage({ params }: PageProps) {
         updates[`following/${currentUser.uid}/${targetUserId}`] = true
       }
       await update(ref(db), updates)
+
+      if (!isFollowing) {
+        notifyFollow({
+          targetUserId,
+          actorId: currentUser.uid,
+          actorName: userProfile?.name || currentUser.displayName || 'Circular Member',
+        }).catch((err) => console.error('Error notifying follow:', err))
+      }
     } catch (err) {
       console.error('Error toggling follow:', err)
     } finally {
@@ -369,11 +453,32 @@ export default function UserProfilePage({ params }: PageProps) {
                   )}
                 </div>
 
-                <p className="text-xs font-semibold text-muted-foreground">{username}</p>
+                <div className="mt-1.5 flex flex-wrap items-center gap-2 text-xs">
+                  <div className="flex items-center gap-1 text-muted-foreground">
+                    <MapPin className="size-3.5 text-primary shrink-0" />
+                    <span className="truncate">{locality}</span>
+                  </div>
 
-                <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
-                  <MapPin className="size-3.5 text-primary shrink-0" />
-                  <span className="truncate">{locality}</span>
+                  {approxDistance && (
+                    <span className="inline-flex items-center gap-1 rounded-full bg-blue-500/10 px-2 py-0.5 text-[11px] font-bold text-blue-600 dark:text-blue-400 border border-blue-500/20">
+                      📍 {approxDistance}
+                    </span>
+                  )}
+
+                  {!isOwnProfile && mutualInfo && mutualInfo.count > 0 && (
+                    <button
+                      type="button"
+                      onClick={handleOpenMutuals}
+                      className="inline-flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[11px] font-bold text-purple-700 dark:text-purple-300 border border-purple-500/20 hover:bg-purple-500/20 transition-all cursor-pointer"
+                    >
+                      <Users className="size-3" />
+                      <span>
+                        {mutualInfo.count} mutual {mutualInfo.count === 1 ? 'connection' : 'connections'}
+                        {mutualInfo.sampleNames.length > 0 ? ` (${mutualInfo.sampleNames.slice(0, 2).join(', ')})` : ''}
+                      </span>
+                      <ChevronRight className="size-2.5 stroke-[2.5]" />
+                    </button>
+                  )}
                 </div>
               </div>
             </div>
@@ -623,6 +728,68 @@ export default function UserProfilePage({ params }: PageProps) {
         images={imageViewerSrc ? [imageViewerSrc] : []}
         onClose={() => setImageViewerSrc(null)}
       />
+
+      {/* Mutual Connections Modal */}
+      {showMutualsModal && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-sm animate-in fade-in duration-200"
+          onClick={() => setShowMutualsModal(false)}
+        >
+          <div
+            className="relative w-full max-w-md rounded-3xl border border-border bg-card p-6 shadow-2xl animate-in zoom-in-95 duration-200"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-3 border-b border-border">
+              <div>
+                <h3 className="text-base font-black text-slate-900 dark:text-white">Mutual Connections</h3>
+                <p className="text-xs text-muted-foreground">
+                  {mutualInfo?.count || 0} mutual {mutualInfo?.count === 1 ? 'connection' : 'connections'} with {displayName}
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowMutualsModal(false)}
+                className="rounded-full p-1 text-muted-foreground hover:bg-muted transition-all"
+              >
+                <X className="size-5" />
+              </button>
+            </div>
+
+            <div className="mt-4 max-h-80 overflow-y-auto space-y-2">
+              {loadingMutuals ? (
+                <div className="py-8 text-center">
+                  <Loader2 className="size-6 animate-spin mx-auto text-purple-600" />
+                </div>
+              ) : (
+                mutualProfiles.map((m) => {
+                  const mAvatar = getUserAvatar(m, publicProfiles) || '/circular-logo.png'
+                  return (
+                    <Link
+                      key={m.uid}
+                      href={`/user/${m.uid}`}
+                      onClick={() => setShowMutualsModal(false)}
+                      className="flex items-center gap-3 rounded-2xl p-2.5 hover:bg-muted/60 transition-all"
+                    >
+                      <div className="relative size-10 rounded-full overflow-hidden bg-purple-500/10 ring-1 ring-border shrink-0">
+                        <Image src={mAvatar} alt={m.name || 'Member'} fill className="object-cover" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <p className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white truncate">
+                          {m.name || m.username || 'Circular Member'}
+                        </p>
+                        <p className="text-[11px] text-muted-foreground truncate">
+                          @{m.username || 'user'} {m.area ? `• ${m.area}` : ''}
+                        </p>
+                      </div>
+                      <ChevronRight className="size-4 text-muted-foreground shrink-0" />
+                    </Link>
+                  )
+                })
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </AppShell>
   )
 }

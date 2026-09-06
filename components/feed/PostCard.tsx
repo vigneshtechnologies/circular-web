@@ -12,6 +12,7 @@ import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
 import { SmartPostRenderer } from '@/components/smartPosts/SmartPostRenderer'
 import { LinkPreviewCard } from '@/components/links/LinkPreviewCard'
 import { getCategoryBadgeClass } from '@/lib/categoryColors'
+import { notifyPostLike } from '@/lib/notifications'
 import {
   Heart,
   MessageCircle,
@@ -56,6 +57,16 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
       await update(ref(db, `posts/${post.id}`), {
         likesCount: newCount,
       })
+
+      if (newLiked && post.userId && post.userId !== user.uid) {
+        notifyPostLike({
+          postId: post.id,
+          postOwnerId: post.userId,
+          actorId: user.uid,
+          actorName: userProfile?.name || user.displayName || 'Circular Member',
+          postText: post.text,
+        }).catch((err) => console.error('Error notifying post like:', err))
+      }
     } catch (e) {
       console.error(e)
     }
