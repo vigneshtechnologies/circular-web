@@ -1,4 +1,4 @@
-import { getAdminDb, getAdminAuth } from './firebaseAdmin'
+import { getAdminDb } from './firebaseAdmin'
 
 export type PeerNotificationType =
   | 'chat_message'

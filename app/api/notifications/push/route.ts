@@ -29,11 +29,11 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    let getAdminAuth: any
+    let verifyFirebaseIdToken: any
     let dispatchPeerPushServer: any
     try {
       const adminMod = await import('@/lib/firebaseAdmin')
-      getAdminAuth = adminMod.getAdminAuth
+      verifyFirebaseIdToken = adminMod.verifyFirebaseIdToken
       const peerMod = await import('@/lib/peerPushServer')
       dispatchPeerPushServer = peerMod.dispatchPeerPushServer
     } catch (loadErr: any) {
@@ -44,26 +44,15 @@ export async function POST(req: NextRequest) {
       )
     }
 
-    const adminAuth = getAdminAuth()
-    if (!adminAuth) {
-      console.error('[PushRoute] Firebase Admin Auth unavailable')
+    const tokenData = await verifyFirebaseIdToken(idToken)
+    if (!tokenData || !tokenData.uid) {
       return NextResponse.json(
-        { success: false, error: 'Authentication service unavailable.' },
-        { status: 500 }
-      )
-    }
-
-    let decodedToken
-    try {
-      decodedToken = await adminAuth.verifyIdToken(idToken)
-    } catch (tokenErr: any) {
-      return NextResponse.json(
-        { success: false, error: 'Unauthorized. Invalid Firebase ID token.' },
+        { success: false, error: 'Unauthorized. Invalid or expired Firebase ID token.' },
         { status: 401 }
       )
     }
 
-    const callerUid = decodedToken.uid
+    const callerUid = tokenData.uid
     if (!callerUid) {
       return NextResponse.json(
         { success: false, error: 'Unauthorized. Invalid token UID.' },
