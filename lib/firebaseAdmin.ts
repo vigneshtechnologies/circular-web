@@ -86,6 +86,19 @@ export async function getAdminAuth(): Promise<any | null> {
   }
 }
 
+export async function getAdminMessaging(): Promise<any | null> {
+  const app = getAdminApp()
+  if (!app) return null
+  try {
+    const { getMessaging } = await import('firebase-admin/messaging')
+    return getMessaging(app)
+  } catch (err) {
+    console.warn('[FirebaseAdmin] Failed to dynamically get messaging instance:', err)
+    return null
+  }
+}
+
+
 export async function verifyFirebaseIdToken(
   idToken: string
 ): Promise<{ uid: string; email?: string } | null> {

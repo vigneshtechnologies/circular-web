@@ -38,6 +38,73 @@ interface AdminConversationItem {
   unreadCount?: number
 }
 
+interface UserIdentityStyle {
+  nameColor: string
+  badgeClass: string
+  ringClass: string
+}
+
+const USER_ACCENT_PALETTES: UserIdentityStyle[] = [
+  {
+    nameColor: 'text-indigo-600 dark:text-indigo-400',
+    badgeClass: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
+    ringClass: 'ring-indigo-500/40',
+  },
+  {
+    nameColor: 'text-emerald-600 dark:text-emerald-400',
+    badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
+    ringClass: 'ring-emerald-500/40',
+  },
+  {
+    nameColor: 'text-amber-600 dark:text-amber-400',
+    badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
+    ringClass: 'ring-amber-500/40',
+  },
+  {
+    nameColor: 'text-rose-600 dark:text-rose-400',
+    badgeClass: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20',
+    ringClass: 'ring-rose-500/40',
+  },
+  {
+    nameColor: 'text-teal-600 dark:text-teal-400',
+    badgeClass: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20',
+    ringClass: 'ring-teal-500/40',
+  },
+  {
+    nameColor: 'text-purple-600 dark:text-purple-400',
+    badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20',
+    ringClass: 'ring-purple-500/40',
+  },
+  {
+    nameColor: 'text-blue-600 dark:text-blue-400',
+    badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
+    ringClass: 'ring-blue-500/40',
+  },
+  {
+    nameColor: 'text-orange-600 dark:text-orange-400',
+    badgeClass: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',
+    ringClass: 'ring-orange-500/40',
+  },
+]
+
+function getUserIdentityStyle(uid?: string): UserIdentityStyle {
+  if (!uid) {
+    return {
+      nameColor: 'text-slate-900 dark:text-white',
+      badgeClass: 'bg-muted text-muted-foreground border-border',
+      ringClass: 'ring-border',
+    }
+  }
+
+  let hash = 0
+  for (let i = 0; i < uid.length; i++) {
+    hash = (hash << 5) - hash + uid.charCodeAt(i)
+    hash |= 0
+  }
+  const index = Math.abs(hash) % USER_ACCENT_PALETTES.length
+  return USER_ACCENT_PALETTES[index]
+}
+
 export default function AdminMessagesPage() {
   const { user, userProfile, isAdmin, loading, publicProfiles } = useAuth()
   const [conversations, setConversations] = useState<AdminConversationItem[]>([])
@@ -420,20 +487,35 @@ export default function AdminMessagesPage() {
                     >
                       {/* Avatars */}
                       <div className="flex -space-x-2 shrink-0 mt-0.5">
-                        {participants.slice(0, 2).map((p) => (
-                          <div
-                            key={p.uid}
-                            className="relative size-9 overflow-hidden rounded-full ring-2 ring-card bg-primary/10"
-                          >
-                            <Image src={p.avatar} alt={p.name} fill className="object-cover" />
-                          </div>
-                        ))}
+                        {participants.slice(0, 2).map((p) => {
+                          const pStyle = getUserIdentityStyle(p.uid)
+                          return (
+                            <div
+                              key={p.uid}
+                              className={`relative size-9 overflow-hidden rounded-full ring-2 ${pStyle.ringClass} bg-primary/10`}
+                            >
+                              <Image src={p.avatar} alt={p.name} fill className="object-cover" />
+                            </div>
+                          )
+                        })}
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <h4 className="text-xs font-bold text-slate-900 dark:text-white truncate">{title}</h4>
+                          <div className="flex items-center gap-1.5 flex-wrap truncate">
+                            {participants.map((p, idx) => {
+                              const pStyle = getUserIdentityStyle(p.uid)
+                              const handle = p.username || `@${p.uid.slice(0, 6)}`
+                              return (
+                                <span key={p.uid} className="inline-flex items-center gap-1 shrink-0">
+                                  {idx > 0 && <span className="text-muted-foreground text-[10px] font-normal">&amp;</span>}
+                                  <span className={`text-xs font-bold ${pStyle.nameColor}`}>{p.name}</span>
+                                  <span className="text-[10px] font-mono text-muted-foreground">{handle}</span>
+                                </span>
+                              )
+                            })}
+                          </div>
                           <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-1">
                             <Clock className="size-3" />
                             {conv.updatedAt
@@ -444,6 +526,7 @@ export default function AdminMessagesPage() {
                               : ''}
                           </span>
                         </div>
+
 
                         <p className="text-xs text-muted-foreground truncate mt-0.5">
                           {conv.lastMessageText || 'Chat conversation'}
@@ -499,16 +582,19 @@ export default function AdminMessagesPage() {
                         {selectedConv.participantIds.map((pId) => {
                           const prof = resolvedProfiles[pId] || publicProfiles?.[pId]
                           const pName = prof?.name || `User_${pId.substring(0, 5)}`
+                          const handle = prof?.username ? `@${prof.username}` : `@${pId.slice(0, 6)}`
+                          const pStyle = getUserIdentityStyle(pId)
                           return (
                             <Link
                               key={pId}
                               href={`/user/${pId}`}
                               target="_blank"
-                              className="inline-flex items-center gap-1 text-[11px] font-bold text-blue-600 hover:underline"
+                              className="inline-flex items-center gap-1.5 text-[11px] font-bold hover:underline"
                             >
-                              <User className="size-3" />
-                              <span>{pName}</span>
-                              <ExternalLink className="size-2.5" />
+                              <User className={`size-3 ${pStyle.nameColor}`} />
+                              <span className={pStyle.nameColor}>{pName}</span>
+                              <span className="text-[10px] font-mono text-muted-foreground font-normal">{handle}</span>
+                              <ExternalLink className="size-2.5 opacity-60 text-muted-foreground" />
                             </Link>
                           )
                         })}
@@ -546,16 +632,19 @@ export default function AdminMessagesPage() {
                         m.senderName ||
                         senderProfile?.name ||
                         `User_${m.senderId.substring(0, 5)}`
+                      const senderHandle = senderProfile?.username ? `@${senderProfile.username}` : `@${m.senderId.slice(0, 6)}`
+                      const senderStyle = getUserIdentityStyle(m.senderId)
 
                       return (
                         <div key={m.id} className="flex items-start gap-2.5 max-w-xl">
-                          <div className="relative size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-border bg-primary/10 mt-0.5">
+                          <div className={`relative size-8 shrink-0 overflow-hidden rounded-full ring-2 ${senderStyle.ringClass} bg-primary/10 mt-0.5`}>
                             <Image src={senderAvatar} alt={senderName} fill className="object-cover" />
                           </div>
 
                           <div className="flex-1 min-w-0">
-                            <div className="flex items-center gap-2">
-                              <span className="text-[11px] font-bold text-slate-900 dark:text-white">{senderName}</span>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className={`text-[11px] font-bold ${senderStyle.nameColor}`}>{senderName}</span>
+                              <span className="text-[9px] font-mono text-muted-foreground">{senderHandle}</span>
                               <span className="text-[9px] text-muted-foreground">
                                 {new Date(m.createdAt || m.timestamp || Date.now()).toLocaleTimeString([], {
                                   hour: '2-digit',

@@ -1,4 +1,4 @@
-import { getAdminDb } from './firebaseAdmin'
+import { getAdminDb, getAdminMessaging } from './firebaseAdmin'
 
 export type PeerNotificationType =
   | 'chat_message'
@@ -170,83 +170,160 @@ export async function dispatchPeerPushServer(
     const tokensSnap = await adminDb.ref(`pushTokens/${recipientId}`).once('value')
     const tokensData = tokensSnap.val() || {}
 
-    const validTokenEntries: { token: string; key: string }[] = []
+    const expoTokenEntries: { token: string; key: string }[] = []
+    const webTokenEntries: { token: string; key: string }[] = []
     const seenTokens = new Set<string>()
 
     Object.entries(tokensData).forEach(([key, record]: [string, any]) => {
       let tokenStr = ''
+      let isWeb = false
       if (typeof record === 'string') {
         tokenStr = record
       } else if (record && record.enabled !== false && typeof record.token === 'string') {
         tokenStr = record.token
+        isWeb = record.platform === 'web'
       }
 
-      if (tokenStr && isValidExpoPushToken(tokenStr) && !seenTokens.has(tokenStr)) {
+      if (tokenStr && !seenTokens.has(tokenStr)) {
         seenTokens.add(tokenStr)
-        validTokenEntries.push({ token: tokenStr, key })
+        if (isValidExpoPushToken(tokenStr)) {
+          expoTokenEntries.push({ token: tokenStr, key })
+        } else if (isWeb || (!tokenStr.startsWith('Expo') && !tokenStr.startsWith('Exponent'))) {
+          webTokenEntries.push({ token: tokenStr, key })
+        }
       }
     })
 
-    if (validTokenEntries.length === 0) {
+    if (expoTokenEntries.length === 0 && webTokenEntries.length === 0) {
       return { success: true, dispatched: false, reason: 'No registered push tokens found for recipient' }
     }
-
-    // 5. Build Expo push messages
-    const channelId = type === 'chat_message' ? 'circular_chat_messages' : 'default'
-    const messages = validTokenEntries.map(({ token }) => ({
-      to: token,
-      sound: settings.sound ? 'default' : null,
-      title: input.title,
-      body: input.body,
-      channelId,
-      priority: 'high',
-      data: {
-        type: input.type,
-        screen: input.screen || (type === 'chat_message' ? 'Chat' : 'Notifications'),
-        params: input.params || {},
-        conversationId: input.conversationId || '',
-        otherUserId: callerUid,
-        postId: input.postId || '',
-        businessId: input.businessId || '',
-        actorId: callerUid,
-      },
-    }))
-
-    // 6. Send to Expo Push API
-    const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        Accept: 'application/json',
-      },
-      body: JSON.stringify(messages),
-    })
 
     let successCount = 0
     let failureCount = 0
     const ticketIds: string[] = []
     const staleTokenKeys: string[] = []
 
-    if (expoRes.ok) {
-      const resultJson: any = await expoRes.json().catch(() => null)
-      const ticketData = Array.isArray(resultJson?.data) ? resultJson.data : []
+    // 5. Send Expo push messages (Android mobile reference)
+    if (expoTokenEntries.length > 0) {
+      const channelId = type === 'chat_message' ? 'circular_chat_messages' : 'default'
+      const expoMessages = expoTokenEntries.map(({ token }) => ({
+        to: token,
+        sound: settings.sound ? 'default' : null,
+        title: input.title,
+        body: input.body,
+        channelId,
+        priority: 'high',
+        data: {
+          type: input.type,
+          screen: input.screen || (type === 'chat_message' ? 'Chat' : 'Notifications'),
+          params: input.params || {},
+          conversationId: input.conversationId || '',
+          otherUserId: callerUid,
+          postId: input.postId || '',
+          businessId: input.businessId || '',
+          actorId: callerUid,
+        },
+      }))
 
-      ticketData.forEach((ticket: any, idx: number) => {
-        const correspondingEntry = validTokenEntries[idx]
-        if (ticket?.status === 'ok') {
-          successCount++
-          if (ticket.id) ticketIds.push(ticket.id)
+      try {
+        const expoRes = await fetch('https://exp.host/--/api/v2/push/send', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Accept: 'application/json',
+          },
+          body: JSON.stringify(expoMessages),
+        })
+
+        if (expoRes.ok) {
+          const resultJson: any = await expoRes.json().catch(() => null)
+          const ticketData = Array.isArray(resultJson?.data) ? resultJson.data : []
+
+          ticketData.forEach((ticket: any, idx: number) => {
+            const correspondingEntry = expoTokenEntries[idx]
+            if (ticket?.status === 'ok') {
+              successCount++
+              if (ticket.id) ticketIds.push(ticket.id)
+            } else {
+              failureCount++
+              const errorMsg = ticket?.details?.error || ticket?.message
+              if (errorMsg === 'DeviceNotRegistered' && correspondingEntry) {
+                staleTokenKeys.push(correspondingEntry.key)
+              }
+            }
+          })
         } else {
-          failureCount++
-          const errorMsg = ticket?.details?.error || ticket?.message
-          if (errorMsg === 'DeviceNotRegistered' && correspondingEntry) {
-            staleTokenKeys.push(correspondingEntry.key)
-          }
+          failureCount += expoMessages.length
+          console.warn(`[PeerPushServer] Expo HTTP Error ${expoRes.status}`)
         }
-      })
-    } else {
-      failureCount += messages.length
-      console.warn(`[PeerPushServer] Expo HTTP Error ${expoRes.status}`)
+      } catch (expoErr) {
+        failureCount += expoMessages.length
+        console.warn('[PeerPushServer] Expo dispatch failure:', expoErr)
+      }
+    }
+
+    // 6. Send Web Push messages via Firebase Cloud Messaging
+    if (webTokenEntries.length > 0) {
+      const adminMessaging = await getAdminMessaging()
+      if (adminMessaging) {
+        const targetUrl = input.conversationId
+          ? `/chat/${input.conversationId}`
+          : input.postId
+          ? `/post/${input.postId}`
+          : input.businessId
+          ? `/business/${input.businessId}`
+          : '/notifications'
+
+        const webPayload = {
+          tokens: webTokenEntries.map((e) => e.token),
+          notification: {
+            title: input.title,
+            body: input.body,
+          },
+          data: {
+            type: String(input.type || ''),
+            screen: String(input.screen || (type === 'chat_message' ? 'Chat' : 'Notifications')),
+            conversationId: String(input.conversationId || ''),
+            postId: String(input.postId || ''),
+            businessId: String(input.businessId || ''),
+            actorId: String(callerUid || ''),
+            targetUrl,
+          },
+          webpush: {
+            notification: {
+              icon: '/circular-logo.png',
+              badge: '/circular-logo.png',
+            },
+            fcmOptions: {
+              link: targetUrl,
+            },
+          },
+        }
+
+        try {
+          const fcmRes = await adminMessaging.sendEachForMulticast(webPayload)
+          successCount += fcmRes.successCount
+          failureCount += fcmRes.failureCount
+
+          fcmRes.responses.forEach((resp: any, idx: number) => {
+            const correspondingEntry = webTokenEntries[idx]
+            if (!resp.success && correspondingEntry) {
+              const errorCode = resp.error?.code
+              if (
+                errorCode === 'messaging/registration-token-not-registered' ||
+                errorCode === 'messaging/invalid-registration-token'
+              ) {
+                staleTokenKeys.push(correspondingEntry.key)
+              }
+            }
+          })
+        } catch (fcmErr) {
+          failureCount += webTokenEntries.length
+          console.warn('[PeerPushServer] Firebase Web Push multicast failure:', fcmErr)
+        }
+      } else {
+        console.warn('[PeerPushServer] Admin Messaging unavailable for Web Push')
+      }
     }
 
     // 7. Cleanup stale tokens if any

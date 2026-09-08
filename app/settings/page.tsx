@@ -17,17 +17,83 @@ import {
   Moon,
   Laptop,
   Check,
+  Bell,
+  BellOff,
+  CheckCircle2,
+  AlertCircle,
+  Loader2,
 } from 'lucide-react'
+import {
+  isWebPushSupported,
+  getCachedWebPushToken,
+  registerWebPushToken,
+  disableWebPushToken,
+} from '@/lib/webPushClient'
 
 type ThemePreference = 'light' | 'dark' | 'system'
 
 export default function SettingsPage() {
   const { user, userProfile, isAdmin, logout, loading } = useAuth()
   const [themePref, setThemePref] = useState<ThemePreference>('system')
+  const [pushStatus, setPushStatus] = useState<'enabled' | 'disabled' | 'denied' | 'unsupported'>('disabled')
+  const [isUpdatingPush, setIsUpdatingPush] = useState(false)
+  const [pushFeedback, setPushFeedback] = useState<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
+
+  useEffect(() => {
+    if (!isWebPushSupported()) {
+      setPushStatus('unsupported')
+      return
+    }
+
+    if (Notification.permission === 'denied') {
+      setPushStatus('denied')
+    } else if (Notification.permission === 'granted' && getCachedWebPushToken()) {
+      setPushStatus('enabled')
+    } else {
+      setPushStatus('disabled')
+    }
+  }, [user])
+
+  const handleTogglePush = async () => {
+    if (!user) return
+    setIsUpdatingPush(true)
+    setPushFeedback(null)
+
+    try {
+      if (pushStatus === 'enabled') {
+        const disabled = await disableWebPushToken(user.uid)
+        if (disabled) {
+          setPushStatus('disabled')
+          setPushFeedback({ type: 'info', text: 'Browser push notifications paused for this device.' })
+        }
+      } else {
+        const result = await registerWebPushToken(user.uid)
+        if (result.success) {
+          setPushStatus('enabled')
+          setPushFeedback({ type: 'success', text: 'Browser push notifications successfully enabled!' })
+        } else if (result.needsVapidKey) {
+          setPushFeedback({
+            type: 'info',
+            text: 'Web Push requires a public VAPID Key pair. Set NEXT_PUBLIC_FIREBASE_VAPID_KEY in environment settings.',
+          })
+        } else {
+          if (Notification.permission === 'denied') {
+            setPushStatus('denied')
+          }
+          setPushFeedback({ type: 'error', text: result.error || 'Could not enable push notifications.' })
+        }
+      }
+    } catch (err: any) {
+      setPushFeedback({ type: 'error', text: err?.message || 'Error updating push settings.' })
+    } finally {
+      setIsUpdatingPush(false)
+    }
+  }
 
   useEffect(() => {
     try {
       const saved = localStorage.getItem('theme') as ThemePreference | null
+
       if (saved === 'light' || saved === 'dark' || saved === 'system') {
         setThemePref(saved)
       } else {
@@ -145,6 +211,93 @@ export default function SettingsPage() {
               {themePref === 'system' && <Check className="size-3 text-blue-600 mt-1" />}
             </button>
           </div>
+        </section>
+
+        {/* Web Push Notifications Section (Indigo/Pink Identity) */}
+        <section className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-4">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Bell className="size-4 text-pink-500" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Browser Push Notifications
+              </h2>
+            </div>
+            {pushStatus === 'enabled' ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-emerald-500/10 px-2.5 py-0.5 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                <CheckCircle2 className="size-3" />
+                Active
+              </span>
+            ) : pushStatus === 'denied' ? (
+              <span className="inline-flex items-center gap-1 rounded-full bg-rose-500/10 px-2.5 py-0.5 text-[11px] font-bold text-rose-600 dark:text-rose-400 border border-rose-500/20">
+                <AlertCircle className="size-3" />
+                Blocked
+              </span>
+            ) : pushStatus === 'unsupported' ? (
+              <span className="text-[11px] font-semibold text-muted-foreground">
+                Not Supported
+              </span>
+            ) : (
+              <span className="inline-flex items-center gap-1 rounded-full bg-muted px-2.5 py-0.5 text-[11px] font-semibold text-muted-foreground">
+                <BellOff className="size-3" />
+                Off
+              </span>
+            )}
+          </div>
+
+          <p className="text-xs text-muted-foreground leading-relaxed">
+            Get instant updates about chat messages, neighbor requests, likes, comments, and community notices even when Circular is in the background.
+          </p>
+
+          {pushFeedback && (
+            <div
+              className={`rounded-2xl p-3 text-xs flex items-start gap-2 ${
+                pushFeedback.type === 'success'
+                  ? 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border border-emerald-500/20'
+                  : pushFeedback.type === 'info'
+                  ? 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border border-blue-500/20'
+                  : 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border border-rose-500/20'
+              }`}
+            >
+              <Info className="size-4 shrink-0 mt-0.5" />
+              <span>{pushFeedback.text}</span>
+            </div>
+          )}
+
+          {pushStatus === 'denied' && (
+            <p className="text-[11px] text-rose-500 dark:text-rose-400 bg-rose-500/10 p-3 rounded-2xl border border-rose-500/20">
+              Browser notifications are currently blocked in your browser settings. To receive push alerts, click the lock/settings icon next to the address bar and allow Notifications for circularapp.in.
+            </p>
+          )}
+
+          {pushStatus !== 'unsupported' && pushStatus !== 'denied' && (
+            <button
+              type="button"
+              disabled={isUpdatingPush}
+              onClick={handleTogglePush}
+              className={`w-full flex items-center justify-center gap-2 rounded-2xl py-2.5 px-4 text-xs font-bold transition-all ${
+                pushStatus === 'enabled'
+                  ? 'bg-muted text-muted-foreground hover:bg-muted/80 hover:text-foreground border border-border'
+                  : 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-md shadow-purple-500/20 hover:opacity-95'
+              }`}
+            >
+              {isUpdatingPush ? (
+                <>
+                  <Loader2 className="size-4 animate-spin" />
+                  <span>Updating...</span>
+                </>
+              ) : pushStatus === 'enabled' ? (
+                <>
+                  <BellOff className="size-4" />
+                  <span>Pause Web Push on this Browser</span>
+                </>
+              ) : (
+                <>
+                  <Bell className="size-4" />
+                  <span>Enable Browser Push Notifications</span>
+                </>
+              )}
+            </button>
+          )}
         </section>
 
         {/* Account Info (Teal Accent) */}

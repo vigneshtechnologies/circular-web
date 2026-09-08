@@ -486,3 +486,33 @@ export async function getPublicPostsList(limit = 100): Promise<PublicPostData[]>
     return []
   }
 }
+
+export async function getPublicUsersList(limit = 100): Promise<PublicUserData[]> {
+  const db = getAdminDb()
+  if (!db) return []
+
+  try {
+    const snap = await db.ref('publicProfiles').limitToLast(limit).once('value')
+    if (!snap.exists()) return []
+
+    const list: PublicUserData[] = []
+    snap.forEach((child: any) => {
+      const data = child.val()
+      if (!data.isRestricted && !data.isDeleted) {
+        list.push({
+          uid: child.key as string,
+          name: String(data.name || data.displayName || 'Circular Member').trim(),
+          username: data.username ? String(data.username).trim() : undefined,
+          area: data.area || data.areaName || data.city || undefined,
+          bio: data.bio ? String(data.bio).trim() : undefined,
+          avatarUrl: data.photoUrl || data.avatarUrl || data.profileImage || undefined,
+          businessTrustLabel: data.businessTrustLabel || undefined,
+        })
+      }
+    })
+    return list.reverse()
+  } catch (err) {
+    console.warn('[getPublicUsersList] Error:', err)
+    return []
+  }
+}

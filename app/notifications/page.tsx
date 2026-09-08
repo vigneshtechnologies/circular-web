@@ -24,12 +24,35 @@ import {
   Briefcase,
   HandHeart,
   Megaphone,
+  X,
 } from 'lucide-react'
+import { isWebPushSupported, registerWebPushToken } from '@/lib/webPushClient'
 
 export default function NotificationsPage() {
   const { user, userProfile, loading } = useAuth()
   const [notifications, setNotifications] = useState<NotificationItem[]>([])
   const [filter, setFilter] = useState<'all' | 'unread'>('all')
+  const [showPushBanner, setShowPushBanner] = useState(false)
+
+  useEffect(() => {
+    if (isWebPushSupported() && Notification.permission === 'default') {
+      const dismissed = sessionStorage.getItem('push_banner_dismissed')
+      if (!dismissed) setShowPushBanner(true)
+    }
+  }, [])
+
+  const handleEnablePush = async () => {
+    if (!user) return
+    await registerWebPushToken(user.uid)
+    setShowPushBanner(false)
+  }
+
+  const handleDismissPush = () => {
+    setShowPushBanner(false)
+    try {
+      sessionStorage.setItem('push_banner_dismissed', '1')
+    } catch {}
+  }
 
   useEffect(() => {
     if (!user) return
@@ -158,6 +181,36 @@ export default function NotificationsPage() {
       </header>
 
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-2.5">
+        {showPushBanner && (
+          <div className="flex items-center justify-between gap-3 rounded-2xl border border-purple-500/30 bg-purple-500/10 p-3.5 shadow-sm transition-all mb-4">
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="flex size-8 items-center justify-center rounded-xl bg-purple-500/20 text-purple-600 dark:text-purple-400 shrink-0">
+                <Bell className="size-4" />
+              </div>
+              <p className="text-xs text-slate-800 dark:text-slate-200 font-medium truncate">
+                Enable browser push alerts to stay notified while inactive
+              </p>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleEnablePush}
+                className="rounded-xl bg-purple-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-purple-700 shadow-sm"
+              >
+                Enable
+              </button>
+              <button
+                type="button"
+                onClick={handleDismissPush}
+                className="p-1 text-muted-foreground hover:text-foreground rounded-lg"
+                aria-label="Dismiss notification banner"
+              >
+                <X className="size-4" />
+              </button>
+            </div>
+          </div>
+        )}
+
         {filtered.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center">
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-pink-500/10 text-pink-600">
