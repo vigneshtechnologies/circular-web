@@ -7,36 +7,37 @@ import { useAuth } from '@/context/AuthContext'
 import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
 import { PostCard } from '@/components/feed/PostCard'
-import { CategoryFilterBar } from '@/components/feed/CategoryFilterBar'
-import { RadiusSelector } from '@/components/feed/RadiusSelector'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { PostComposerModal } from '@/components/feed/PostComposerModal'
 import { StoriesBar } from '@/components/feed/StoriesBar'
 import { PeopleYouMayKnowCard } from '@/components/feed/PeopleYouMayKnowCard'
 import { getUserAvatar } from '@/lib/imageUtils'
-import {
-  CIRCULAR_RADIUS_OPTIONS,
-  CircularRadiusOption,
-  DEFAULT_RADIUS_KM,
-  getDistanceKm,
-  isValidCoordinate,
-  getUserCommunityLocation,
-} from '@/lib/locationUtils'
+import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { ref, get, query, orderByChild, limitToLast, endAt } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
-import { Sparkles, MapPin, Loader2, ArrowDown, Navigation, Briefcase, HandHeart, Store } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
+import {
+  Sparkles,
+  Loader2,
+  ArrowDown,
+  Briefcase,
+  HandHeart,
+  Store,
+  Users,
+  Compass,
+} from 'lucide-react'
 
-const INITIAL_PAGE_SIZE = 30
+const INITIAL_PAGE_SIZE = 35
 const NEXT_PAGE_SIZE = 30
 
 export default function CircularRootPage() {
   const { user, userProfile, publicProfiles, loading } = useAuth()
+  const { t } = useTranslation()
+
+  const [feedTab, setFeedTab] = useState<'forYou' | 'following'>('forYou')
   const [posts, setPosts] = useState<Post[]>([])
-  const [selectedCategory, setSelectedCategory] = useState('All')
-  const [selectedRadius, setSelectedRadius] = useState<CircularRadiusOption>(DEFAULT_RADIUS_KM)
-  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null)
-  const [locationAvailable, setLocationAvailable] = useState(false)
+  const [followingUids, setFollowingUids] = useState<string[]>([])
 
   const [feedLoading, setFeedLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -47,50 +48,35 @@ export default function CircularRootPage() {
 
   const observerTarget = useRef<HTMLDivElement>(null)
 
-  // Load radius preference from localStorage
+  // 1. Load following user IDs for following filter and privacy checks
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('circular_feed_radius')
-      if (saved) {
-        const num = Number(saved) as CircularRadiusOption
-        if (CIRCULAR_RADIUS_OPTIONS.includes(num)) {
-          setSelectedRadius(num)
-        }
-      }
-    } catch {}
-  }, [])
-
-  // Acquire user browser geolocation
-  const requestUserLocation = useCallback(() => {
-    if (typeof navigator !== 'undefined' && navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          setUserCoords({
-            latitude: pos.coords.latitude,
-            longitude: pos.coords.longitude,
+    if (!user) return
+    const fetchFollowing = async () => {
+      try {
+        const uidsSet = new Set<string>()
+        const fSnap = await get(ref(db, `following/${user.uid}`)).catch(() => null)
+        if (fSnap && fSnap.exists()) {
+          const val = fSnap.val()
+          Object.keys(val).forEach((k) => {
+            if (val[k]) uidsSet.add(k)
           })
-          setLocationAvailable(true)
-        },
-        () => {
-          setLocationAvailable(false)
-        },
-        { timeout: 8000, maximumAge: 120000 }
-      )
+        }
+        const userFollowSnap = await get(ref(db, `users/${user.uid}/following`)).catch(() => null)
+        if (userFollowSnap && userFollowSnap.exists()) {
+          const val = userFollowSnap.val()
+          Object.keys(val).forEach((k) => {
+            if (val[k]) uidsSet.add(k)
+          })
+        }
+        setFollowingUids(Array.from(uidsSet))
+      } catch (err) {
+        console.warn('Error loading following list:', err)
+      }
     }
-  }, [])
+    fetchFollowing()
+  }, [user])
 
-  useEffect(() => {
-    requestUserLocation()
-  }, [requestUserLocation])
-
-  const handleSelectRadius = (radius: CircularRadiusOption) => {
-    setSelectedRadius(radius)
-    try {
-      localStorage.setItem('circular_feed_radius', String(radius))
-    } catch {}
-  }
-
-  // 1. Initial Page Load (30 posts ordered by createdAt descending)
+  // 2. Initial Page Load
   const loadInitialPosts = useCallback(async () => {
     if (!user) return
     setFeedLoading(true)
@@ -123,7 +109,7 @@ export default function CircularRootPage() {
     }
   }, [user])
 
-  // 2. Cursor Pagination / Load More Posts (30 older posts)
+  // 3. Cursor Pagination / Load More Posts
   const loadMorePosts = useCallback(async () => {
     if (loadingMore || !hasMorePosts || lastCreatedAt == null || !user) return
 
@@ -173,7 +159,7 @@ export default function CircularRootPage() {
     loadInitialPosts()
   }, [loadInitialPosts])
 
-  // 3. Infinite scroll observer when reaching bottom
+  // 4. Infinite scroll observer when reaching bottom
   useEffect(() => {
     const el = observerTarget.current
     if (!el) return
@@ -217,80 +203,75 @@ export default function CircularRootPage() {
 
   const displayLocation = getUserCommunityLocation(userProfile)
 
-  // Filter posts by Category + Geographic Radius
-  const filteredPosts = posts.filter((p) => {
-    // 1. Category Filter
-    const postCat = (p.category || '').toLowerCase().trim()
-    const selected = selectedCategory.toLowerCase().trim()
+  // Filter posts based on For You vs Following & Privacy Enforcement
+  const visiblePosts = posts.filter((post) => {
+    const isOwnPost = Boolean(user && post.userId === user.uid)
+    const authorProfile = post.userId ? publicProfiles[post.userId] : null
+    const isAuthorPrivate =
+      authorProfile?.isPrivate === true ||
+      (authorProfile as any)?.accountPrivacy === 'private'
+    const isFollowersOnly = post.audience === 'followers' || isAuthorPrivate
+    const isFollowingAuthor = post.userId ? followingUids.includes(post.userId) : false
 
-    let matchesCategory = selected === 'all'
-    if (!matchesCategory) {
-      if (selected === 'general') {
-        matchesCategory = !postCat || postCat === 'general'
-      } else if (selected === 'news & updates') {
-        matchesCategory = postCat === 'news' || postCat === 'news & updates' || postCat === 'local news'
-      } else {
-        matchesCategory = postCat === selected || postCat.includes(selected)
-      }
+    // Privacy rule: private or followers-only content is protected
+    if (isFollowersOnly && !isOwnPost && !isFollowingAuthor) {
+      return false
     }
 
-    if (!matchesCategory) return false
-
-    // 2. Geographic Radius Filter
-    if (userCoords && isValidCoordinate(p.latitude, p.longitude)) {
-      const distance = getDistanceKm(
-        userCoords.latitude,
-        userCoords.longitude,
-        p.latitude!,
-        p.longitude!
-      )
-      return distance <= selectedRadius
+    if (feedTab === 'following') {
+      return isFollowingAuthor || isOwnPost
     }
 
-    if (selectedRadius === DEFAULT_RADIUS_KM || !userCoords) {
-      return true
-    }
-
-    return false
+    // For You: eligible public posts from all locations globally (no distance restriction)
+    return true
   })
 
   const authorAvatar = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
 
   return (
     <AppShell currentArea={displayLocation}>
-      {/* Top Header in Center Feed (Clean Layout: Location on Left, Radius on Right) */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2.5 min-w-0">
-            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/15 via-purple-500/15 to-pink-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">
-              <MapPin className="size-4.5 stroke-[2.2]" />
-            </div>
-            <div className="min-w-0">
-              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">Local Feed</h1>
-              <div className="text-[11px] font-semibold text-muted-foreground truncate flex items-center gap-1">
-                <span>Showing updates in</span>
-                <span className="text-purple-600 dark:text-purple-400 font-bold">{displayLocation}</span>
-              </div>
-            </div>
+      {/* Top Header: For You | Following Tab Selector */}
+      <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-2.5 md:px-6">
+        <div className="flex items-center justify-between max-w-2xl mx-auto">
+          {/* Top Two-Option Feed Selector: For You | Following */}
+          <div className="flex items-center bg-muted/60 p-1 rounded-2xl border border-border shadow-xs">
+            <button
+              type="button"
+              onClick={() => setFeedTab('forYou')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                feedTab === 'forYou'
+                  ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card/60'
+              }`}
+            >
+              <Sparkles className="size-3.5" />
+              <span>{t.forYou}</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => setFeedTab('following')}
+              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition-all ${
+                feedTab === 'following'
+                  ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground hover:bg-card/60'
+              }`}
+            >
+              <Users className="size-3.5" />
+              <span>{t.following}</span>
+              {followingUids.length > 0 && (
+                <span className="ml-1 text-[10px] opacity-80">({followingUids.length})</span>
+              )}
+            </button>
           </div>
 
-          {/* Right Action: ONLY Radius Selector (No duplicate blank buttons) */}
-          <div className="flex items-center shrink-0">
-            <RadiusSelector
-              selectedRadius={selectedRadius}
-              onSelectRadius={handleSelectRadius}
-              hasUserLocation={locationAvailable}
-              onRequestLocation={requestUserLocation}
-            />
-          </div>
-        </div>
-
-        {/* Category Filter Bar */}
-        <div className="mt-2.5">
-          <CategoryFilterBar
-            selectedCategory={selectedCategory}
-            onSelectCategory={(cat) => setSelectedCategory(cat)}
-          />
+          {/* Dedicated Nearby Feed Link */}
+          <Link
+            href="/nearby"
+            className="flex items-center gap-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors"
+          >
+            <Compass className="size-3.5" />
+            <span className="hidden sm:inline">{t.navNearby}</span>
+          </Link>
         </div>
       </header>
 
@@ -299,7 +280,7 @@ export default function CircularRootPage() {
         {/* Compact Stories / Status Launcher Bar */}
         <StoriesBar />
 
-        {/* Quick Discovery Buttons (Local Jobs, Need Nearby, Bulletin) with Individual Colour Identity */}
+        {/* Quick Discovery Buttons (Jobs, Need Nearby, Bulletin) with Individual Colour Identity */}
         <div className="grid grid-cols-3 gap-2 sm:gap-3 py-0.5">
           <Link
             href="/jobs"
@@ -308,7 +289,7 @@ export default function CircularRootPage() {
             <div className="flex size-5 items-center justify-center rounded-md bg-emerald-500 text-white shrink-0 shadow-xs">
               <Briefcase className="size-3 stroke-[2.5]" />
             </div>
-            <span className="truncate">Local Jobs</span>
+            <span className="truncate">{t.jobs}</span>
           </Link>
 
           <Link
@@ -332,7 +313,7 @@ export default function CircularRootPage() {
           </Link>
         </div>
 
-        {/* Quick Post Prompt Card */}
+        {/* Simplified Quick Post Prompt Card */}
         <div
           onClick={() => setIsComposerOpen(true)}
           className="flex cursor-pointer items-center gap-3 rounded-2xl border border-border bg-card p-3 shadow-sm transition-all hover:border-purple-500/40 hover:bg-muted/40"
@@ -346,47 +327,49 @@ export default function CircularRootPage() {
             />
           </div>
           <div className="flex-1 rounded-xl bg-muted/60 px-3.5 py-1.5 text-xs text-muted-foreground truncate">
-            Share what's happening around you...
+            {t.whatsOnYourMind}
           </div>
           <button
             type="button"
             className="rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white px-3.5 py-1.5 text-xs font-bold shadow-sm shrink-0 hover:opacity-95"
           >
-            Post
+            {t.postButton}
           </button>
         </div>
 
         {/* People You May Know Recommendation Carousel */}
-        <PeopleYouMayKnowCard currentLocation={userCoords} />
+        <PeopleYouMayKnowCard />
 
         {/* Posts List */}
         {feedLoading ? (
           <div className="space-y-4 py-8 text-center text-xs text-muted-foreground">
             <div className="mx-auto size-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
-            <p className="mt-2 font-medium">Loading community feed...</p>
+            <p className="mt-2 font-medium">Loading feed...</p>
           </div>
-        ) : filteredPosts.length === 0 ? (
+        ) : visiblePosts.length === 0 ? (
           <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
             <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
               <Sparkles className="size-6" />
             </div>
             <h3 className="mt-3 text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-              No posts found within {selectedRadius} km
+              {feedTab === 'following'
+                ? t.noFollowingPosts
+                : t.noPostsYet}
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              {selectedCategory !== 'All'
-                ? `No ${selectedCategory} posts currently in this radius.`
-                : 'Try expanding your distance radius or sharing a new update!'}
+              {feedTab === 'following'
+                ? 'Follow people in For You to see their updates here.'
+                : 'Share an update or event with the community!'}
             </p>
             <div className="mt-4 flex items-center justify-center gap-2">
-              {selectedRadius < 25 && (
+              {feedTab === 'following' && (
                 <button
                   type="button"
-                  onClick={() => handleSelectRadius(25)}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm hover:bg-muted"
+                  onClick={() => setFeedTab('forYou')}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-foreground shadow-sm hover:bg-muted"
                 >
-                  <Navigation className="size-3.5 text-blue-600 dark:text-blue-400" />
-                  <span>Expand to 25 km</span>
+                  <Sparkles className="size-3.5 text-purple-600 dark:text-purple-400" />
+                  <span>Go to For You</span>
                 </button>
               )}
               <button
@@ -394,12 +377,12 @@ export default function CircularRootPage() {
                 onClick={() => setIsComposerOpen(true)}
                 className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-3.5 py-1.5 text-xs font-bold text-white shadow hover:opacity-95"
               >
-                <span>Create Post</span>
+                <span>{t.navCreate}</span>
               </button>
             </div>
           </div>
         ) : (
-          filteredPosts.map((post) => (
+          visiblePosts.map((post) => (
             <PostCard
               key={post.id}
               post={post}

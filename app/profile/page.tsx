@@ -15,12 +15,19 @@ import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { getUserAvatar } from '@/lib/imageUtils'
-import { MapPin, Edit3, Settings, Sparkles, X, Shield, Share2, Check, LayoutGrid, List } from 'lucide-react'
+import { MapPin, Edit3, Settings, Sparkles, X, Shield, Share2, Check, LayoutGrid, List, FileText, Briefcase, Lock, Globe, Users } from 'lucide-react'
+import { ProfileSwitcherModal } from '@/components/profile/ProfileSwitcherModal'
+import { getActiveProfileId } from '@/lib/profileService'
+import { useTranslation } from '@/lib/i18n'
 
 const VIEW_PREF_KEY = 'circular_profile_view'
 
 export default function ProfilePage() {
   const { user, userProfile, isAdmin, refreshProfile, loading, publicProfiles } = useAuth()
+  const { t } = useTranslation()
+  const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState(false)
+  const [activeProfileId, setActiveProfileId] = useState<string | null>(null)
+  const [isPrivateAccount, setIsPrivateAccount] = useState(false)
   const [activeTab, setActiveTab] = useState<'posts' | 'businesses'>('posts')
   const [myPosts, setMyPosts] = useState<Post[]>([])
   const [myBusinesses, setMyBusinesses] = useState<BusinessProfile[]>([])
@@ -59,6 +66,7 @@ export default function ProfilePage() {
   }, [viewMode])
 
   useEffect(() => {
+    setActiveProfileId(getActiveProfileId())
     if (userProfile) {
       setName(userProfile.name || '')
       setUsername(userProfile.username || '')
@@ -66,8 +74,28 @@ export default function ProfilePage() {
       setArea(userProfile.area || '')
       setPhone(userProfile.phone || '')
       setPhotoURL(userProfile.photoURL || userProfile.profileImage || '')
+      setIsPrivateAccount(Boolean(userProfile.isPrivate || (userProfile as any).accountPrivacy === 'private'))
     }
   }, [userProfile])
+
+  const handleTogglePrivacy = async () => {
+    if (!user) return
+    const nextVal = !isPrivateAccount
+    setIsPrivateAccount(nextVal)
+    try {
+      await update(ref(db, `users/${user.uid}`), {
+        isPrivate: nextVal,
+        accountPrivacy: nextVal ? 'private' : 'everyone',
+      })
+      await update(ref(db, `publicProfiles/${user.uid}`), {
+        isPrivate: nextVal,
+        accountPrivacy: nextVal ? 'private' : 'everyone',
+      })
+      await refreshProfile()
+    } catch (err) {
+      console.error('Failed to update account privacy:', err)
+    }
+  }
 
 
   useEffect(() => {
@@ -211,7 +239,28 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="flex items-center gap-2 pt-2 sm:pt-0">
+            <div className="flex flex-wrap items-center gap-2 pt-2 sm:pt-0">
+              <button
+                type="button"
+                onClick={() => setIsProfileSwitcherOpen(true)}
+                className="flex items-center gap-1.5 rounded-xl border border-purple-500/30 bg-purple-500/10 px-3.5 py-2 text-xs font-bold text-purple-600 dark:text-purple-400 hover:bg-purple-500/20 transition-all"
+              >
+                <Users className="size-3.5" />
+                <span>Switch Profile</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleTogglePrivacy}
+                className={`flex items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-bold transition-all ${
+                  isPrivateAccount
+                    ? 'border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                    : 'border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-400'
+                }`}
+                title="Click to toggle Public / Private account mode"
+              >
+                {isPrivateAccount ? <Lock className="size-3.5" /> : <Globe className="size-3.5" />}
+                <span>{isPrivateAccount ? 'Private Account' : 'Public Account'}</span>
+              </button>
               <button
                 type="button"
                 onClick={() => setIsEditOpen(true)}
@@ -258,6 +307,34 @@ export default function ProfilePage() {
               <span className="font-black text-slate-900 dark:text-white">{followingCount}</span>{' '}
               <span className="text-muted-foreground">Following</span>
             </div>
+          </div>
+
+          {/* Career Shortcuts */}
+          <div className="grid grid-cols-2 gap-2.5 mt-4 pt-4 border-t border-border">
+            <Link
+              href="/jobs/resume"
+              className="flex items-center gap-2.5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-3 hover:bg-indigo-500/10 transition-colors"
+            >
+              <div className="flex size-8 items-center justify-center rounded-xl bg-indigo-500 text-white shrink-0">
+                <FileText className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-white truncate">My Resume</div>
+                <div className="text-[10px] text-muted-foreground truncate">Private career profile &amp; skills</div>
+              </div>
+            </Link>
+            <Link
+              href="/jobs/applications"
+              className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3 hover:bg-emerald-500/10 transition-colors"
+            >
+              <div className="flex size-8 items-center justify-center rounded-xl bg-emerald-500 text-white shrink-0">
+                <Briefcase className="size-4" />
+              </div>
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-white truncate">My Applications</div>
+                <div className="text-[10px] text-muted-foreground truncate">Track status &amp; revoke access</div>
+              </div>
+            </Link>
           </div>
         </div>
 
@@ -474,6 +551,12 @@ export default function ProfilePage() {
       <PostCommentsDrawer
         postId={activeCommentsPostId}
         onClose={() => setActiveCommentsPostId(null)}
+      />
+
+      <ProfileSwitcherModal
+        isOpen={isProfileSwitcherOpen}
+        onClose={() => setIsProfileSwitcherOpen(false)}
+        onProfileSwitched={(p) => setActiveProfileId(p?.id || null)}
       />
 
       <ImageViewerModal

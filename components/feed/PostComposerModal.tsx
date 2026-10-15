@@ -41,7 +41,10 @@ import {
   MapPin,
   Sparkles,
   Loader2,
+  Users,
+  Lock,
 } from 'lucide-react'
+import { getActiveProfileId } from '@/lib/profileService'
 
 type PostFormat =
   | 'selection'
@@ -77,6 +80,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
   const [text, setText] = useState('')
   const [category, setCategory] = useState('General')
   const [area, setArea] = useState('')
+  const [audience, setAudience] = useState<'everyone' | 'followers'>('everyone')
   const [imageUrls, setImageUrls] = useState<string[]>([])
   const [imageUrlInput, setImageUrlInput] = useState('')
 
@@ -130,6 +134,9 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
   useEffect(() => {
     if (userProfile) {
       setArea(getUserCommunityLocation(userProfile))
+      if (userProfile.isPrivate || (userProfile as any).accountPrivacy === 'private') {
+        setAudience('followers')
+      }
     }
   }, [userProfile])
 
@@ -238,6 +245,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
       const now = Date.now()
       const userLoc = area.trim() || getUserCommunityLocation(userProfile)
       const uName = userProfile?.name || user.displayName || 'Member'
+      const activeProfileId = getActiveProfileId()
 
       if (selectedFormat === 'normal') {
         if (!text.trim() && imageUrls.length === 0) {
@@ -250,8 +258,10 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           userName: uName,
           businessName: userProfile?.businessName || undefined,
           text: text.trim(),
-          category,
+          category: 'General',
           area: userLoc,
+          audience,
+          profileId: activeProfileId || undefined,
           imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
           imageUrl: imageUrls[0] || undefined,
           imageCount: imageUrls.length,
@@ -279,6 +289,8 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           text: text.trim() || undefined,
           category,
           area: userLoc,
+          audience,
+          profileId: activeProfileId || undefined,
           postType: 'link',
           linkPreview: preview,
           createdAt: now,
@@ -678,36 +690,78 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           {/* ======================================================== */}
           {selectedFormat !== 'selection' && (
             <form onSubmit={handlePublish} className="space-y-4">
-              {/* Category & Locality Bar */}
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">Category</label>
-                  <select
-                    value={category}
-                    onChange={(e) => setCategory(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-card p-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
-                  >
-                    <option value="General">General</option>
-                    <option value="News & Updates">News &amp; Updates</option>
-                    <option value="Food">Food</option>
-                    <option value="Shopping">Shopping</option>
-                    <option value="Services">Services</option>
-                    <option value="Education">Education</option>
-                    <option value="Medical">Medical</option>
-                    <option value="Events">Events</option>
-                    <option value="Offers">Offers</option>
-                  </select>
+              {/* Audience Selector & Privacy Indicator */}
+              <div className="flex items-center justify-between bg-muted/40 p-2.5 rounded-2xl border border-border">
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold text-foreground">Audience:</span>
+                  <div className="flex items-center gap-1 bg-card p-1 rounded-xl border border-border">
+                    <button
+                      type="button"
+                      onClick={() => setAudience('everyone')}
+                      disabled={userProfile?.isPrivate || (userProfile as any)?.accountPrivacy === 'private'}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        audience === 'everyone'
+                          ? 'bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      } ${userProfile?.isPrivate ? 'opacity-50 cursor-not-allowed' : ''}`}
+                    >
+                      <Globe className="size-3" />
+                      <span>Everyone</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAudience('followers')}
+                      className={`flex items-center gap-1.5 px-3 py-1 rounded-lg text-xs font-bold transition-all ${
+                        audience === 'followers'
+                          ? 'bg-gradient-to-r from-purple-600 to-pink-600 text-white shadow-xs'
+                          : 'text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      <Users className="size-3" />
+                      <span>Followers only</span>
+                    </button>
+                  </div>
                 </div>
-                <div>
-                  <label className="block text-xs font-semibold text-foreground mb-1">Area / Locality</label>
-                  <input
-                    type="text"
-                    value={area}
-                    onChange={(e) => setArea(e.target.value)}
-                    className="w-full rounded-xl border border-border bg-card p-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
-                  />
-                </div>
+                {(userProfile?.isPrivate || (userProfile as any)?.accountPrivacy === 'private') && (
+                  <span className="text-[11px] font-semibold text-amber-600 dark:text-amber-400 flex items-center gap-1">
+                    <Lock className="size-3" />
+                    <span>Private Account</span>
+                  </span>
+                )}
               </div>
+
+              {/* Category & Locality Bar: Only shown for structured smart/events/links formats, NOT ordinary normal posts */}
+              {selectedFormat !== 'normal' && (
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Category</label>
+                    <select
+                      value={category}
+                      onChange={(e) => setCategory(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-card p-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
+                    >
+                      <option value="General">General</option>
+                      <option value="News & Updates">News &amp; Updates</option>
+                      <option value="Food">Food</option>
+                      <option value="Shopping">Shopping</option>
+                      <option value="Services">Services</option>
+                      <option value="Education">Education</option>
+                      <option value="Medical">Medical</option>
+                      <option value="Events">Events</option>
+                      <option value="Offers">Offers</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-foreground mb-1">Area / Locality</label>
+                    <input
+                      type="text"
+                      value={area}
+                      onChange={(e) => setArea(e.target.value)}
+                      className="w-full rounded-xl border border-border bg-card p-2.5 text-xs text-foreground focus:border-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+              )}
 
               {/* Form by Selected Format */}
               {selectedFormat === 'normal' && (
@@ -716,7 +770,7 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
                     rows={4}
                     value={text}
                     onChange={(e) => setText(e.target.value)}
-                    placeholder="What's happening in your local community?"
+                    placeholder="What's on your mind?"
                     className="w-full rounded-2xl border border-border bg-card p-3.5 text-xs sm:text-sm text-foreground placeholder-muted-foreground focus:border-primary focus:outline-none"
                   />
 

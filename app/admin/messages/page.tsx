@@ -42,48 +42,66 @@ interface UserIdentityStyle {
   nameColor: string
   badgeClass: string
   ringClass: string
+  borderClass: string
+  dotClass: string
 }
 
 const USER_ACCENT_PALETTES: UserIdentityStyle[] = [
   {
     nameColor: 'text-indigo-600 dark:text-indigo-400',
-    badgeClass: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/20',
-    ringClass: 'ring-indigo-500/40',
+    badgeClass: 'bg-indigo-500/10 text-indigo-700 dark:text-indigo-300 border-indigo-500/30',
+    ringClass: 'ring-indigo-500/50',
+    borderClass: 'border-l-indigo-500',
+    dotClass: 'bg-indigo-500',
   },
   {
     nameColor: 'text-emerald-600 dark:text-emerald-400',
-    badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/20',
-    ringClass: 'ring-emerald-500/40',
+    badgeClass: 'bg-emerald-500/10 text-emerald-700 dark:text-emerald-300 border-emerald-500/30',
+    ringClass: 'ring-emerald-500/50',
+    borderClass: 'border-l-emerald-500',
+    dotClass: 'bg-emerald-500',
   },
   {
     nameColor: 'text-amber-600 dark:text-amber-400',
-    badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/20',
-    ringClass: 'ring-amber-500/40',
+    badgeClass: 'bg-amber-500/10 text-amber-700 dark:text-amber-300 border-amber-500/30',
+    ringClass: 'ring-amber-500/50',
+    borderClass: 'border-l-amber-500',
+    dotClass: 'bg-amber-500',
   },
   {
     nameColor: 'text-rose-600 dark:text-rose-400',
-    badgeClass: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/20',
-    ringClass: 'ring-rose-500/40',
+    badgeClass: 'bg-rose-500/10 text-rose-700 dark:text-rose-300 border-rose-500/30',
+    ringClass: 'ring-rose-500/50',
+    borderClass: 'border-l-rose-500',
+    dotClass: 'bg-rose-500',
   },
   {
     nameColor: 'text-teal-600 dark:text-teal-400',
-    badgeClass: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/20',
-    ringClass: 'ring-teal-500/40',
+    badgeClass: 'bg-teal-500/10 text-teal-700 dark:text-teal-300 border-teal-500/30',
+    ringClass: 'ring-teal-500/50',
+    borderClass: 'border-l-teal-500',
+    dotClass: 'bg-teal-500',
   },
   {
     nameColor: 'text-purple-600 dark:text-purple-400',
-    badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/20',
-    ringClass: 'ring-purple-500/40',
+    badgeClass: 'bg-purple-500/10 text-purple-700 dark:text-purple-300 border-purple-500/30',
+    ringClass: 'ring-purple-500/50',
+    borderClass: 'border-l-purple-500',
+    dotClass: 'bg-purple-500',
   },
   {
     nameColor: 'text-blue-600 dark:text-blue-400',
-    badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/20',
-    ringClass: 'ring-blue-500/40',
+    badgeClass: 'bg-blue-500/10 text-blue-700 dark:text-blue-300 border-blue-500/30',
+    ringClass: 'ring-blue-500/50',
+    borderClass: 'border-l-blue-500',
+    dotClass: 'bg-blue-500',
   },
   {
     nameColor: 'text-orange-600 dark:text-orange-400',
-    badgeClass: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/20',
-    ringClass: 'ring-orange-500/40',
+    badgeClass: 'bg-orange-500/10 text-orange-700 dark:text-orange-300 border-orange-500/30',
+    ringClass: 'ring-orange-500/50',
+    borderClass: 'border-l-orange-500',
+    dotClass: 'bg-orange-500',
   },
 ]
 
@@ -93,6 +111,8 @@ function getUserIdentityStyle(uid?: string): UserIdentityStyle {
       nameColor: 'text-slate-900 dark:text-white',
       badgeClass: 'bg-muted text-muted-foreground border-border',
       ringClass: 'ring-border',
+      borderClass: 'border-l-border',
+      dotClass: 'bg-muted-foreground',
     }
   }
 
@@ -103,6 +123,55 @@ function getUserIdentityStyle(uid?: string): UserIdentityStyle {
   }
   const index = Math.abs(hash) % USER_ACCENT_PALETTES.length
   return USER_ACCENT_PALETTES[index]
+}
+
+interface UserIdentity {
+  uid: string
+  name: string
+  handle: string
+  isRealUsername: boolean
+  style: UserIdentityStyle
+  avatar: string
+  area?: string
+}
+
+function resolveUserIdentity(
+  uid: string,
+  profile?: any,
+  fallbackName?: string,
+  fallbackAvatar?: string,
+  resolvedMap?: Record<string, any>
+): UserIdentity {
+  const cleanUid = String(uid || '').trim()
+  const name = String(
+    profile?.name ||
+    profile?.displayName ||
+    profile?.businessName ||
+    fallbackName ||
+    (cleanUid ? `User_${cleanUid.substring(0, 5)}` : 'Unknown User')
+  ).trim()
+
+  const rawUsername = profile?.username ? String(profile.username).trim().replace(/^@/, '') : ''
+  const isRealUsername = rawUsername.length > 0
+  const handle = isRealUsername
+    ? `@${rawUsername}`
+    : cleanUid
+    ? `#${cleanUid.slice(0, 6).toLowerCase()}`
+    : '#000000'
+
+  const style = getUserIdentityStyle(cleanUid)
+  const avatar = getUserAvatar(profile, resolvedMap) || fallbackAvatar || '/circular-logo.png'
+  const area = profile?.area || profile?.areaName || profile?.city || undefined
+
+  return {
+    uid: cleanUid,
+    name,
+    handle,
+    isRealUsername,
+    style,
+    avatar,
+    area,
+  }
 }
 
 export default function AdminMessagesPage() {
@@ -262,31 +331,69 @@ export default function AdminMessagesPage() {
     return () => unsub()
   }, [selectedConvId, user, isAdmin])
 
-  // 3. Search Filter Logic (Case-Insensitive across Name, Username, Business, Locality, ID, Text)
+  // 2b. Automatically load any missing participant profiles for the selected conversation
+  useEffect(() => {
+    if (!selectedConvId) return
+    const sel = conversations.find((c) => c.id === selectedConvId)
+    if (!sel) return
+
+    const missingUids = sel.participantIds.filter(
+      (uid) => uid && !resolvedProfiles[uid] && !publicProfiles?.[uid]
+    )
+
+    if (missingUids.length > 0) {
+      Promise.all(
+        missingUids.map(async (uid) => {
+          const [pSnap, uSnap] = await Promise.all([
+            get(ref(db, `publicProfiles/${uid}`)).catch(() => null),
+            get(ref(db, `users/${uid}`)).catch(() => null),
+          ])
+          const pData = pSnap && pSnap.exists() ? pSnap.val() : {}
+          const uData = uSnap && uSnap.exists() ? uSnap.val() : {}
+          return { uid, data: { ...pData, ...uData } }
+        })
+      ).then((results) => {
+        setResolvedProfiles((prev) => {
+          const next = { ...prev }
+          let changed = false
+          results.forEach(({ uid, data }) => {
+            if (Object.keys(data).length > 0) {
+              next[uid] = data
+              changed = true
+            }
+          })
+          return changed ? next : prev
+        })
+      })
+    }
+  }, [selectedConvId, conversations, resolvedProfiles, publicProfiles])
+
+  // 3. Search Filter Logic (Case-Insensitive across Name, Username, Handle, Business, Locality, ID, Text)
   const filtered = useMemo(() => {
-    const q = searchQuery.toLowerCase().trim()
-    if (!q) return conversations
+    const rawQ = searchQuery.toLowerCase().trim()
+    if (!rawQ) return conversations
+    const cleanQ = rawQ.replace(/^[@#]/, '')
 
     return conversations.filter((c) => {
       // A. Match Conversation ID
-      if (c.id.toLowerCase().includes(q)) return true
+      if (c.id.toLowerCase().includes(rawQ) || c.id.toLowerCase().includes(cleanQ)) return true
 
       // B. Match Last Message Text
-      if (c.lastMessageText?.toLowerCase().includes(q)) return true
+      if (c.lastMessageText?.toLowerCase().includes(rawQ)) return true
 
       // C. Match Participant Profiles
       for (const pId of c.participantIds) {
-        if (pId.toLowerCase().includes(q)) return true
+        if (pId.toLowerCase().includes(rawQ) || pId.toLowerCase().includes(cleanQ)) return true
 
         const prof = resolvedProfiles[pId] || publicProfiles?.[pId]
         if (prof) {
-          if (prof.name?.toLowerCase().includes(q)) return true
-          if (prof.username?.toLowerCase().includes(q)) return true
-          if (prof.businessName?.toLowerCase().includes(q)) return true
-          if (prof.email?.toLowerCase().includes(q)) return true
-          if (prof.area?.toLowerCase().includes(q)) return true
-          if (prof.areaName?.toLowerCase().includes(q)) return true
-          if (prof.city?.toLowerCase().includes(q)) return true
+          if (prof.name?.toLowerCase().includes(rawQ)) return true
+          if (prof.username?.toLowerCase().includes(rawQ) || prof.username?.toLowerCase().includes(cleanQ)) return true
+          if (prof.businessName?.toLowerCase().includes(rawQ)) return true
+          if (prof.email?.toLowerCase().includes(rawQ)) return true
+          if (prof.area?.toLowerCase().includes(rawQ)) return true
+          if (prof.areaName?.toLowerCase().includes(rawQ)) return true
+          if (prof.city?.toLowerCase().includes(rawQ)) return true
         }
       }
 
@@ -463,16 +570,19 @@ export default function AdminMessagesPage() {
                   const isSelected = selectedConvId === conv.id
                   const participants = conv.participantIds.map((pId) => {
                     const p = resolvedProfiles[pId] || publicProfiles?.[pId]
-                    return {
-                      uid: pId,
-                      name: p?.name || p?.businessName || `User_${pId.substring(0, 5)}`,
-                      avatar: getUserAvatar(p, resolvedProfiles) || '/circular-logo.png',
-                      username: p?.username ? `@${p.username}` : '',
-                      area: p?.area || p?.areaName || '',
-                    }
+                    return resolveUserIdentity(pId, p, undefined, undefined, resolvedProfiles)
                   })
 
-                  const title = participants.map((p) => p.name).join(' & ') || conv.id
+                  // Last message sender attribution
+                  const lastSender = conv.lastMessageSenderId
+                    ? resolveUserIdentity(
+                        conv.lastMessageSenderId,
+                        resolvedProfiles[conv.lastMessageSenderId] || publicProfiles?.[conv.lastMessageSenderId],
+                        conv.lastMessageSenderName,
+                        undefined,
+                        resolvedProfiles
+                      )
+                    : null
 
                   return (
                     <button
@@ -481,42 +591,37 @@ export default function AdminMessagesPage() {
                       onClick={() => setSelectedConvId(conv.id)}
                       className={`w-full text-left p-3.5 transition-all flex items-start gap-3 ${
                         isSelected
-                          ? 'bg-blue-50/90 border-l-4 border-l-blue-600'
+                          ? 'bg-blue-50/90 dark:bg-blue-950/40 border-l-4 border-l-blue-600'
                           : 'hover:bg-muted/40'
                       }`}
                     >
                       {/* Avatars */}
                       <div className="flex -space-x-2 shrink-0 mt-0.5">
-                        {participants.slice(0, 2).map((p) => {
-                          const pStyle = getUserIdentityStyle(p.uid)
-                          return (
-                            <div
-                              key={p.uid}
-                              className={`relative size-9 overflow-hidden rounded-full ring-2 ${pStyle.ringClass} bg-primary/10`}
-                            >
-                              <Image src={p.avatar} alt={p.name} fill className="object-cover" />
-                            </div>
-                          )
-                        })}
+                        {participants.slice(0, 2).map((p) => (
+                          <div
+                            key={p.uid}
+                            className={`relative size-9 overflow-hidden rounded-full ring-2 ${p.style.ringClass} bg-primary/10`}
+                          >
+                            <Image src={p.avatar} alt={p.name} fill className="object-cover" />
+                          </div>
+                        ))}
                       </div>
 
                       {/* Content */}
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-1">
-                          <div className="flex items-center gap-1.5 flex-wrap truncate">
-                            {participants.map((p, idx) => {
-                              const pStyle = getUserIdentityStyle(p.uid)
-                              const handle = p.username || `@${p.uid.slice(0, 6)}`
-                              return (
-                                <span key={p.uid} className="inline-flex items-center gap-1 shrink-0">
-                                  {idx > 0 && <span className="text-muted-foreground text-[10px] font-normal">&amp;</span>}
-                                  <span className={`text-xs font-bold ${pStyle.nameColor}`}>{p.name}</span>
-                                  <span className="text-[10px] font-mono text-muted-foreground">{handle}</span>
+                          <div className="flex items-center gap-1.5 flex-wrap min-w-0">
+                            {participants.map((p, idx) => (
+                              <span key={p.uid} className="inline-flex items-center gap-1 shrink-0">
+                                {idx > 0 && <span className="text-muted-foreground text-[10px] font-normal">&amp;</span>}
+                                <span className={`text-xs font-bold ${p.style.nameColor}`}>{p.name}</span>
+                                <span className="text-[10px] font-mono text-muted-foreground bg-muted/70 px-1 py-0.2 rounded font-medium">
+                                  {p.handle}
                                 </span>
-                              )
-                            })}
+                              </span>
+                            ))}
                           </div>
-                          <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-1">
+                          <span className="text-[10px] text-muted-foreground shrink-0 flex items-center gap-1 ml-auto">
                             <Clock className="size-3" />
                             {conv.updatedAt
                               ? new Date(conv.updatedAt).toLocaleDateString([], {
@@ -527,9 +632,20 @@ export default function AdminMessagesPage() {
                           </span>
                         </div>
 
-
-                        <p className="text-xs text-muted-foreground truncate mt-0.5">
-                          {conv.lastMessageText || 'Chat conversation'}
+                        <p className="text-xs text-muted-foreground truncate mt-1">
+                          {conv.lastMessageText ? (
+                            <>
+                              {lastSender && (
+                                <span className={`font-semibold ${lastSender.style.nameColor}`}>
+                                  {lastSender.name}{' '}
+                                  <span className="font-mono text-[10px] opacity-75">({lastSender.handle})</span>:{' '}
+                                </span>
+                              )}
+                              {conv.lastMessageText}
+                            </>
+                          ) : (
+                            'Chat conversation'
+                          )}
                         </p>
 
                         <div className="mt-1.5 flex items-center gap-2">
@@ -578,23 +694,25 @@ export default function AdminMessagesPage() {
                         </span>
                       </div>
 
-                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                      <div className="flex items-center gap-2 mt-1 flex-wrap">
                         {selectedConv.participantIds.map((pId) => {
                           const prof = resolvedProfiles[pId] || publicProfiles?.[pId]
-                          const pName = prof?.name || `User_${pId.substring(0, 5)}`
-                          const handle = prof?.username ? `@${prof.username}` : `@${pId.slice(0, 6)}`
-                          const pStyle = getUserIdentityStyle(pId)
+                          const identity = resolveUserIdentity(pId, prof, undefined, undefined, resolvedProfiles)
                           return (
                             <Link
                               key={pId}
                               href={`/user/${pId}`}
                               target="_blank"
-                              className="inline-flex items-center gap-1.5 text-[11px] font-bold hover:underline"
+                              className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md border text-[11px] font-medium transition-colors hover:opacity-90 ${identity.style.badgeClass}`}
+                              title={`View profile for ${identity.name} (${identity.handle})`}
                             >
-                              <User className={`size-3 ${pStyle.nameColor}`} />
-                              <span className={pStyle.nameColor}>{pName}</span>
-                              <span className="text-[10px] font-mono text-muted-foreground font-normal">{handle}</span>
-                              <ExternalLink className="size-2.5 opacity-60 text-muted-foreground" />
+                              <span className={`size-1.5 rounded-full shrink-0 ${identity.style.dotClass}`} />
+                              <span className={`font-bold ${identity.style.nameColor}`}>{identity.name}</span>
+                              <span className="font-mono text-[10px] opacity-80">{identity.handle}</span>
+                              {identity.area && (
+                                <span className="text-[9px] opacity-65 font-normal">· {identity.area}</span>
+                              )}
+                              <ExternalLink className="size-2.5 opacity-60 ml-0.5" />
                             </Link>
                           )
                         })}
@@ -624,27 +742,26 @@ export default function AdminMessagesPage() {
                   ) : (
                     messages.map((m) => {
                       const senderProfile = resolvedProfiles[m.senderId] || publicProfiles?.[m.senderId]
-                      const senderAvatar =
-                        getUserAvatar(senderProfile, resolvedProfiles) ||
-                        m.senderAvatar ||
-                        '/circular-logo.png'
-                      const senderName =
-                        m.senderName ||
-                        senderProfile?.name ||
-                        `User_${m.senderId.substring(0, 5)}`
-                      const senderHandle = senderProfile?.username ? `@${senderProfile.username}` : `@${m.senderId.slice(0, 6)}`
-                      const senderStyle = getUserIdentityStyle(m.senderId)
+                      const identity = resolveUserIdentity(
+                        m.senderId,
+                        senderProfile,
+                        m.senderName,
+                        m.senderAvatar,
+                        resolvedProfiles
+                      )
 
                       return (
                         <div key={m.id} className="flex items-start gap-2.5 max-w-xl">
-                          <div className={`relative size-8 shrink-0 overflow-hidden rounded-full ring-2 ${senderStyle.ringClass} bg-primary/10 mt-0.5`}>
-                            <Image src={senderAvatar} alt={senderName} fill className="object-cover" />
+                          <div className={`relative size-8 shrink-0 overflow-hidden rounded-full ring-2 ${identity.style.ringClass} bg-primary/10 mt-0.5`}>
+                            <Image src={identity.avatar} alt={identity.name} fill className="object-cover" />
                           </div>
 
                           <div className="flex-1 min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className={`text-[11px] font-bold ${senderStyle.nameColor}`}>{senderName}</span>
-                              <span className="text-[9px] font-mono text-muted-foreground">{senderHandle}</span>
+                              <span className={`text-[11px] font-bold ${identity.style.nameColor}`}>{identity.name}</span>
+                              <span className={`text-[10px] font-mono px-1.5 py-0.2 rounded border font-medium ${identity.style.badgeClass}`}>
+                                {identity.handle}
+                              </span>
                               <span className="text-[9px] text-muted-foreground">
                                 {new Date(m.createdAt || m.timestamp || Date.now()).toLocaleTimeString([], {
                                   hour: '2-digit',
@@ -655,7 +772,7 @@ export default function AdminMessagesPage() {
                               </span>
                             </div>
 
-                            <div className="mt-1 rounded-2xl border border-border bg-card p-3 text-xs shadow-sm text-foreground">
+                            <div className={`mt-1 rounded-2xl border border-border bg-card p-3 text-xs shadow-sm text-foreground border-l-4 ${identity.style.borderClass}`}>
                               <p className="leading-relaxed whitespace-pre-wrap">{m.text}</p>
                             </div>
                           </div>

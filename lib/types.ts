@@ -20,6 +20,8 @@ export interface UserProfile {
   latitude?: number
   longitude?: number
   isVerified?: boolean
+  isPrivate?: boolean
+  accountPrivacy?: string
   lastActiveAt?: number
   occupation?: string
   category?: string
@@ -162,6 +164,9 @@ export interface Post {
     contactPhone?: string
     status?: 'active' | 'cancelled' | 'completed'
   }
+  audience?: 'everyone' | 'followers'
+  profileId?: string
+  profileType?: string
 }
 
 export interface PostComment {
@@ -354,3 +359,63 @@ export interface ChatMessage {
   createdAt?: number
   read?: boolean
 }
+
+export type ProfileType =
+  | 'personal'
+  | 'business'
+  | 'creator'
+  | 'organisation'
+  | 'project'
+
+export interface SubProfile {
+  id: string
+  userId: string
+  name: string
+  handle: string
+  profileType: ProfileType
+  bio?: string
+  avatarUrl?: string
+  area?: string
+  createdAt: number
+  updatedAt: number
+}
+
+export type ApplicationStatus =
+  | 'Submitted'
+  | 'Under Review'
+  | 'Shortlisted'
+  | 'Rejected'
+  | 'Hired'
+
+export interface UserResume {
+  name: string
+  phone: string
+  email: string
+  summary: string
+  skills: string
+  experience?: string
+  education?: string
+  updatedAt: number
+}
+
+export interface JobApplicationRecord {
+  id: string
+  jobId: string
+  jobTitle: string
+  businessName: string
+  employerId: string
+  applicantId: string
+  applicantName: string
+  applicantPhone: string
+  applicantEmail: string
+  summary: string
+  skills: string
+  experience?: string
+  education?: string
+  appliedAt: number
+  accessDurationDays: number
+  accessExpiresAt: number
+  status: ApplicationStatus
+  revoked: boolean
+}
+

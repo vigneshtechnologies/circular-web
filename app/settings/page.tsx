@@ -22,6 +22,8 @@ import {
   CheckCircle2,
   AlertCircle,
   Loader2,
+  Globe,
+  Briefcase,
 } from 'lucide-react'
 import {
   isWebPushSupported,
@@ -29,11 +31,14 @@ import {
   registerWebPushToken,
   disableWebPushToken,
 } from '@/lib/webPushClient'
+import { useLanguage, useTranslation } from '@/lib/i18n'
 
 type ThemePreference = 'light' | 'dark' | 'system'
 
 export default function SettingsPage() {
   const { user, userProfile, isAdmin, logout, loading } = useAuth()
+  const { language, setLanguage } = useLanguage()
+  const { t } = useTranslation()
   const [themePref, setThemePref] = useState<ThemePreference>('system')
   const [pushStatus, setPushStatus] = useState<'enabled' | 'disabled' | 'denied' | 'unsupported'>('disabled')
   const [isUpdatingPush, setIsUpdatingPush] = useState(false)
@@ -145,6 +150,95 @@ export default function SettingsPage() {
       </header>
 
       <div className="mx-auto max-w-2xl px-4 py-6 md:px-6 space-y-6">
+        {/* Language Selection Section */}
+        <section className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <Globe className="size-4 text-blue-500" />
+              <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                Language / மொழி / भाषा
+              </h2>
+            </div>
+            <span className="text-xs font-bold text-blue-600 dark:text-blue-400">
+              {language === 'en' ? 'English' : language === 'ta' ? 'தமிழ்' : 'हिन्दी'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-3 gap-2.5 pt-1">
+            <button
+              type="button"
+              onClick={() => setLanguage('en')}
+              className={`flex flex-col items-center justify-center rounded-2xl border p-3 transition-all ${
+                language === 'en'
+                  ? 'border-blue-500 bg-blue-500/10 text-blue-700 dark:text-blue-400 font-bold ring-2 ring-blue-500/20'
+                  : 'border-border bg-card text-muted-foreground hover:bg-muted/70'
+              }`}
+            >
+              <span className="text-sm font-bold">English</span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">EN</span>
+              {language === 'en' && <Check className="size-3 text-blue-600 mt-1" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setLanguage('ta')}
+              className={`flex flex-col items-center justify-center rounded-2xl border p-3 transition-all ${
+                language === 'ta'
+                  ? 'border-purple-500 bg-purple-500/10 text-purple-700 dark:text-purple-400 font-bold ring-2 ring-purple-500/20'
+                  : 'border-border bg-card text-muted-foreground hover:bg-muted/70'
+              }`}
+            >
+              <span className="text-sm font-bold">தமிழ்</span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">Tamil</span>
+              {language === 'ta' && <Check className="size-3 text-purple-600 mt-1" />}
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setLanguage('hi')}
+              className={`flex flex-col items-center justify-center rounded-2xl border p-3 transition-all ${
+                language === 'hi'
+                  ? 'border-orange-500 bg-orange-500/10 text-orange-700 dark:text-orange-400 font-bold ring-2 ring-orange-500/20'
+                  : 'border-border bg-card text-muted-foreground hover:bg-muted/70'
+              }`}
+            >
+              <span className="text-sm font-bold">हिन्दी</span>
+              <span className="text-[10px] text-muted-foreground mt-0.5">Hindi</span>
+              {language === 'hi' && <Check className="size-3 text-orange-600 mt-1" />}
+            </button>
+          </div>
+        </section>
+
+        {/* Career & Direct Applications */}
+        <section className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3">
+          <div className="flex items-center gap-2">
+            <Briefcase className="size-4 text-emerald-500" />
+            <h2 className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Career &amp; Applications</h2>
+          </div>
+          <div className="grid grid-cols-2 gap-3 pt-1">
+            <Link
+              href="/jobs/resume"
+              className="flex items-center gap-2.5 rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-3 hover:bg-indigo-500/10 transition-colors"
+            >
+              <FileText className="size-4 text-indigo-600" />
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-white truncate">My Resume</div>
+                <div className="text-[10px] text-muted-foreground truncate">Private career profile</div>
+              </div>
+            </Link>
+            <Link
+              href="/jobs/applications"
+              className="flex items-center gap-2.5 rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-3 hover:bg-emerald-500/10 transition-colors"
+            >
+              <Briefcase className="size-4 text-emerald-600" />
+              <div className="min-w-0">
+                <div className="text-xs font-bold text-slate-900 dark:text-white truncate">My Applications</div>
+                <div className="text-[10px] text-muted-foreground truncate">Tracking &amp; revocation</div>
+              </div>
+            </Link>
+          </div>
+        </section>
+
         {/* Appearance Mode Section (Amber, Purple, Blue identity) */}
         <section className="rounded-3xl border border-border bg-card p-5 shadow-sm space-y-3">
           <div className="flex items-center justify-between">
@@ -390,7 +484,7 @@ export default function SettingsPage() {
           </div>
           <div className="flex items-center justify-between text-muted-foreground">
             <span>Android App Version</span>
-            <span className="font-bold text-foreground">1.0.20 (20)</span>
+            <span className="font-bold text-foreground">1.0.22 (22)</span>
           </div>
           <div className="flex items-center justify-between text-muted-foreground">
             <span>Publisher</span>

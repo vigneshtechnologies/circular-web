@@ -6,7 +6,8 @@ import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
 import { ref, onValue, off } from 'firebase/database'
 import { db } from '@/lib/firebase'
-import { Home, Search, MessageSquare, Bell, User, PlusCircle, Users } from 'lucide-react'
+import { Home, MapPin, PlusCircle, Bell, User } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 interface MobileNavProps {
   onOpenPostComposer?: () => void
@@ -15,8 +16,8 @@ interface MobileNavProps {
 export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
   const pathname = usePathname()
   const { user } = useAuth()
+  const { t } = useTranslation()
   const [unreadNotifications, setUnreadNotifications] = useState(0)
-  const [unreadMessages, setUnreadMessages] = useState(0)
 
   useEffect(() => {
     if (!user) return
@@ -34,22 +35,8 @@ export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
     }
     onValue(notifRef, notifCb)
 
-    // Messages Unread
-    const convRef = ref(db, `userConversations/${user.uid}`)
-    const convCb = (snap: any) => {
-      if (snap.exists()) {
-        const val = snap.val()
-        const unread = Object.values(val).reduce((acc: number, c: any) => acc + (c.unreadCount || 0), 0)
-        setUnreadMessages(unread)
-      } else {
-        setUnreadMessages(0)
-      }
-    }
-    onValue(convRef, convCb)
-
     return () => {
       off(notifRef)
-      off(convRef)
     }
   }, [user])
 
@@ -57,35 +44,36 @@ export function MobileNav({ onOpenPostComposer }: MobileNavProps) {
     {
       href: '/',
       icon: Home,
-      label: 'Home',
+      label: t.navHome,
       activeColor: 'text-blue-600 dark:text-blue-400',
       activeBg: 'bg-blue-500/15 dark:bg-blue-500/20',
       dotColor: 'bg-blue-600 dark:bg-blue-400',
     },
     {
-      href: '/following',
-      icon: Users,
-      label: 'Following',
-      activeColor: 'text-purple-600 dark:text-purple-400',
-      activeBg: 'bg-purple-500/15 dark:bg-purple-500/20',
-      dotColor: 'bg-purple-600 dark:bg-purple-400',
+      href: '/nearby',
+      icon: MapPin,
+      label: t.navNearby,
+      activeColor: 'text-emerald-600 dark:text-emerald-400',
+      activeBg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
+      dotColor: 'bg-emerald-600 dark:bg-emerald-400',
     },
     {
       isAction: true,
-      label: 'Post',
+      label: t.navCreate,
     },
     {
-      href: '/search',
-      icon: Search,
-      label: 'Search',
-      activeColor: 'text-teal-600 dark:text-teal-400',
-      activeBg: 'bg-teal-500/15 dark:bg-teal-500/20',
-      dotColor: 'bg-teal-600 dark:bg-teal-400',
+      href: '/notifications',
+      icon: Bell,
+      label: t.navNotifications,
+      activeColor: 'text-amber-600 dark:text-amber-400',
+      activeBg: 'bg-amber-500/15 dark:bg-amber-500/20',
+      dotColor: 'bg-amber-600 dark:bg-amber-400',
+      badge: unreadNotifications,
     },
     {
       href: '/profile',
       icon: User,
-      label: 'Profile',
+      label: t.navProfile,
       activeColor: 'text-pink-600 dark:text-pink-400',
       activeBg: 'bg-pink-500/15 dark:bg-pink-500/20',
       dotColor: 'bg-pink-600 dark:bg-pink-400',

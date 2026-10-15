@@ -29,7 +29,9 @@ import {
   FilePlus2,
   Building2,
   Info,
+  FileText,
 } from 'lucide-react'
+import { useTranslation } from '@/lib/i18n'
 
 interface SidebarNavProps {
   onOpenPostComposer?: () => void
@@ -137,7 +139,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
     items: NavItem[]
   }
 
-  // Strictly organized into the 6 requested sections with semantic colors
+  // Strictly organized into the requested sections with semantic colors
   const navGroups: NavGroup[] = [
     {
       title: 'Feed & Social',
@@ -152,6 +154,15 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
           activeText: 'text-blue-600 dark:text-blue-400 font-bold',
         },
         {
+          href: '/nearby',
+          label: 'Nearby',
+          icon: Compass,
+          iconColor: 'text-cyan-600 dark:text-cyan-400',
+          bgColor: 'bg-cyan-500/10 dark:bg-cyan-500/15',
+          activeBg: 'bg-cyan-500/15 dark:bg-cyan-500/20',
+          activeText: 'text-cyan-600 dark:text-cyan-400 font-bold',
+        },
+        {
           href: '/following',
           label: 'Following',
           icon: Users,
@@ -163,7 +174,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
       ],
     },
     {
-      title: 'Profile',
+      title: 'Profile & Career',
       items: [
         {
           href: '/profile',
@@ -175,22 +186,22 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
           activeText: 'text-teal-600 dark:text-teal-400 font-bold',
         },
         {
-          href: '/profile?tab=posts',
-          label: 'My Posts',
-          icon: FilePlus2,
-          iconColor: 'text-blue-600 dark:text-blue-400',
-          bgColor: 'bg-blue-500/10 dark:bg-blue-500/15',
-          activeBg: 'bg-blue-500/15 dark:bg-blue-500/20',
-          activeText: 'text-blue-600 dark:text-blue-400 font-bold',
+          href: '/jobs/resume',
+          label: 'My Resume',
+          icon: FileText,
+          iconColor: 'text-indigo-600 dark:text-indigo-400',
+          bgColor: 'bg-indigo-500/10 dark:bg-indigo-500/15',
+          activeBg: 'bg-indigo-500/15 dark:bg-indigo-500/20',
+          activeText: 'text-indigo-600 dark:text-indigo-400 font-bold',
         },
         {
-          href: '/profile?tab=businesses',
-          label: 'My Businesses',
-          icon: Building2,
-          iconColor: 'text-purple-600 dark:text-purple-400',
-          bgColor: 'bg-purple-500/10 dark:bg-purple-500/15',
-          activeBg: 'bg-purple-500/15 dark:bg-purple-500/20',
-          activeText: 'text-purple-600 dark:text-purple-400 font-bold',
+          href: '/jobs/applications',
+          label: 'My Applications',
+          icon: Briefcase,
+          iconColor: 'text-emerald-600 dark:text-emerald-400',
+          bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/15',
+          activeBg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
+          activeText: 'text-emerald-600 dark:text-emerald-400 font-bold',
         },
       ],
     },
@@ -198,13 +209,13 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
       title: 'Discover',
       items: [
         {
-          href: '/search',
-          label: 'Explore & Search',
-          icon: Compass,
-          iconColor: 'text-teal-600 dark:text-teal-400',
-          bgColor: 'bg-teal-500/10 dark:bg-teal-500/15',
-          activeBg: 'bg-teal-500/15 dark:bg-teal-500/20',
-          activeText: 'text-teal-600 dark:text-teal-400 font-bold',
+          href: '/jobs',
+          label: 'Jobs',
+          icon: Briefcase,
+          iconColor: 'text-emerald-600 dark:text-emerald-400',
+          bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/15',
+          activeBg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
+          activeText: 'text-emerald-600 dark:text-emerald-400 font-bold',
         },
         {
           href: '/businesses',
@@ -214,15 +225,6 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
           bgColor: 'bg-orange-500/10 dark:bg-orange-500/15',
           activeBg: 'bg-orange-500/15 dark:bg-orange-500/20',
           activeText: 'text-orange-600 dark:text-orange-400 font-bold',
-        },
-        {
-          href: '/jobs',
-          label: 'Local Jobs',
-          icon: Briefcase,
-          iconColor: 'text-emerald-600 dark:text-emerald-400',
-          bgColor: 'bg-emerald-500/10 dark:bg-emerald-500/15',
-          activeBg: 'bg-emerald-500/15 dark:bg-emerald-500/20',
-          activeText: 'text-emerald-600 dark:text-emerald-400 font-bold',
         },
         {
           href: '/needs',

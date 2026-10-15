@@ -1,0 +1,328 @@
+'use client'
+
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import Image from 'next/image'
+import Link from 'next/link'
+import { useAuth } from '@/context/AuthContext'
+import { AuthPortal } from '@/components/auth/AuthPortal'
+import { AppShell } from '@/components/layout/AppShell'
+import { PostCard } from '@/components/feed/PostCard'
+import { CategoryFilterBar } from '@/components/feed/CategoryFilterBar'
+import { RadiusSelector } from '@/components/feed/RadiusSelector'
+import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
+import { PostComposerModal } from '@/components/feed/PostComposerModal'
+import {
+  CIRCULAR_RADIUS_OPTIONS,
+  CircularRadiusOption,
+  DEFAULT_RADIUS_KM,
+  getDistanceKm,
+  isValidCoordinate,
+  getUserCommunityLocation,
+} from '@/lib/locationUtils'
+import { ref, get, query, orderByChild, limitToLast } from 'firebase/database'
+import { db } from '@/lib/firebase'
+import { Post } from '@/lib/types'
+import { useTranslation } from '@/lib/i18n'
+import {
+  MapPin,
+  Sparkles,
+  Loader2,
+  Navigation,
+  Compass,
+  Store,
+  HandHeart,
+  Briefcase,
+  AlertCircle,
+} from 'lucide-react'
+
+export default function NearbyPage() {
+  const { user, userProfile, publicProfiles, loading } = useAuth()
+  const { t } = useTranslation()
+
+  const [posts, setPosts] = useState<Post[]>([])
+  const [selectedCategory, setSelectedCategory] = useState('All')
+  const [selectedRadius, setSelectedRadius] = useState<CircularRadiusOption>(DEFAULT_RADIUS_KM)
+  const [userCoords, setUserCoords] = useState<{ latitude: number; longitude: number } | null>(null)
+  const [locationAvailable, setLocationAvailable] = useState(false)
+
+  const [feedLoading, setFeedLoading] = useState(true)
+  const [isComposerOpen, setIsComposerOpen] = useState(false)
+  const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
+
+  // Load radius preference
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('circular_nearby_radius')
+      if (saved) {
+        const num = Number(saved) as CircularRadiusOption
+        if (CIRCULAR_RADIUS_OPTIONS.includes(num)) {
+          setSelectedRadius(num)
+        }
+      }
+    } catch {}
+  }, [])
+
+  // Geolocation
+  const requestUserLocation = useCallback(() => {
+    if (typeof navigator !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          setUserCoords({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          })
+          setLocationAvailable(true)
+        },
+        () => {
+          setLocationAvailable(false)
+        },
+        { timeout: 8000, maximumAge: 120000 }
+      )
+    }
+  }, [])
+
+  useEffect(() => {
+    requestUserLocation()
+  }, [requestUserLocation])
+
+  const handleSelectRadius = (radius: CircularRadiusOption) => {
+    setSelectedRadius(radius)
+    try {
+      localStorage.setItem('circular_nearby_radius', String(radius))
+    } catch {}
+  }
+
+  // Load posts
+  const loadNearbyPosts = useCallback(async () => {
+    if (!user) return
+    setFeedLoading(true)
+    try {
+      const postsQuery = query(
+        ref(db, 'posts'),
+        orderByChild('createdAt'),
+        limitToLast(50)
+      )
+
+      const snapshot = await get(postsQuery)
+      if (snapshot.exists()) {
+        const data = snapshot.val()
+        const batch: Post[] = Object.keys(data)
+          .map((key) => ({ id: key, ...data[key] }))
+          .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+
+        setPosts(batch)
+      } else {
+        setPosts([])
+      }
+    } catch (err) {
+      console.error('Error loading nearby posts:', err)
+    } finally {
+      setFeedLoading(false)
+    }
+  }, [user])
+
+  useEffect(() => {
+    loadNearbyPosts()
+  }, [loadNearbyPosts])
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background">
+        <Loader2 className="size-8 animate-spin text-primary" />
+      </div>
+    )
+  }
+
+  if (!user) {
+    return <AuthPortal />
+  }
+
+  const displayLocation = getUserCommunityLocation(userProfile)
+
+  // Filter posts by Category + Geographic Radius
+  const filteredPosts = posts.filter((p) => {
+    // 1. Category Filter
+    const postCat = (p.category || '').toLowerCase().trim()
+    const selected = selectedCategory.toLowerCase().trim()
+
+    let matchesCategory = selected === 'all'
+    if (!matchesCategory) {
+      if (selected === 'general') {
+        matchesCategory = !postCat || postCat === 'general'
+      } else if (selected === 'news & updates') {
+        matchesCategory = postCat === 'news' || postCat === 'news & updates' || postCat === 'local news'
+      } else {
+        matchesCategory = postCat === selected || postCat.includes(selected)
+      }
+    }
+
+    if (!matchesCategory) return false
+
+    // 2. Geographic Radius Filter
+    if (userCoords && isValidCoordinate(p.latitude, p.longitude)) {
+      const distance = getDistanceKm(
+        userCoords.latitude,
+        userCoords.longitude,
+        p.latitude!,
+        p.longitude!
+      )
+      return distance <= selectedRadius
+    }
+
+    // Fallback: match locality or default radius
+    if (selectedRadius === DEFAULT_RADIUS_KM || !userCoords) {
+      return true
+    }
+
+    return false
+  })
+
+  return (
+    <AppShell currentArea={displayLocation}>
+      {/* Top Header with Locality & Radius Selector */}
+      <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-3 md:px-6">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2.5 min-w-0">
+            <div className="flex size-9 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-blue-500/15 via-purple-500/15 to-pink-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20">
+              <Compass className="size-5 stroke-[2.2]" />
+            </div>
+            <div className="min-w-0">
+              <h1 className="text-sm sm:text-base font-extrabold text-slate-900 dark:text-white truncate">
+                {t.nearbyFeed}
+              </h1>
+              <div className="text-[11px] font-semibold text-muted-foreground truncate flex items-center gap-1">
+                <span>{displayLocation}</span>
+                <span className="text-purple-600 dark:text-purple-400 font-bold">• {selectedRadius} km</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Radius Selector */}
+          <div className="flex items-center shrink-0">
+            <RadiusSelector
+              selectedRadius={selectedRadius}
+              onSelectRadius={handleSelectRadius}
+              hasUserLocation={locationAvailable}
+              onRequestLocation={requestUserLocation}
+            />
+          </div>
+        </div>
+
+        {/* Category Filter Bar */}
+        <div className="mt-2.5">
+          <CategoryFilterBar
+            selectedCategory={selectedCategory}
+            onSelectCategory={(cat) => setSelectedCategory(cat)}
+          />
+        </div>
+      </header>
+
+      {/* Main Container */}
+      <div className="mx-auto max-w-2xl px-4 py-4 md:px-6 space-y-3.5">
+        {/* Locality Quick Links */}
+        <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <Link
+            href="/businesses"
+            className="flex items-center gap-2 rounded-2xl border border-purple-500/30 bg-purple-500/10 p-3 hover:bg-purple-500/20 transition-colors"
+          >
+            <div className="flex size-8 items-center justify-center rounded-xl bg-purple-500 text-white shrink-0">
+              <Store className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Local Shops &amp; Pros</div>
+              <div className="text-[10px] text-muted-foreground">Within {selectedRadius} km</div>
+            </div>
+          </Link>
+
+          <Link
+            href="/needs"
+            className="flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 p-3 hover:bg-amber-500/20 transition-colors"
+          >
+            <div className="flex size-8 items-center justify-center rounded-xl bg-amber-500 text-white shrink-0">
+              <HandHeart className="size-4" />
+            </div>
+            <div className="min-w-0">
+              <div className="text-xs font-bold text-slate-900 dark:text-white truncate">Nearby Needs</div>
+              <div className="text-[10px] text-muted-foreground">Help your neighbors</div>
+            </div>
+          </Link>
+        </div>
+
+        {/* Location Notice if GPS disabled */}
+        {!locationAvailable && (
+          <div className="flex items-center justify-between rounded-2xl border border-blue-500/20 bg-blue-500/10 p-3 text-xs text-blue-700 dark:text-blue-300">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="size-4 shrink-0 text-blue-500" />
+              <span>Enable GPS location to get precise distance calculation.</span>
+            </div>
+            <button
+              type="button"
+              onClick={requestUserLocation}
+              className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline shrink-0"
+            >
+              Enable
+            </button>
+          </div>
+        )}
+
+        {/* Posts List */}
+        {feedLoading ? (
+          <div className="space-y-4 py-8 text-center text-xs text-muted-foreground">
+            <Loader2 className="mx-auto size-8 animate-spin text-primary" />
+            <p className="mt-2 font-medium">Scanning updates within {selectedRadius} km...</p>
+          </div>
+        ) : filteredPosts.length === 0 ? (
+          <div className="rounded-3xl border border-dashed border-border bg-card p-8 text-center">
+            <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+              <Sparkles className="size-6" />
+            </div>
+            <h3 className="mt-3 text-sm sm:text-base font-bold text-slate-900 dark:text-white">
+              No posts found within {selectedRadius} km
+            </h3>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {t.noNearbyPosts}
+            </p>
+            <div className="mt-4 flex items-center justify-center gap-2">
+              {selectedRadius < 25 && (
+                <button
+                  type="button"
+                  onClick={() => handleSelectRadius(25)}
+                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-slate-800 dark:text-slate-200 shadow-sm hover:bg-muted"
+                >
+                  <Navigation className="size-3.5 text-blue-600 dark:text-blue-400" />
+                  <span>Expand to 25 km</span>
+                </button>
+              )}
+              <button
+                type="button"
+                onClick={() => setIsComposerOpen(true)}
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-3.5 py-1.5 text-xs font-bold text-white shadow hover:opacity-95"
+              >
+                <span>{t.navCreate}</span>
+              </button>
+            </div>
+          </div>
+        ) : (
+          filteredPosts.map((post) => (
+            <PostCard
+              key={post.id}
+              post={post}
+              onOpenComments={(pId) => setActiveCommentsPostId(pId)}
+            />
+          ))
+        )}
+      </div>
+
+      <PostComposerModal
+        isOpen={isComposerOpen}
+        onClose={() => setIsComposerOpen(false)}
+        onSuccess={loadNearbyPosts}
+      />
+
+      <PostCommentsDrawer
+        postId={activeCommentsPostId}
+        onClose={() => setActiveCommentsPostId(null)}
+      />
+    </AppShell>
+  )
+}
