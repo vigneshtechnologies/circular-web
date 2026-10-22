@@ -1,8 +1,12 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import Image from 'next/image'
+import { useAuth } from '@/context/AuthContext'
+import { useActiveActor } from '@/lib/profileService'
+import { ref, onValue, off } from 'firebase/database'
+import { db } from '@/lib/firebase'
 import {
   Menu,
   X,
@@ -14,6 +18,7 @@ import {
   FileText,
   MessageSquare,
   Bell,
+  Search,
   Sun,
   Moon,
   Laptop,
@@ -24,6 +29,31 @@ const PLAY_STORE_URL =
 
 export function CircularHeader() {
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { user } = useAuth()
+  const { actorId } = useActiveActor()
+  const effectiveId = actorId || user?.uid
+  const [unreadNotifications, setUnreadNotifications] = useState(0)
+
+  useEffect(() => {
+    if (!effectiveId) {
+      setUnreadNotifications(0)
+      return
+    }
+
+    const notifRef = ref(db, `notifications/${effectiveId}`)
+    const notifCallback = (snap: any) => {
+      if (snap.exists()) {
+        const val = snap.val()
+        const unread = Object.values(val).filter((n: any) => !n.read).length
+        setUnreadNotifications(unread)
+      } else {
+        setUnreadNotifications(0)
+      }
+    }
+    onValue(notifRef, notifCallback)
+
+    return () => off(notifRef)
+  }, [effectiveId])
 
   const handleSetTheme = (theme: 'light' | 'dark' | 'system') => {
     try {
@@ -103,33 +133,20 @@ export function CircularHeader() {
           </Link>
         </nav>
 
-        {/* Action Controls & Colourful Quick Icons */}
+        {/* Action Controls & Notifications Bell */}
         <div className="flex items-center gap-2 sm:gap-2.5">
-          {/* Calendar: Orange/Amber */}
-          <Link
-            href="/events"
-            className="flex size-9 items-center justify-center rounded-xl bg-orange-500/10 text-orange-600 dark:text-orange-400 transition-all hover:bg-orange-500/20 hover:scale-105 active:scale-95"
-            title="Community Events"
-          >
-            <Calendar className="size-4 stroke-[2.2]" />
-          </Link>
-
-          {/* Messages: Purple/Pink */}
-          <Link
-            href="/messages"
-            className="flex size-9 items-center justify-center rounded-xl bg-pink-500/10 text-pink-600 dark:text-pink-400 transition-all hover:bg-pink-500/20 hover:scale-105 active:scale-95"
-            title="Messages"
-          >
-            <MessageSquare className="size-4 stroke-[2.2]" />
-          </Link>
-
           {/* Notifications: Amber/Orange */}
           <Link
             href="/notifications"
-            className="flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-all hover:bg-amber-500/20 hover:scale-105 active:scale-95"
+            className="relative flex size-9 items-center justify-center rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 transition-all hover:bg-amber-500/20 hover:scale-105 active:scale-95"
             title="Notifications"
           >
             <Bell className="size-4 stroke-[2.2]" />
+            {unreadNotifications > 0 && (
+              <span className="absolute -top-1 -right-1 flex h-4 min-w-4 items-center justify-center rounded-full bg-red-600 px-1 text-[9px] font-bold text-white shadow-xs animate-in zoom-in-75">
+                {unreadNotifications > 99 ? '99+' : unreadNotifications}
+              </span>
+            )}
           </Link>
 
           {/* App CTA */}

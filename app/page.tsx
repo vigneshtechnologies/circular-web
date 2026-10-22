@@ -16,6 +16,7 @@ import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { ref, get, query, orderByChild, limitToLast, endAt } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { Post } from '@/lib/types'
+import { onActiveProfileChanged } from '@/lib/profileService'
 import { useTranslation } from '@/lib/i18n'
 import {
   Sparkles,
@@ -26,6 +27,7 @@ import {
   Store,
   Users,
   Compass,
+  Search,
 } from 'lucide-react'
 
 const INITIAL_PAGE_SIZE = 35
@@ -35,7 +37,6 @@ export default function CircularRootPage() {
   const { user, userProfile, publicProfiles, loading } = useAuth()
   const { t } = useTranslation()
 
-  const [feedTab, setFeedTab] = useState<'forYou' | 'following'>('forYou')
   const [posts, setPosts] = useState<Post[]>([])
   const [followingUids, setFollowingUids] = useState<string[]>([])
 
@@ -159,6 +160,13 @@ export default function CircularRootPage() {
     loadInitialPosts()
   }, [loadInitialPosts])
 
+  useEffect(() => {
+    const unsub = onActiveProfileChanged(() => {
+      loadInitialPosts()
+    })
+    return () => unsub()
+  }, [loadInitialPosts])
+
   // 4. Infinite scroll observer when reaching bottom
   useEffect(() => {
     const el = observerTarget.current
@@ -205,8 +213,22 @@ export default function CircularRootPage() {
 
   // Filter posts based on For You vs Following & Privacy Enforcement
   const visiblePosts = posts.filter((post) => {
+    // Edge-case exclusion: moderated or deleted records or restricted authors must NEVER appear
+    if (
+      (post as any).isDeleted === true ||
+      (post as any).isModerated === true ||
+      (post as any).status === 'deleted' ||
+      (post as any).status === 'moderated' ||
+      (post as any).isRestricted === true
+    ) {
+      return false
+    }
+
     const isOwnPost = Boolean(user && post.userId === user.uid)
     const authorProfile = post.userId ? publicProfiles[post.userId] : null
+    if (authorProfile?.isRestricted === true) {
+      return false
+    }
     const isAuthorPrivate =
       authorProfile?.isPrivate === true ||
       (authorProfile as any)?.accountPrivacy === 'private'
@@ -218,11 +240,7 @@ export default function CircularRootPage() {
       return false
     }
 
-    if (feedTab === 'following') {
-      return isFollowingAuthor || isOwnPost
-    }
-
-    // For You: eligible public posts from all locations globally (no distance restriction)
+    // Main Feed: eligible public posts from all locations globally (no distance restriction)
     return true
   })
 
@@ -230,51 +248,6 @@ export default function CircularRootPage() {
 
   return (
     <AppShell currentArea={displayLocation}>
-      {/* Top Header: For You | Following Tab Selector */}
-      <header className="sticky top-0 z-30 border-b border-border bg-card/90 backdrop-blur-md px-4 py-2.5 md:px-6">
-        <div className="flex items-center justify-between max-w-2xl mx-auto">
-          {/* Top Two-Option Feed Selector: For You | Following */}
-          <div className="flex items-center bg-muted/60 p-1 rounded-2xl border border-border shadow-xs">
-            <button
-              type="button"
-              onClick={() => setFeedTab('forYou')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                feedTab === 'forYou'
-                  ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-card/60'
-              }`}
-            >
-              <Sparkles className="size-3.5" />
-              <span>{t.forYou}</span>
-            </button>
-            <button
-              type="button"
-              onClick={() => setFeedTab('following')}
-              className={`flex items-center gap-1.5 px-4 py-1.5 text-xs font-bold rounded-xl transition-all ${
-                feedTab === 'following'
-                  ? 'bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white shadow-sm'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-card/60'
-              }`}
-            >
-              <Users className="size-3.5" />
-              <span>{t.following}</span>
-              {followingUids.length > 0 && (
-                <span className="ml-1 text-[10px] opacity-80">({followingUids.length})</span>
-              )}
-            </button>
-          </div>
-
-          {/* Dedicated Nearby Feed Link */}
-          <Link
-            href="/nearby"
-            className="flex items-center gap-1.5 rounded-xl border border-blue-500/20 bg-blue-500/10 px-3 py-1.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-500/20 transition-colors"
-          >
-            <Compass className="size-3.5" />
-            <span className="hidden sm:inline">{t.navNearby}</span>
-          </Link>
-        </div>
-      </header>
-
       {/* Main Feed Container */}
       <div className="mx-auto max-w-2xl px-4 py-4 md:px-6 space-y-3.5">
         {/* Compact Stories / Status Launcher Bar */}
@@ -352,30 +325,16 @@ export default function CircularRootPage() {
               <Sparkles className="size-6" />
             </div>
             <h3 className="mt-3 text-sm sm:text-base font-bold text-slate-900 dark:text-white">
-              {feedTab === 'following'
-                ? t.noFollowingPosts
-                : t.noPostsYet}
+              {t.noPostsYet}
             </h3>
             <p className="mt-1 text-xs text-muted-foreground">
-              {feedTab === 'following'
-                ? 'Follow people in For You to see their updates here.'
-                : 'Share an update or event with the community!'}
+              Share an update or event with the community!
             </p>
             <div className="mt-4 flex items-center justify-center gap-2">
-              {feedTab === 'following' && (
-                <button
-                  type="button"
-                  onClick={() => setFeedTab('forYou')}
-                  className="inline-flex items-center gap-1.5 rounded-xl border border-border bg-card px-3.5 py-1.5 text-xs font-bold text-foreground shadow-sm hover:bg-muted"
-                >
-                  <Sparkles className="size-3.5 text-purple-600 dark:text-purple-400" />
-                  <span>Go to For You</span>
-                </button>
-              )}
               <button
                 type="button"
                 onClick={() => setIsComposerOpen(true)}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 px-3.5 py-1.5 text-xs font-bold text-white shadow hover:opacity-95"
+                className="inline-flex items-center gap-1.5 rounded-xl bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 px-3.5 py-1.5 text-xs font-bold text-white shadow hover:opacity-95"
               >
                 <span>{t.navCreate}</span>
               </button>

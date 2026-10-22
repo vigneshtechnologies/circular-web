@@ -25,6 +25,8 @@ export interface UserProfile {
   lastActiveAt?: number
   occupation?: string
   category?: string
+  ownerUid?: string
+  isSubProfile?: boolean
 }
 
 export type CircularPostType =
@@ -165,7 +167,14 @@ export interface Post {
     status?: 'active' | 'cancelled' | 'completed'
   }
   audience?: 'everyone' | 'followers'
+  isPrivate?: boolean
   profileId?: string
+  authorProfileId?: string
+  publicName?: string
+  publicProfileImage?: string
+  authorName?: string
+  authorAvatar?: string
+  authorUsername?: string
   profileType?: string
 }
 
@@ -173,8 +182,11 @@ export interface PostComment {
   id: string
   postId: string
   userId: string
+  ownerUid?: string
   userName: string
   userAvatar?: string
+  profileId?: string
+  authorProfileId?: string
   text: string
   createdAt: number
 }
@@ -295,6 +307,7 @@ export type CircularNotificationType =
   | 'chat_message'
   | 'event_new'
   | 'job_new'
+  | 'job_application'
   | 'need_new'
   | 'business_update'
   | 'people_nearby'
@@ -375,7 +388,14 @@ export interface SubProfile {
   profileType: ProfileType
   bio?: string
   avatarUrl?: string
+  avatar?: string
   area?: string
+  phone?: string
+  username?: string
+  ownerUid?: string
+  isSubProfile?: boolean
+  isPrivate?: boolean
+  type?: string
   createdAt: number
   updatedAt: number
 }

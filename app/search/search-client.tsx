@@ -85,10 +85,23 @@ export default function SearchClientContainer({
 
     const loadSearchData = async () => {
       try {
-        const bSnap = await get(ref(db, 'businessProfiles')).catch(() => null)
-        if (isMounted && bSnap && bSnap.exists()) {
+        const results = await Promise.allSettled([
+          get(ref(db, 'businessProfiles')),
+          get(query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(80))).catch(() => get(ref(db, 'posts'))),
+          get(ref(db, 'publicProfiles')),
+          get(ref(db, 'publicSubProfiles')),
+          get(query(ref(db, 'localJobs'), orderByChild('createdAt'), limitToLast(60))).catch(() => get(ref(db, 'localJobs'))).catch(() => get(ref(db, 'jobs'))),
+          get(query(ref(db, 'needPosts'), orderByChild('createdAt'), limitToLast(60))).catch(() => get(ref(db, 'needPosts'))),
+          get(ref(db, 'events')),
+          get(ref(db, 'businessPhotos')),
+        ])
+
+        if (!isMounted) return
+
+        // 1. Businesses
+        if (results[0].status === 'fulfilled' && results[0].value?.exists()) {
           const list: BusinessProfile[] = []
-          bSnap.forEach((c) => {
+          results[0].value.forEach((c) => {
             const val = c.val()
             list.push({
               id: c.key as string,
@@ -101,78 +114,90 @@ export default function SearchClientContainer({
           })
           setBusinesses(list)
         }
-      } catch (err) {}
 
-      try {
-        const pSnap = await get(query(ref(db, 'posts'), orderByChild('createdAt'), limitToLast(60))).catch(() => null)
-        if (isMounted && pSnap && pSnap.exists()) {
+        // 2. Posts
+        if (results[1].status === 'fulfilled' && results[1].value?.exists()) {
           const list: Post[] = []
-          pSnap.forEach((c) => {
+          results[1].value.forEach((c) => {
             list.push({ id: c.key as string, ...c.val() })
           })
           setPosts(list.reverse())
         }
-      } catch (err) {}
 
-      try {
-        const uSnap = await get(ref(db, 'publicProfiles')).catch(() => null)
-        if (isMounted && uSnap && uSnap.exists()) {
-          const list: UserProfile[] = []
-          uSnap.forEach((c) => {
+        // 3. People & Sub-Profiles Directory
+        const userMap = new Map<string, UserProfile>()
+        if (results[2].status === 'fulfilled' && results[2].value?.exists()) {
+          results[2].value.forEach((c) => {
             const val = c.val()
-            list.push({
-              uid: c.key as string,
-              name: val.name || 'Member',
-              username: val.username || 'user',
-              area: val.area || val.city || val.areaName || '',
-              ...val,
-            })
+            if (!val.isDeleted && !val.isRestricted) {
+              userMap.set(c.key as string, {
+                uid: c.key as string,
+                name: val.name || val.displayName || val.publicName || val.fullName || 'Member',
+                username: (val.username || val.handle || 'user').replace(/^@+/, ''),
+                area: val.area || val.city || val.areaName || val.locality || '',
+                bio: val.bio || val.about || val.profession || '',
+                isSubProfile: false,
+                ...val,
+              })
+            }
           })
-          setPeople(list)
         }
-      } catch (err) {}
+        if (results[3].status === 'fulfilled' && results[3].value?.exists()) {
+          results[3].value.forEach((c) => {
+            const val = c.val()
+            if (!val.isDeleted && !val.isRestricted) {
+              userMap.set(c.key as string, {
+                uid: c.key as string,
+                name: val.name || val.displayName || val.publicName || val.fullName || 'Sub Profile',
+                username: (val.username || val.handle || 'user').replace(/^@+/, ''),
+                area: val.area || val.city || val.areaName || val.locality || '',
+                bio: val.bio || val.about || val.profession || '',
+                isSubProfile: true,
+                ...val,
+              })
+            }
+          })
+        }
+        if (userMap.size > 0) {
+          setPeople(Array.from(userMap.values()))
+        }
 
-      try {
-        const jSnap = await get(ref(db, 'jobs')).catch(() => null)
-        if (isMounted && jSnap && jSnap.exists()) {
+        // 4. Jobs
+        if (results[4].status === 'fulfilled' && results[4].value?.exists()) {
           const list: LocalJob[] = []
-          jSnap.forEach((c) => {
+          results[4].value.forEach((c) => {
             list.push({ id: c.key as string, ...c.val() })
           })
           setJobs(list.reverse())
         }
-      } catch (err) {}
 
-      try {
-        const nSnap = await get(ref(db, 'needPosts')).catch(() => null)
-        if (isMounted && nSnap && nSnap.exists()) {
+        // 5. Needs
+        if (results[5].status === 'fulfilled' && results[5].value?.exists()) {
           const list: NeedPost[] = []
-          nSnap.forEach((c) => {
+          results[5].value.forEach((c) => {
             list.push({ id: c.key as string, ...c.val() })
           })
           setNeeds(list.reverse())
         }
-      } catch (err) {}
 
-      try {
-        const eSnap = await get(ref(db, 'events')).catch(() => null)
-        if (isMounted && eSnap && eSnap.exists()) {
+        // 6. Events
+        if (results[6].status === 'fulfilled' && results[6].value?.exists()) {
           const list: CommunityEvent[] = []
-          eSnap.forEach((c) => {
+          results[6].value.forEach((c) => {
             list.push({ id: c.key as string, ...c.val() })
           })
           setEvents(list.reverse())
         }
-      } catch (err) {}
 
-      try {
-        const bpSnap = await get(ref(db, 'businessPhotos')).catch(() => null)
-        if (isMounted && bpSnap && bpSnap.exists()) {
-          setPhotosRecord(bpSnap.val() || {})
+        // 7. Business Photos
+        if (results[7].status === 'fulfilled' && results[7].value?.exists()) {
+          setPhotosRecord(results[7].value.val() || {})
         }
-      } catch (err) {}
-
-      if (isMounted) setIsSearching(false)
+      } catch (err) {
+        console.warn('[search-client] loadSearchData notice:', err)
+      } finally {
+        if (isMounted) setIsSearching(false)
+      }
     }
 
     loadSearchData()
@@ -183,64 +208,89 @@ export default function SearchClientContainer({
   }, [user])
 
   const q = searchTerm.toLowerCase().trim()
+  const cleanQ = q.replace(/^@+/, '').trim()
 
   const filteredBusinesses = businesses.filter((b) => {
-    if (!q) return true
+    if (!cleanQ) return true
     const name = (b.name || (b as any).businessName || '').toLowerCase()
-    const cat = (b.category || (b as any).businessCategory || '').toLowerCase()
-    const desc = (b.description || '').toLowerCase()
-    const area = (b.area || '').toLowerCase()
+    const cat = (b.category || (b as any).businessCategory || (b as any).subcategory || '').toLowerCase()
+    const desc = (b.description || (b as any).services || (b as any).about || '').toLowerCase()
+    const area = (b.area || (b as any).city || (b as any).locality || '').toLowerCase()
     const addr = ((b as any).address || '').toLowerCase()
-    return name.includes(q) || cat.includes(q) || desc.includes(q) || area.includes(q) || addr.includes(q)
+    return name.includes(cleanQ) || cat.includes(cleanQ) || desc.includes(cleanQ) || area.includes(cleanQ) || addr.includes(cleanQ)
+  }).sort((a, b) => {
+    if (!cleanQ) return 0
+    const aName = (a.name || (a as any).businessName || '').toLowerCase()
+    const bName = (b.name || (b as any).businessName || '').toLowerCase()
+    const aScore = aName === cleanQ ? 100 : (aName.startsWith(cleanQ) ? 50 : 0)
+    const bScore = bName === cleanQ ? 100 : (bName.startsWith(cleanQ) ? 50 : 0)
+    return bScore - aScore
   })
 
   const filteredPeople = people.filter((u) => {
-    if (!q) return true
-    const name = (u.name || '').toLowerCase()
-    const username = (u.username || '').toLowerCase()
-    const email = (u.email || '').toLowerCase()
-    const bio = (u.bio || '').toLowerCase()
-    const biz = (u.businessName || '').toLowerCase()
-    const area = (u.area || '').toLowerCase()
-    return name.includes(q) || username.includes(q) || email.includes(q) || bio.includes(q) || biz.includes(q) || area.includes(q)
+    if (!cleanQ) return true
+    const name = (u.name || (u as any).displayName || (u as any).publicName || (u as any).fullName || '').toLowerCase()
+    const username = (u.username || (u as any).handle || '').toLowerCase().replace(/^@+/, '')
+    const email = ((u as any).email || '').toLowerCase()
+    const bio = (u.bio || (u as any).about || (u as any).profession || (u as any).occupation || '').toLowerCase()
+    const biz = ((u as any).businessName || '').toLowerCase()
+    const area = (u.area || (u as any).city || (u as any).locality || '').toLowerCase()
+    return (
+      name.includes(cleanQ) ||
+      username.includes(cleanQ) ||
+      email.includes(cleanQ) ||
+      bio.includes(cleanQ) ||
+      biz.includes(cleanQ) ||
+      area.includes(cleanQ)
+    )
+  }).sort((a, b) => {
+    if (!cleanQ) return 0
+    const aName = (a.name || (a as any).displayName || '').toLowerCase()
+    const bName = (b.name || (b as any).displayName || '').toLowerCase()
+    const aUser = (a.username || '').toLowerCase().replace(/^@+/, '')
+    const bUser = (b.username || '').toLowerCase().replace(/^@+/, '')
+
+    const aScore = (aName === cleanQ || aUser === cleanQ ? 100 : (aName.startsWith(cleanQ) || aUser.startsWith(cleanQ) ? 50 : 0))
+    const bScore = (bName === cleanQ || bUser === cleanQ ? 100 : (bName.startsWith(cleanQ) || bUser.startsWith(cleanQ) ? 50 : 0))
+    return bScore - aScore
   })
 
   const filteredPosts = posts.filter((p) => {
-    if (!q) return true
-    const text = (p.text || '').toLowerCase()
-    const author = (p.userName || (p as any).authorName || '').toLowerCase()
+    if (!cleanQ) return true
+    const text = (p.text || (p as any).content || (p as any).title || '').toLowerCase()
+    const author = (p.userName || (p as any).authorName || (p as any).publicName || '').toLowerCase()
     const biz = (p.businessName || '').toLowerCase()
     const cat = (p.category || '').toLowerCase()
-    const area = (p.area || '').toLowerCase()
-    return text.includes(q) || author.includes(q) || biz.includes(q) || cat.includes(q) || area.includes(q)
+    const area = (p.area || (p as any).city || '').toLowerCase()
+    return text.includes(cleanQ) || author.includes(cleanQ) || biz.includes(cleanQ) || cat.includes(cleanQ) || area.includes(cleanQ)
   })
 
   const filteredJobs = jobs.filter((j) => {
-    if (!q) return true
-    const title = (j.title || '').toLowerCase()
-    const biz = (j.businessName || '').toLowerCase()
+    if (!cleanQ) return true
+    const title = (j.title || (j as any).role || '').toLowerCase()
+    const biz = (j.businessName || (j as any).companyName || '').toLowerCase()
     const cat = (j.category || '').toLowerCase()
     const desc = (j.description || '').toLowerCase()
-    const area = (j.area || '').toLowerCase()
-    return title.includes(q) || biz.includes(q) || cat.includes(q) || desc.includes(q) || area.includes(q)
+    const area = (j.area || (j as any).city || '').toLowerCase()
+    return title.includes(cleanQ) || biz.includes(cleanQ) || cat.includes(cleanQ) || desc.includes(cleanQ) || area.includes(cleanQ)
   })
 
   const filteredNeeds = needs.filter((n) => {
-    if (!q) return true
-    const title = (n.title || '').toLowerCase()
+    if (!cleanQ) return true
+    const title = (n.title || (n as any).text || (n as any).content || '').toLowerCase()
     const desc = (n.description || '').toLowerCase()
-    const author = (n.userName || (n as any).requesterName || '').toLowerCase()
-    const area = (n.area || '').toLowerCase()
-    return title.includes(q) || desc.includes(q) || author.includes(q) || area.includes(q)
+    const author = (n.userName || (n as any).requesterName || (n as any).authorName || '').toLowerCase()
+    const area = (n.area || (n as any).city || '').toLowerCase()
+    return title.includes(cleanQ) || desc.includes(cleanQ) || author.includes(cleanQ) || area.includes(cleanQ)
   })
 
   const filteredEvents = events.filter((e) => {
-    if (!q) return true
+    if (!cleanQ) return true
     const title = (e.title || '').toLowerCase()
     const desc = (e.description || '').toLowerCase()
     const venue = (e.venue || '').toLowerCase()
-    const area = (e.area || '').toLowerCase()
-    return title.includes(q) || desc.includes(q) || venue.includes(q) || area.includes(q)
+    const area = (e.area || (e as any).city || '').toLowerCase()
+    return title.includes(cleanQ) || desc.includes(cleanQ) || venue.includes(cleanQ) || area.includes(cleanQ)
   })
 
   const totalResultsCount =

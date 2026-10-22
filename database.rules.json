@@ -1,0 +1,570 @@
+{
+  "rules": {
+    ".read": false,
+    ".write": false,
+    "admins": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": false
+      }
+    },
+    "users": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "publicProfiles": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "name",
+        "username",
+        "category",
+        "area",
+        "badgeMode",
+        "isPrivate",
+        "accountPrivacy"
+      ],
+      "$uid": {
+        ".write": "auth != null && (auth.uid === $uid || (data.exists() && data.child('ownerUid').val() === auth.uid) || (!data.exists() && newData.child('ownerUid').val() === auth.uid) || root.child('users').child(auth.uid).child('subProfiles').child($uid).exists() || root.child('userSubProfiles').child(auth.uid).child($uid).exists() || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "publicSubProfiles": {
+      ".read": true,
+      ".indexOn": [
+        "name",
+        "username",
+        "ownerUid",
+        "createdAt"
+      ],
+      "$subProfileId": {
+        ".write": "auth != null && (!data.exists() || data.child('ownerUid').val() === auth.uid || newData.child('ownerUid').val() === auth.uid || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "usernames": {
+      ".read": "auth != null",
+      "$username": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && (!data.exists() || data.val() === auth.uid)))"
+      }
+    },
+    "posts": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "createdAt",
+        "userId",
+        "category",
+        "area",
+        "isAdminPost",
+        "isGlobal",
+        "lastCommentAt",
+        "commentsCount",
+        "postType",
+        "event/startAt",
+        "event/endAt",
+        "poll/closesAt",
+        "smart/template",
+        "audience",
+        "isPrivate",
+        "isModerated",
+        "isDeleted"
+      ],
+      "$postId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && ((!data.exists() && (newData.child('userId').val() === auth.uid || root.child('userSubProfiles').child(auth.uid).child(newData.child('userId').val()).exists() || root.child('users').child(auth.uid).child('subProfiles').child(newData.child('userId').val()).exists())) || (data.exists() && (data.child('userId').val() === auth.uid || data.child('ownerUid').val() === auth.uid || root.child('userSubProfiles').child(auth.uid).child(data.child('userId').val()).exists() || root.child('users').child(auth.uid).child('subProfiles').child(data.child('userId').val()).exists())))))",
+        "lastCommentAt": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && root.child('posts').child($postId).exists()))",
+          ".validate": "!newData.exists() || newData.isNumber()"
+        },
+        "commentsCount": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && root.child('posts').child($postId).exists()))",
+          ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0 && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && (newData.val() === 0 || newData.val() === 1)) || (data.exists() && (newData.val() === data.val() + 1 || newData.val() === data.val() - 1 || newData.val() === data.val()))))"
+        }
+      }
+    },
+    "postLikes": {
+      ".read": "auth != null",
+      "$postId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!newData.exists() && (root.child('posts').child($postId).child('userId').val() === auth.uid || root.child('posts').child($postId).child('ownerUid').val() === auth.uid)))",
+        "$uid": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('userSubProfiles').child(auth.uid).child($uid).exists() || root.child('users').child(auth.uid).child('subProfiles').child($uid).exists()) && root.child('users').child(auth.uid).child('isRestricted').val() !== true",
+          ".validate": "newData.val() === true || !newData.exists()"
+        }
+      }
+    },
+    "postViews": {
+      ".read": "auth != null",
+      "$postId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!newData.exists() && root.child('posts').child($postId).child('userId').val() === auth.uid))",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.val() === true || !newData.exists()"
+        }
+      }
+    },
+    "postComments": {
+      "$postId": {
+        ".read": "auth != null",
+        "$commentId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('userId').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true) || (data.exists() && data.child('userId').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true) || (data.exists() && !newData.exists() && root.child('posts').child($postId).child('userId').val() === auth.uid))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['postId','userId','userName','text','createdAt']) && newData.child('postId').val() === $postId && newData.child('userId').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 500)"
+        }
+      },
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true"
+    },
+    "postCommentCounts": {
+      "$postId": {
+        ".read": "auth != null",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && root.child('posts').child($postId).exists()))",
+        ".validate": "!newData.exists() || (newData.isNumber() && newData.val() >= 0 && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && (newData.val() === 0 || newData.val() === 1)) || (data.exists() && (newData.val() === data.val() + 1 || newData.val() === data.val() - 1 || newData.val() === data.val()))))"
+      },
+      ".read": "auth != null"
+    },
+    "commentReports": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+      "$commentId": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+        "$reportId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && (newData.child('reporterId').val() === auth.uid || newData.child('reportedBy').val() === auth.uid)))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['reportType','postId','commentId','reason','status','createdAt']) && newData.child('reportType').val() === 'comment' && newData.child('commentId').val() === $commentId && newData.child('reason').isString() && newData.child('reason').val().length > 0)"
+        }
+      }
+    },
+    "followers": {
+      ".read": "auth != null",
+      "$targetUid": {
+        "$followerUid": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || ((auth.uid === $followerUid || root.child('userSubProfiles').child(auth.uid).child($followerUid).exists() || root.child('users').child(auth.uid).child('subProfiles').child($followerUid).exists()) && root.child('users').child(auth.uid).child('isRestricted').val() !== true))",
+          ".validate": "newData.val() === true || !newData.exists()"
+        },
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!newData.exists() && (auth.uid === $targetUid || root.child('userSubProfiles').child(auth.uid).child($targetUid).exists() || root.child('users').child(auth.uid).child('subProfiles').child($targetUid).exists())))"
+      }
+    },
+    "following": {
+      ".read": "auth != null",
+      "$followerUid": {
+        "$targetUid": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || ((auth.uid === $followerUid || root.child('userSubProfiles').child(auth.uid).child($followerUid).exists() || root.child('users').child(auth.uid).child('subProfiles').child($followerUid).exists()) && root.child('users').child(auth.uid).child('isRestricted').val() !== true))",
+          ".validate": "newData.val() === true || !newData.exists()"
+        },
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!newData.exists() && (auth.uid === $followerUid || root.child('userSubProfiles').child(auth.uid).child($followerUid).exists() || root.child('users').child(auth.uid).child('subProfiles').child($followerUid).exists())))"
+      }
+    },
+    "reports": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$reportId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || !data.exists())"
+      }
+    },
+    "statuses": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "createdAt",
+        "expiresAt",
+        "userId",
+        "audience"
+      ],
+      "$statusId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && ((!data.exists() && (newData.child('userId').val() === auth.uid || root.child('userSubProfiles').child(auth.uid).child(newData.child('userId').val()).exists() || root.child('users').child(auth.uid).child('subProfiles').child(newData.child('userId').val()).exists())) || (data.exists() && (data.child('userId').val() === auth.uid || data.child('ownerUid').val() === auth.uid || root.child('userSubProfiles').child(auth.uid).child(data.child('userId').val()).exists() || root.child('users').child(auth.uid).child('subProfiles').child(data.child('userId').val()).exists()) && (!newData.exists() || newData.child('userId').val() === auth.uid || root.child('userSubProfiles').child(auth.uid).child(newData.child('userId').val()).exists() || root.child('users').child(auth.uid).child('subProfiles').child(newData.child('userId').val()).exists())))))",
+        "viewedBy": {
+          "$viewerId": {
+            ".write": "auth != null && (auth.uid === $viewerId || root.child('userSubProfiles').child(auth.uid).child($viewerId).exists() || root.child('users').child(auth.uid).child('subProfiles').child($viewerId).exists())",
+            ".validate": "newData.val() === true || !newData.exists()"
+          }
+        },
+        "poll": {
+          "option1Votes": {
+            ".write": "auth != null",
+            ".validate": "newData.isNumber()"
+          },
+          "option2Votes": {
+            ".write": "auth != null",
+            ".validate": "newData.isNumber()"
+          }
+        }
+      }
+    },
+    "statusVotes": {
+      "$statusId": {
+        ".read": "auth != null",
+        "$uid": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('userSubProfiles').child(auth.uid).child($uid).exists() || root.child('users').child(auth.uid).child('subProfiles').child($uid).exists())",
+          ".validate": "newData.isNumber() && (newData.val() === 1 || newData.val() === 2)"
+        }
+      }
+    },
+    "businessProfiles": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "ownerId",
+        "category",
+        "area",
+        "createdAt",
+        "updatedAt",
+        "lastActiveAt",
+        "badgeMode",
+        "manualBadge",
+        "isRestricted",
+        "adminBadge",
+        "adminBadgeUpdatedAt"
+      ],
+      "$businessId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && (auth.uid === $businessId || (!data.exists() && newData.child('ownerId').val() === auth.uid) || (data.exists() && data.child('ownerId').val() === auth.uid))))",
+        "lastActiveAt": {
+          ".write": "auth != null && root.child('users').child(auth.uid).child('isRestricted').val() !== true",
+          ".validate": "newData.isNumber() || !newData.exists()"
+        }
+      }
+    },
+    "businessRatings": {
+      "$businessId": {
+        ".read": "auth != null",
+        ".indexOn": [
+          "createdAt",
+          "updatedAt",
+          "rating",
+          "userId",
+          "userName"
+        ],
+        "$userId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (auth.uid === $userId && root.child('users').child(auth.uid).child('isRestricted').val() !== true && root.child('businessProfiles').child($businessId).child('ownerId').val() !== auth.uid))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['userId','userName','rating','createdAt','updatedAt']) && newData.child('userId').val() === $userId && newData.child('rating').isNumber() && newData.child('rating').val() >= 1 && newData.child('rating').val() <= 5)"
+        }
+      },
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true"
+    },
+    "businessReports": {
+      "$businessId": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        ".indexOn": [
+          "createdAt",
+          "status",
+          "severity"
+        ],
+        "$reportId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('reportedBy').val() === auth.uid))"
+        }
+      },
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true"
+    },
+    "businessPhotos": {
+      "$businessId": {
+        ".read": "auth != null",
+        "$photoId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && (auth.uid === $businessId || root.child('businessProfiles').child($businessId).child('ownerId').val() === auth.uid)))"
+        },
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!newData.exists() && (auth.uid === $businessId || root.child('businessProfiles').child($businessId).child('ownerId').val() === auth.uid)))"
+      },
+      ".read": "auth != null"
+    },
+    "adminAnnouncements": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "createdAt"
+      ],
+      "$announcementId": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      }
+    },
+    "notifications": {
+      "$uid": {
+        ".read": "auth != null && auth.uid === $uid",
+        ".indexOn": [
+          "createdAt",
+          "read",
+          "type"
+        ],
+        "$notificationId": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true || (!data.exists() && (newData.child('actorId').val() === auth.uid || newData.child('fromUserId').val() === auth.uid || newData.child('senderId').val() === auth.uid || newData.child('userId').val() === auth.uid)))"
+        },
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "notificationSettings": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
+        ".write": "auth != null && auth.uid === $uid"
+      }
+    },
+    "pushTokens": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
+        "$tokenKey": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.exists() || !newData.exists()"
+        },
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "userPushTokens": {
+      ".read": "auth != null",
+      "$actorId": {
+        ".write": "auth != null && (auth.uid === $actorId || root.child('userSubProfiles').child(auth.uid).child($actorId).exists() || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "userImages": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "adminActions": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$actionId": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      }
+    },
+    "adminUserActions": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$actionId": {
+        ".write": "auth != null && root.child('admins').child(auth.uid).val() === true"
+      }
+    },
+    "activeUsers": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$dateKey": {
+        ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid",
+          ".validate": "newData.exists() || !newData.exists()"
+        }
+      }
+    },
+    "userJoinLogs": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$logId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || $logId === auth.uid || newData.child('uid').val() === auth.uid || newData.child('userId').val() === auth.uid)",
+        ".validate": "newData.exists() || !newData.exists()"
+      }
+    },
+    "deletedAccountLogs": {
+      ".read": "auth != null && root.child('admins').child(auth.uid).val() === true",
+      "$logId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || $logId === auth.uid || newData.child('uid').val() === auth.uid || newData.child('userId').val() === auth.uid)",
+        ".validate": "newData.exists() || !newData.exists()"
+      }
+    },
+    "businessStatuses": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "businessId",
+        "ownerId",
+        "expiresAt",
+        "updatedAt"
+      ],
+      "$businessId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && (auth.uid === $businessId || root.child('businessProfiles').child($businessId).child('ownerId').val() === auth.uid)))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['businessId','ownerId','statuses','expiresAt','updatedAt','updatedBy']) && newData.child('businessId').val() === $businessId && newData.child('ownerId').isString() && newData.child('expiresAt').isNumber() && newData.child('updatedAt').isNumber() && newData.child('updatedBy').isString())"
+      }
+    },
+    "localJobs": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "createdAt",
+        "updatedAt",
+        "expiresAt",
+        "status",
+        "createdBy",
+        "jobType",
+        "workMode",
+        "area",
+        "areaKey"
+      ],
+      "$jobId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || (!newData.exists() && data.child('createdBy').val() === auth.uid) || (!data.exists() && newData.child('createdBy').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true) || (data.exists() && data.child('createdBy').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','title','businessName','jobType','area','createdBy','createdAt','expiresAt','status']) && newData.child('id').val() === $jobId && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 120 && newData.child('businessName').isString() && newData.child('businessName').val().length > 0 && newData.child('businessName').val().length <= 120 && newData.child('area').isString() && newData.child('area').val().length > 0 && newData.child('createdBy').isString() && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber())"
+      }
+    },
+    "jobs": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "createdAt",
+        "updatedAt",
+        "expiresAt",
+        "status",
+        "createdBy",
+        "jobType",
+        "workMode",
+        "area",
+        "areaKey"
+      ],
+      "$jobId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || (!newData.exists() && data.child('createdBy').val() === auth.uid) || (!data.exists() && newData.child('createdBy').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true) || (data.exists() && data.child('createdBy').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['id','title','businessName','jobType','area','createdBy','createdAt','expiresAt','status']) && newData.child('id').val() === $jobId && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 120 && newData.child('businessName').isString() && newData.child('businessName').val().length > 0 && newData.child('businessName').val().length <= 120 && newData.child('area').isString() && newData.child('area').val().length > 0 && newData.child('createdBy').isString() && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber())"
+      }
+    },
+    "jobReports": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+      "$jobId": {
+        "$reportId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && newData.child('reporterId').val() === auth.uid))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['reportType','jobId','reason','status','createdAt']) && newData.child('reportType').val() === 'job' && newData.child('jobId').val() === $jobId && newData.child('reason').isString() && newData.child('reason').val().length > 0)"
+        }
+      }
+    },
+    "needPosts": {
+      ".read": "auth != null",
+      ".indexOn": [
+        "createdAt",
+        "expiresAt",
+        "status",
+        "category",
+        "areaKey",
+        "createdBy"
+      ],
+      "$needId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || (root.child('users').child(auth.uid).child('isRestricted').val() !== true && ((!data.exists() && newData.child('createdBy').val() === auth.uid) || (data.exists() && data.child('createdBy').val() === auth.uid))))",
+        ".validate": "!newData.exists() || (newData.hasChildren(['title','description','category','area','createdBy','createdAt','expiresAt','status']) && newData.child('title').isString() && newData.child('title').val().length > 0 && newData.child('title').val().length <= 120 && newData.child('description').isString() && newData.child('description').val().length > 0 && newData.child('description').val().length <= 500 && newData.child('area').isString() && newData.child('area').val().length > 0 && newData.child('createdBy').isString() && newData.child('createdAt').isNumber() && newData.child('expiresAt').isNumber())"
+      }
+    },
+    "needReplies": {
+      "$needId": {
+        ".read": "auth != null",
+        "$replyId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && newData.child('userId').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true) || (data.exists() && data.child('userId').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true) || (data.exists() && !newData.exists() && root.child('needPosts').child($needId).child('createdBy').val() === auth.uid))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['needId','userId','userName','text','createdAt']) && newData.child('needId').val() === $needId && newData.child('userId').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 300)"
+        }
+      }
+    },
+    "needReports": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true)",
+      "$needId": {
+        "$reportId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || (!data.exists() && newData.child('reporterId').val() === auth.uid) || (data.exists() && !newData.exists() && root.child('needPosts').child($needId).child('createdBy').val() === auth.uid))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['reportType','needId','reason','status','createdAt']) && newData.child('reportType').val() === 'need' && newData.child('needId').val() === $needId && newData.child('reason').isString() && newData.child('reason').val().length > 0)"
+        }
+      }
+    },
+    "businessAnalytics": {
+      "$businessId": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || root.child('businessProfiles').child($businessId).child('ownerId').val() === auth.uid || $businessId === auth.uid)",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || root.child('businessProfiles').child($businessId).exists() || (!newData.exists() && (auth.uid === $businessId || root.child('businessProfiles').child($businessId).child('ownerId').val() === auth.uid)))",
+        "profileViews": {
+          "$uid": {
+            ".write": "auth != null && auth.uid === $uid && root.child('businessProfiles').child($businessId).exists()"
+          }
+        },
+        "clicks": {
+          "$clickType": {
+            "$eventId": {
+              ".write": "auth != null && root.child('businessProfiles').child($businessId).exists()"
+            }
+          }
+        }
+      }
+    },
+    "pollVotes": {
+      ".read": "auth != null",
+      "$postId": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true && root.child('posts').child($postId).child('postType').val() === 'poll' && (!root.child('posts').child($postId).child('poll').child('closesAt').exists() || root.child('posts').child($postId).child('poll').child('closesAt').val() > now) && (!data.exists() || root.child('posts').child($postId).child('poll').child('allowVoteChange').val() === true || !newData.exists())",
+          ".validate": "!newData.exists() || (newData.hasChildren(['selections','votedAt','updatedAt']) && newData.child('selections').hasChildren() && newData.child('votedAt').isNumber() && newData.child('updatedAt').isNumber())",
+          "selections": {
+            "$optionId": {
+              ".validate": "newData.val() === true && root.child('posts').child($postId).child('poll').child('options').child($optionId).exists()"
+            }
+          }
+        },
+        ".write": "auth != null && !newData.exists() && (root.child('admins').child(auth.uid).val() === true || root.child('posts').child($postId).child('userId').val() === auth.uid)"
+      }
+    },
+    "eventAttendance": {
+      ".read": "auth != null",
+      "$postId": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true && root.child('posts').child($postId).child('postType').val() === 'event' && root.child('posts').child($postId).child('event').child('status').val() === 'active' && (!root.child('posts').child($postId).child('event').child('registrationClosesAt').exists() || root.child('posts').child($postId).child('event').child('registrationClosesAt').val() > now)",
+          ".validate": "!newData.exists() || (newData.hasChildren(['status','respondedAt']) && (newData.child('status').val() === 'attending' || newData.child('status').val() === 'interested' || newData.child('status').val() === 'not_attending') && newData.child('respondedAt').isNumber())"
+        },
+        ".write": "auth != null && !newData.exists() && (root.child('admins').child(auth.uid).val() === true || root.child('posts').child($postId).child('userId').val() === auth.uid)"
+      }
+    },
+    "checklistProgress": {
+      ".read": "auth != null",
+      "$postId": {
+        "$uid": {
+          ".write": "auth != null && auth.uid === $uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true && root.child('posts').child($postId).child('postType').val() === 'smart' && root.child('posts').child($postId).child('smart').child('template').val() === 'checklist'",
+          "$itemId": {
+            ".validate": "newData.val() === true || !newData.exists()"
+          }
+        },
+        ".write": "auth != null && !newData.exists() && (root.child('admins').child(auth.uid).val() === true || root.child('posts').child($postId).child('userId').val() === auth.uid)"
+      }
+    },
+    "smartPostSuggestions": {
+      ".read": "auth != null",
+      "$postId": {
+        "$suggestionId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('createdBy').val() === auth.uid && root.child('users').child(auth.uid).child('isRestricted').val() !== true && root.child('posts').child($postId).child('smart').child('settings').child('allowSuggestions').val() === true) || (data.exists() && (data.child('createdBy').val() === auth.uid || root.child('posts').child($postId).child('userId').val() === auth.uid)))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['createdBy','status','createdAt']) && newData.child('createdBy').isString() && (newData.child('status').val() === 'pending' || newData.child('status').val() === 'approved' || newData.child('status').val() === 'rejected'))"
+        },
+        ".write": "auth != null && !newData.exists() && (root.child('admins').child(auth.uid).val() === true || root.child('posts').child($postId).child('userId').val() === auth.uid)"
+      }
+    },
+    "conversations": {
+      "$conversationId": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || $conversationId.beginsWith(auth.uid + '_') || $conversationId.endsWith('_' + auth.uid) || data.child('participants').child(auth.uid).exists())",
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || $conversationId.beginsWith(auth.uid + '_') || $conversationId.endsWith('_' + auth.uid) || (!data.exists() && newData.child('participants').child(auth.uid).exists()) || (data.exists() && data.child('participants').child(auth.uid).exists()))"
+      }
+    },
+    "userConversations": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
+        ".indexOn": [
+          "updatedAt",
+          "lastMessageTime",
+          "unreadCount"
+        ],
+        "$conversationId": {
+          ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true || $conversationId.beginsWith(auth.uid + '_') || $conversationId.endsWith('_' + auth.uid))"
+        }
+      }
+    },
+    "messages": {
+      "$conversationId": {
+        ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || $conversationId.beginsWith(auth.uid + '_') || $conversationId.endsWith('_' + auth.uid) || root.child('conversations').child($conversationId).child('participants').child(auth.uid).exists())",
+        ".indexOn": [
+          "createdAt",
+          "senderId"
+        ],
+        "$messageId": {
+          ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || (!data.exists() && newData.child('senderId').val() === auth.uid && ($conversationId.beginsWith(auth.uid + '_') || $conversationId.endsWith('_' + auth.uid)) && root.child('users').child(auth.uid).child('isRestricted').val() !== true))",
+          ".validate": "!newData.exists() || (newData.hasChildren(['id','conversationId','senderId','senderName','text','createdAt']) && newData.child('conversationId').val() === $conversationId && newData.child('senderId').val() === auth.uid && newData.child('text').isString() && newData.child('text').val().length > 0 && newData.child('text').val().length <= 2000)"
+        }
+      }
+    },
+    "userResumes": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "userSubProfiles": {
+      "$uid": {
+        ".read": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)",
+        ".write": "auth != null && (auth.uid === $uid || root.child('admins').child(auth.uid).val() === true)"
+      }
+    },
+    "jobApplications": {
+      "$jobId": {
+        ".read": "auth != null && (root.child('localJobs').child($jobId).child('createdBy').val() === auth.uid || root.child('jobs').child($jobId).child('createdBy').val() === auth.uid || root.child('admins').child(auth.uid).val() === true)",
+        "$applicantId": {
+          ".read": "auth != null && (auth.uid === $applicantId || root.child('localJobs').child($jobId).child('createdBy').val() === auth.uid || root.child('jobs').child($jobId).child('createdBy').val() === auth.uid || root.child('admins').child(auth.uid).val() === true)",
+          ".write": "auth != null && (auth.uid === $applicantId || root.child('localJobs').child($jobId).child('createdBy').val() === auth.uid || root.child('jobs').child($jobId).child('createdBy').val() === auth.uid || root.child('admins').child(auth.uid).val() === true)"
+        }
+      }
+    },
+    "adminRoles": {
+      ".read": "auth != null",
+      "$uid": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('adminRoles').child(auth.uid).val() === 'superadmin')"
+      }
+    },
+    "adminActivityLogs": {
+      ".read": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || root.child('adminRoles').child(auth.uid).exists())",
+      ".indexOn": ["timestamp", "actorUid", "actionType"],
+      "$logId": {
+        ".write": "auth != null && (root.child('admins').child(auth.uid).val() === true || root.child('users').child(auth.uid).child('isAdmin').val() === true || root.child('adminRoles').child(auth.uid).exists())"
+      }
+    }
+  }
+}

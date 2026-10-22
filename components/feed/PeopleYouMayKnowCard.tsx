@@ -10,6 +10,8 @@ import {
   SuggestedPerson,
 } from '@/lib/peopleDiscoveryService'
 import { Users, UserPlus, UserCheck, X, Sparkles, MapPin, CheckCircle2, ChevronRight } from 'lucide-react'
+import { getAvatarColorInfo, FOLLOW_BUTTON_CLASS } from '@/lib/themeColors'
+import { useActiveActor, getEffectiveUid, onActiveProfileChanged } from '@/lib/profileService'
 
 interface PeopleYouMayKnowCardProps {
   currentLocation?: { latitude: number; longitude: number } | null
@@ -25,6 +27,7 @@ export function PeopleYouMayKnowCard({
   className = '',
 }: PeopleYouMayKnowCardProps) {
   const { user, userProfile } = useAuth()
+  const { actorId, actor } = useActiveActor()
   const [people, setPeople] = useState<SuggestedPerson[]>([])
   const [loading, setLoading] = useState(true)
   const [followingMap, setFollowingMap] = useState<Record<string, boolean>>({})
@@ -41,7 +44,8 @@ export function PeopleYouMayKnowCard({
   }, [])
 
   const loadSuggestions = useCallback(async () => {
-    if (!user?.uid) {
+    const effectiveUid = actorId || user?.uid
+    if (!effectiveUid) {
       setPeople([])
       setLoading(false)
       return
@@ -50,7 +54,7 @@ export function PeopleYouMayKnowCard({
     try {
       setLoading(true)
       const list = await getPeopleYouMayKnow({
-        currentUid: user.uid,
+        currentUid: effectiveUid,
         currentLocation: currentLocation || undefined,
         maxResults: 10,
         dismissedUids,
@@ -61,10 +65,17 @@ export function PeopleYouMayKnowCard({
     } finally {
       setLoading(false)
     }
-  }, [user?.uid, currentLocation, dismissedUids])
+  }, [user?.uid, actorId, currentLocation, dismissedUids])
 
   useEffect(() => {
     loadSuggestions()
+  }, [loadSuggestions])
+
+  useEffect(() => {
+    const unsub = onActiveProfileChanged(() => {
+      loadSuggestions()
+    })
+    return () => unsub()
   }, [loadSuggestions])
 
   const handleDismiss = (uid: string) => {
@@ -77,15 +88,16 @@ export function PeopleYouMayKnowCard({
   }
 
   const handleFollow = async (person: SuggestedPerson) => {
-    if (!user?.uid || followingMap[person.uid]) return
+    const effectiveUid = actorId || user?.uid
+    if (!effectiveUid || followingMap[person.uid]) return
 
     // Optimistic UI update
     setFollowingMap((prev) => ({ ...prev, [person.uid]: true }))
 
     const success = await followUserOptimistic({
-      currentUid: user.uid,
+      currentUid: effectiveUid,
       targetUid: person.uid,
-      actorName: userProfile?.name || user.displayName || 'Circular Member',
+      actorName: actor?.name || userProfile?.name || user?.displayName || 'Circular Member',
     })
 
     if (!success) {
@@ -105,7 +117,7 @@ export function PeopleYouMayKnowCard({
       {/* Header */}
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
-          <div className="flex size-7 items-center justify-center rounded-lg bg-purple-500/15 text-purple-600 dark:text-purple-400">
+          <div className="flex size-7 items-center justify-center rounded-lg bg-pink-500/15 text-pink-600 dark:text-pink-400">
             <Users className="size-4 stroke-[2.2]" />
           </div>
           <div>
@@ -120,7 +132,7 @@ export function PeopleYouMayKnowCard({
 
         <Link
           href="/search"
-          className="flex items-center gap-0.5 text-[11px] font-bold text-purple-600 dark:text-purple-400 hover:underline"
+          className="flex items-center gap-0.5 text-[11px] font-bold text-pink-600 dark:text-pink-400 hover:underline"
         >
           <span>Explore</span>
           <ChevronRight className="size-3 stroke-[2.5]" />
@@ -131,7 +143,9 @@ export function PeopleYouMayKnowCard({
       <div className="flex items-stretch gap-3 overflow-x-auto no-scrollbar pb-1 pt-0.5">
         {people.map((person) => {
           const isFollowing = followingMap[person.uid] === true
-          const avatarUrl = person.avatar || '/circular-logo.png'
+          const avatarInfo = getAvatarColorInfo(person.name || person.uid)
+          const initial = (person.name?.trim()?.[0] || 'C').toUpperCase()
+          const hasAvatar = Boolean(person.avatar)
 
           return (
             <div
@@ -153,13 +167,22 @@ export function PeopleYouMayKnowCard({
                 href={`/user/${person.uid}`}
                 className="flex flex-col items-center w-full"
               >
-                <div className="relative size-14 rounded-full overflow-hidden bg-purple-500/10 ring-2 ring-border/60 group-hover:ring-purple-500/40 transition-all mb-2">
-                  <Image
-                    src={avatarUrl}
-                    alt={person.name}
-                    fill
-                    className="object-cover"
-                  />
+                <div
+                  className="relative size-14 rounded-full overflow-hidden ring-2 ring-border/60 group-hover:ring-purple-500/40 transition-all mb-2 flex items-center justify-center"
+                  style={!hasAvatar ? { background: `linear-gradient(135deg, ${avatarInfo.gradient[0]}, ${avatarInfo.gradient[1]})` } : undefined}
+                >
+                  {hasAvatar ? (
+                    <Image
+                      src={person.avatar!}
+                      alt={person.name}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <span className="text-lg font-black text-white select-none">
+                      {initial}
+                    </span>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-center gap-1 w-full px-1">
@@ -191,7 +214,7 @@ export function PeopleYouMayKnowCard({
                 className={`mt-auto flex w-full items-center justify-center gap-1 rounded-lg py-1.5 text-[11px] font-bold transition-all ${
                   isFollowing
                     ? 'border border-border bg-muted/60 text-muted-foreground cursor-default'
-                    : 'bg-purple-600 text-white hover:bg-purple-700 shadow-xs active:scale-95'
+                    : FOLLOW_BUTTON_CLASS
                 }`}
               >
                 {isFollowing ? (

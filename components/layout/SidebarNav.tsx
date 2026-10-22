@@ -5,6 +5,8 @@ import Link from 'next/link'
 import Image from 'next/image'
 import { usePathname } from 'next/navigation'
 import { useAuth } from '@/context/AuthContext'
+import { useActiveActor } from '@/lib/profileService'
+import { ProfileSwitcherModal } from '@/components/profile/ProfileSwitcherModal'
 import { ref, onValue, off } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { getUserAvatar } from '@/lib/imageUtils'
@@ -12,6 +14,7 @@ import {
   Home,
   Compass,
   Users,
+  Search,
   MessageSquare,
   Store,
   Briefcase,
@@ -30,6 +33,7 @@ import {
   Building2,
   Info,
   FileText,
+  ArrowLeftRight,
 } from 'lucide-react'
 import { useTranslation } from '@/lib/i18n'
 
@@ -42,8 +46,11 @@ type ThemePreference = 'light' | 'dark' | 'system'
 export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
   const pathname = usePathname()
   const { user, userProfile, publicProfiles, isAdmin, logout } = useAuth()
+  const { actorId, actor } = useActiveActor()
+  const effectiveId = actorId || user?.uid
   const [unreadNotifications, setUnreadNotifications] = useState(0)
   const [unreadMessages, setUnreadMessages] = useState(0)
+  const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState(false)
   const [themePref, setThemePref] = useState<ThemePreference>('system')
 
   // Initialize theme from localStorage and system preference
@@ -90,9 +97,9 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
 
   // Firebase unread notifications & conversations
   useEffect(() => {
-    if (!user) return
+    if (!effectiveId) return
 
-    const notifRef = ref(db, `notifications/${user.uid}`)
+    const notifRef = ref(db, `notifications/${effectiveId}`)
     const notifCallback = (snap: any) => {
       if (snap.exists()) {
         const val = snap.val()
@@ -104,7 +111,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
     }
     onValue(notifRef, notifCallback)
 
-    const convRef = ref(db, `userConversations/${user.uid}`)
+    const convRef = ref(db, `userConversations/${effectiveId}`)
     const convCallback = (snap: any) => {
       if (snap.exists()) {
         const val = snap.val()
@@ -120,7 +127,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
       off(notifRef)
       off(convRef)
     }
-  }, [user])
+  }, [effectiveId])
 
   interface NavItem {
     href: string
@@ -170,6 +177,15 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
           bgColor: 'bg-purple-500/10 dark:bg-purple-500/15',
           activeBg: 'bg-purple-500/15 dark:bg-purple-500/20',
           activeText: 'text-purple-600 dark:text-purple-400 font-bold',
+        },
+        {
+          href: '/search',
+          label: 'Search',
+          icon: Search,
+          iconColor: 'text-pink-600 dark:text-pink-400',
+          bgColor: 'bg-pink-500/10 dark:bg-pink-500/15',
+          activeBg: 'bg-pink-500/15 dark:bg-pink-500/20',
+          activeText: 'text-pink-600 dark:text-pink-400 font-bold',
         },
       ],
     },
@@ -328,7 +344,7 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
     },
   ]
 
-  const avatar = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
+  const avatar = actor?.avatar || getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
 
   return (
     <aside className="sticky top-0 flex h-screen w-64 flex-col justify-between border-r border-border bg-card p-3.5 shadow-sm">
@@ -529,33 +545,49 @@ export function SidebarNav({ onOpenPostComposer }: SidebarNavProps) {
           </div>
         </div>
 
-        {/* Account: User Avatar & Destructive Sign Out */}
-        <div className="flex items-center justify-between pt-1">
-          <Link href="/profile" className="flex items-center gap-2 min-w-0 group">
+        {/* Account: User Avatar, Profile Switcher & Destructive Sign Out */}
+        <div className="flex items-center justify-between pt-1 gap-1">
+          <Link href="/profile" className="flex items-center gap-2 min-w-0 flex-1 group">
             <div className="relative size-8 shrink-0 overflow-hidden rounded-full ring-1.5 ring-purple-500/30">
               <Image src={avatar} alt="User Avatar" fill className="object-cover" />
             </div>
             <div className="min-w-0">
               <p className="truncate text-xs font-bold text-slate-800 dark:text-slate-100 group-hover:text-purple-600 dark:group-hover:text-purple-400">
-                {userProfile?.name || 'My Account'}
+                {actor?.isSubProfile ? actor.name : (userProfile?.name || 'My Account')}
               </p>
               <p className="truncate text-[10px] text-muted-foreground">
-                {userProfile?.username ? `@${userProfile.username}` : user?.email?.split('@')[0]}
+                {actor?.isSubProfile ? `@${actor.username || 'sub'}` : (userProfile?.username ? `@${userProfile.username}` : user?.email?.split('@')[0])}
               </p>
             </div>
           </Link>
+
+          {/* Profile Switcher Trigger */}
+          <button
+            type="button"
+            onClick={() => setIsProfileSwitcherOpen(true)}
+            title="Switch Profile"
+            aria-label="Switch Profile"
+            className="flex size-7 items-center justify-center rounded-lg bg-purple-500/10 text-purple-600 hover:bg-purple-500/20 dark:text-purple-400 transition-colors shrink-0"
+          >
+            <ArrowLeftRight className="size-3.5 stroke-[2.2]" />
+          </button>
 
           <button
             type="button"
             onClick={logout}
             title="Sign Out"
             aria-label="Sign Out"
-            className="flex size-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 dark:text-rose-400 transition-colors"
+            className="flex size-7 items-center justify-center rounded-lg bg-rose-500/10 text-rose-600 hover:bg-rose-500/20 dark:text-rose-400 transition-colors shrink-0"
           >
             <LogOut className="size-3.5 stroke-[2.2]" />
           </button>
         </div>
       </div>
+
+      <ProfileSwitcherModal
+        isOpen={isProfileSwitcherOpen}
+        onClose={() => setIsProfileSwitcherOpen(false)}
+      />
     </aside>
   )
 }

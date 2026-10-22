@@ -115,12 +115,8 @@ export function LinkPreviewCard({
   const description = isDescError
     ? isInstagramReelOrVideo
       ? 'Preview unavailable'
-      : isInstagram
-      ? 'View post on Instagram'
-      : isFacebook
-      ? 'View post on Facebook'
-      : `Visit ${domain}`
-    : rawDesc
+      : 'Open this link to view the shared content.'
+    : rawDesc || 'Open this link to view the shared content.'
 
   // Guard: If it is an Instagram Reel or Video, but the imageUrl is an invalid photo endpoint (/p/.../media),
   // ignore it so we never render a 404 image or empty box.

@@ -3,12 +3,57 @@
  * Mirrors the mobile app logic from imageResolution.ts and locationUtils.ts.
  */
 
-export function getUserAvatar(user: any, publicProfiles?: Record<string, any>): string {
+/**
+ * Transforms Cloudinary image URLs to compressed dimensions:
+ * - 'feed': w_600,q_auto,f_auto
+ * - 'avatar': w_120,c_fill,q_auto,f_auto
+ * - 'thumbnail': w_300,c_fill,q_auto,f_auto
+ * - 'full': w_1080,q_auto,f_auto
+ */
+export function optimizeCloudinaryUrl(
+  url: string | undefined | null,
+  type: 'feed' | 'avatar' | 'thumbnail' | 'full' | string = 'feed'
+): string {
+  if (!url || typeof url !== 'string') return ''
+  const trimmed = url.trim()
+  if (!trimmed.includes('res.cloudinary.com') || !trimmed.includes('/image/upload/')) {
+    return trimmed
+  }
+
+  const transform =
+    type === 'avatar'
+      ? 'w_120,c_fill,q_auto,f_auto'
+      : type === 'thumbnail'
+      ? 'w_300,c_fill,q_auto,f_auto'
+      : type === 'full'
+      ? 'w_1080,q_auto,f_auto'
+      : 'w_600,q_auto,f_auto'
+
+  if (trimmed.includes(`/image/upload/${transform}/`)) {
+    return trimmed
+  }
+
+  return trimmed.replace(
+    /\/image\/upload\/(?:[a-z]_[a-zA-Z0-9_,-]+\/)?(.*)/,
+    (_, rest) => `/image/upload/${transform}/${rest}`
+  )
+}
+
+export function getUserAvatar(user: any, publicProfiles?: Record<string, any>, publicSubProfiles?: Record<string, any>): string {
   if (!user) return ''
-  if (typeof user === 'string') return user.trim()
+  if (typeof user === 'string') return optimizeCloudinaryUrl(user.trim(), 'avatar')
+
+  // If this user/post object belongs to a sub-profile, NEVER fall back to primary user publicProfiles[uid]!
+  const isSubProfile = Boolean(
+    (user.profileId && user.profileId !== 'default') ||
+    (user.authorProfileId && user.authorProfileId !== 'default') ||
+    user.isSubProfile === true
+  )
 
   // 1. Direct user object fields (custom upload > Google photoURL)
   const directCandidates = [
+    user.authorAvatar,
+    user.publicProfileImage,
     user.profileImage,
     user.avatar,
     user.photoURL,
@@ -22,11 +67,25 @@ export function getUserAvatar(user: any, publicProfiles?: Record<string, any>): 
 
   for (const c of directCandidates) {
     if (typeof c === 'string' && c.trim().length > 0) {
-      return c.trim()
+      return optimizeCloudinaryUrl(c.trim(), 'avatar')
     }
   }
 
-  // 2. Check publicProfiles map if userId is available
+  // If this is a sub-profile, check publicSubProfiles if available, but DO NOT fallback to publicProfiles[uid]
+  const subProfId = (user.profileId && user.profileId !== 'default' ? user.profileId : user.authorProfileId) || ''
+  if (isSubProfile) {
+    if (subProfId && publicSubProfiles && publicSubProfiles[subProfId]) {
+      const sProf = publicSubProfiles[subProfId]
+      const sImg = sProf.avatar || sProf.profileImage || ''
+      if (typeof sImg === 'string' && sImg.trim().length > 0) {
+        return optimizeCloudinaryUrl(sImg.trim(), 'avatar')
+      }
+    }
+    // Sub-profile with no custom photo -> return empty string so initial letter renders!
+    return ''
+  }
+
+  // 2. Check publicProfiles map if userId is available (only for primary profiles)
   const uid = user.userId || user.uid || user.id || ''
   if (uid && publicProfiles && publicProfiles[uid]) {
     const prof = publicProfiles[uid]
@@ -40,7 +99,7 @@ export function getUserAvatar(user: any, publicProfiles?: Record<string, any>): 
       prof.profilePic ||
       ''
     if (typeof pImg === 'string' && pImg.trim().length > 0) {
-      return pImg.trim()
+      return optimizeCloudinaryUrl(pImg.trim(), 'avatar')
     }
   }
 
@@ -97,7 +156,7 @@ export function getBusinessPhoto(
       if (values.length > 0) {
         const first = values[0] as any
         const photo = first?.imageUrl || first?.url || first?.photoUrl || first?.photoURL || ''
-        if (typeof photo === 'string' && photo.trim().length > 0) return photo.trim()
+        if (typeof photo === 'string' && photo.trim().length > 0) return optimizeCloudinaryUrl(photo.trim(), 'thumbnail')
       }
     }
   }
@@ -107,17 +166,18 @@ export function getBusinessPhoto(
 
 export function getPostMainImage(post: any): string {
   if (!post) return ''
+  let raw = ''
   if (Array.isArray(post.imageUrls) && post.imageUrls.length > 0) {
     const firstValid = post.imageUrls.find((url: any) => typeof url === 'string' && url.trim().length > 0)
-    if (firstValid) return firstValid.trim()
+    if (firstValid) raw = firstValid.trim()
   }
-  if (post.imageUrl && typeof post.imageUrl === 'string' && post.imageUrl.trim().length > 0) {
-    return post.imageUrl.trim()
+  if (!raw && post.imageUrl && typeof post.imageUrl === 'string' && post.imageUrl.trim().length > 0) {
+    raw = post.imageUrl.trim()
   }
-  if (post.event?.imageUrl && typeof post.event.imageUrl === 'string' && post.event.imageUrl.trim().length > 0) {
-    return post.event.imageUrl.trim()
+  if (!raw && post.event?.imageUrl && typeof post.event.imageUrl === 'string' && post.event.imageUrl.trim().length > 0) {
+    raw = post.event.imageUrl.trim()
   }
-  return ''
+  return raw ? optimizeCloudinaryUrl(raw, 'feed') : ''
 }
 
 /**

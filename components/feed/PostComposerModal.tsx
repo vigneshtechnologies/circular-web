@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import { useAuth } from '@/context/AuthContext'
-import { ref, push, set } from 'firebase/database'
+import { ref, push, set, get } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
 import {
@@ -44,7 +44,7 @@ import {
   Users,
   Lock,
 } from 'lucide-react'
-import { getActiveProfileId } from '@/lib/profileService'
+import { getActiveProfileId, resolveActiveAuthorIdentity } from '@/lib/profileService'
 
 type PostFormat =
   | 'selection'
@@ -244,8 +244,12 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
     try {
       const now = Date.now()
       const userLoc = area.trim() || getUserCommunityLocation(userProfile)
-      const uName = userProfile?.name || user.displayName || 'Member'
-      const activeProfileId = getActiveProfileId()
+      const authorIdentity = await resolveActiveAuthorIdentity(user.uid)
+      const uName = authorIdentity.authorName
+      const uImage = authorIdentity.authorAvatar
+      const activeProfileId = authorIdentity.profileId
+      const authorProfileId = authorIdentity.authorProfileId
+      const authorUsername = authorIdentity.authorUsername
 
       if (selectedFormat === 'normal') {
         if (!text.trim() && imageUrls.length === 0) {
@@ -256,12 +260,19 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           id: postRef.key as string,
           userId: user.uid,
           userName: uName,
-          businessName: userProfile?.businessName || undefined,
+          publicName: uName,
+          authorName: uName,
+          profileImage: uImage || undefined,
+          publicProfileImage: uImage || undefined,
+          authorAvatar: uImage || undefined,
+          authorUsername: authorUsername || undefined,
+          businessName: authorIdentity.businessName || userProfile?.businessName || undefined,
           text: text.trim(),
           category: 'General',
           area: userLoc,
           audience,
-          profileId: activeProfileId || undefined,
+          profileId: activeProfileId,
+          authorProfileId,
           imageUrls: imageUrls.length > 0 ? imageUrls : undefined,
           imageUrl: imageUrls[0] || undefined,
           imageCount: imageUrls.length,
@@ -285,12 +296,19 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           id: postRef.key as string,
           userId: user.uid,
           userName: uName,
-          businessName: userProfile?.businessName || undefined,
+          publicName: uName,
+          authorName: uName,
+          profileImage: uImage || undefined,
+          publicProfileImage: uImage || undefined,
+          authorAvatar: uImage || undefined,
+          authorUsername: authorUsername || undefined,
+          businessName: authorIdentity.businessName || userProfile?.businessName || undefined,
           text: text.trim() || undefined,
           category,
           area: userLoc,
           audience,
-          profileId: activeProfileId || undefined,
+          profileId: activeProfileId,
+          authorProfileId,
           postType: 'link',
           linkPreview: preview,
           createdAt: now,
@@ -305,7 +323,15 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           id: postRef.key as string,
           userId: user.uid,
           userName: uName,
-          businessName: userProfile?.businessName || undefined,
+          publicName: uName,
+          authorName: uName,
+          profileImage: uImage || undefined,
+          publicProfileImage: uImage || undefined,
+          authorAvatar: uImage || undefined,
+          authorUsername: authorUsername || undefined,
+          profileId: activeProfileId,
+          authorProfileId,
+          businessName: authorIdentity.businessName || userProfile?.businessName || undefined,
           text: text.trim() || undefined,
           category: 'Events',
           area: userLoc,
@@ -334,6 +360,15 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           id: postRef.key as string,
           userId: user.uid,
           userName: uName,
+          publicName: uName,
+          authorName: uName,
+          profileImage: uImage || undefined,
+          publicProfileImage: uImage || undefined,
+          authorAvatar: uImage || undefined,
+          authorUsername: authorUsername || undefined,
+          businessName: authorIdentity.businessName || userProfile?.businessName || undefined,
+          profileId: activeProfileId,
+          authorProfileId,
           text: text.trim() || undefined,
           category: 'General',
           area: userLoc,
@@ -376,7 +411,15 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           id: postRef.key as string,
           userId: user.uid,
           userName: uName,
-          businessName: userProfile?.businessName || undefined,
+          publicName: uName,
+          authorName: uName,
+          profileImage: uImage || undefined,
+          publicProfileImage: uImage || undefined,
+          authorAvatar: uImage || undefined,
+          authorUsername: authorUsername || undefined,
+          profileId: activeProfileId,
+          authorProfileId,
+          businessName: authorIdentity.businessName || userProfile?.businessName || undefined,
           category,
           area: userLoc,
           postType: 'smart',
@@ -401,6 +444,14 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
           id: needRef.key as string,
           userId: user.uid,
           userName: uName,
+          publicName: uName,
+          authorName: uName,
+          profileImage: uImage || undefined,
+          publicProfileImage: uImage || undefined,
+          authorAvatar: uImage || undefined,
+          authorUsername: authorUsername || undefined,
+          profileId: activeProfileId,
+          authorProfileId,
           title: smartTitle.trim(),
           category,
           urgency: needUrgency,
@@ -415,7 +466,16 @@ export function PostComposerModal({ isOpen, onClose, onSuccess }: PostComposerMo
         await set(jobRef, {
           id: jobRef.key as string,
           userId: user.uid,
-          businessName: jobBizName.trim() || userProfile?.businessName || uName,
+          userName: uName,
+          publicName: uName,
+          authorName: uName,
+          profileImage: uImage || undefined,
+          publicProfileImage: uImage || undefined,
+          authorAvatar: uImage || undefined,
+          authorUsername: authorUsername || undefined,
+          profileId: activeProfileId,
+          authorProfileId,
+          businessName: jobBizName.trim() || authorIdentity.businessName || userProfile?.businessName || uName,
           title: jobTitle.trim(),
           category,
           jobType,

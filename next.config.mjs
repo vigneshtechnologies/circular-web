@@ -24,6 +24,20 @@ const nextConfig = {
       },
     ]
   },
+  async redirects() {
+    return [
+      {
+        source: '/profile/:id',
+        destination: '/user/:id',
+        permanent: true,
+      },
+      {
+        source: '/u/:id',
+        destination: '/user/:id',
+        permanent: true,
+      },
+    ]
+  },
 }
 
 export default nextConfig

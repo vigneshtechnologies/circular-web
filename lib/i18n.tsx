@@ -10,6 +10,8 @@ export interface TranslationDictionary {
   navNearby: string
   navCreate: string
   navNotifications: string
+  navSearch: string
+  navMessages: string
   navProfile: string
   navFollowing: string
   navJobs: string
@@ -25,6 +27,15 @@ export interface TranslationDictionary {
   noFollowingPosts: string
   noNearbyPosts: string
   refreshFeed: string
+
+  // Photos Gallery
+  photos: string
+  allPhotos: string
+  postPhotos: string
+  profilePictures: string
+  noPhotosYet: string
+  viewPost: string
+  uploadPhoto: string
 
   // Create Post
   whatsOnYourMind: string
@@ -78,6 +89,8 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
     navNearby: 'Nearby',
     navCreate: 'Create',
     navNotifications: 'Alerts',
+    navSearch: 'Search',
+    navMessages: 'Messages',
     navProfile: 'Profile',
     navFollowing: 'Following',
     navJobs: 'Jobs',
@@ -92,6 +105,14 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
     noFollowingPosts: 'No posts from people you follow yet. Discover people in For You!',
     noNearbyPosts: 'No local posts found in this radius. Try widening your radius or exploring nearby.',
     refreshFeed: 'Refresh feed',
+
+    photos: 'Photos',
+    allPhotos: 'All Photos',
+    postPhotos: 'Timeline Photos',
+    profilePictures: 'Profile Pictures',
+    noPhotosYet: 'No photos yet',
+    viewPost: 'View Post',
+    uploadPhoto: 'Upload Photo',
 
     whatsOnYourMind: "What's on your mind?",
     postButton: 'Post',
@@ -139,6 +160,8 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
     navNearby: 'அருகில்',
     navCreate: 'உருவாக்கு',
     navNotifications: 'அறிவிப்புகள்',
+    navSearch: 'தேடு',
+    navMessages: 'செய்திகள்',
     navProfile: 'சுயவிவரம்',
     navFollowing: 'பின்பற்றுபவை',
     navJobs: 'வேலைகள்',
@@ -153,6 +176,14 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
     noFollowingPosts: 'நீங்கள் பின்தொடரும் கணக்குகளிலிருந்து புதிய பதிவுகள் இல்லை.',
     noNearbyPosts: 'உங்கள் பகுதியில் பதிவுகள் இல்லை.',
     refreshFeed: 'புதுப்பிக்கவும்',
+
+    photos: 'புகைப்படங்கள்',
+    allPhotos: 'அனைத்து புகைப்படங்கள்',
+    postPhotos: 'பதிவு புகைப்படங்கள்',
+    profilePictures: 'சுயவிவரப் படங்கள்',
+    noPhotosYet: 'இன்னும் புகைப்படங்கள் இல்லை',
+    viewPost: 'பதிவைப் பார்க்க',
+    uploadPhoto: 'புகைப்படம் பதிவேற்றுக',
 
     whatsOnYourMind: 'உங்கள் மனதில் என்ன தோன்றுகிறது?',
     postButton: 'பதிவிடு',
@@ -200,6 +231,8 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
     navNearby: 'आस-पास',
     navCreate: 'बनाएं',
     navNotifications: 'सूचनाएं',
+    navSearch: 'खोजें',
+    navMessages: 'संदेश',
     navProfile: 'प्रोफ़ाइल',
     navFollowing: 'फॉलोइंग',
     navJobs: 'नौकरियां',
@@ -214,6 +247,14 @@ export const translations: Record<AppLanguage, TranslationDictionary> = {
     noFollowingPosts: 'जिन लोगों को आप फ़ॉलो करते हैं उनकी कोई नई पोस्ट नहीं है।',
     noNearbyPosts: 'इस क्षेत्र में कोई पोस्ट नहीं मिली।',
     refreshFeed: 'रिफ्रेश करें',
+
+    photos: 'फ़ोटो',
+    allPhotos: 'सभी फ़ोटो',
+    postPhotos: 'पोस्ट फ़ोटो',
+    profilePictures: 'प्रोफ़ाइल फ़ोटो',
+    noPhotosYet: 'अभी कोई फ़ोटो नहीं है',
+    viewPost: 'पोस्ट देखें',
+    uploadPhoto: 'फ़ोटो अपलोड करें',
 
     whatsOnYourMind: 'आपके मन में क्या है?',
     postButton: 'पोस्ट करें',

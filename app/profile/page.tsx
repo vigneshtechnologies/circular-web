@@ -15,9 +15,19 @@ import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { getUserAvatar } from '@/lib/imageUtils'
-import { MapPin, Edit3, Settings, Sparkles, X, Shield, Share2, Check, LayoutGrid, List, FileText, Briefcase, Lock, Globe, Users } from 'lucide-react'
+import { MapPin, Edit3, Settings, Sparkles, X, Shield, Share2, Check, LayoutGrid, List, FileText, Briefcase, Lock, Globe, Users, Image as ImageIcon, Heart, MessageCircle } from 'lucide-react'
 import { ProfileSwitcherModal } from '@/components/profile/ProfileSwitcherModal'
-import { getActiveProfileId } from '@/lib/profileService'
+import ProfilePhotoLightbox from '@/components/profile/ProfilePhotoLightbox'
+import {
+  getActiveProfileId,
+  setActiveProfileId,
+  onActiveProfileChanged,
+  isPostBelongingToProfile,
+  getUserProfiles,
+  extractProfilePhotos,
+  ProfilePhotoItem,
+} from '@/lib/profileService'
+import { SubProfile } from '@/lib/types'
 import { useTranslation } from '@/lib/i18n'
 
 const VIEW_PREF_KEY = 'circular_profile_view'
@@ -26,15 +36,34 @@ export default function ProfilePage() {
   const { user, userProfile, isAdmin, refreshProfile, loading, publicProfiles } = useAuth()
   const { t } = useTranslation()
   const [isProfileSwitcherOpen, setIsProfileSwitcherOpen] = useState(false)
-  const [activeProfileId, setActiveProfileId] = useState<string | null>(null)
+  const [activeProfileId, setActiveProfileIdState] = useState<string>('default')
+  const [activeSubProfile, setActiveSubProfile] = useState<SubProfile | null>(null)
   const [isPrivateAccount, setIsPrivateAccount] = useState(false)
-  const [activeTab, setActiveTab] = useState<'posts' | 'businesses'>('posts')
+  const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'businesses'>('posts')
+  const [photosFilter, setPhotosFilter] = useState<'all' | 'posts' | 'profile'>('all')
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0)
   const [myPosts, setMyPosts] = useState<Post[]>([])
   const [myBusinesses, setMyBusinesses] = useState<BusinessProfile[]>([])
   const [followersCount, setFollowersCount] = useState(0)
   const [followingCount, setFollowingCount] = useState(0)
   const [viewMode, setViewMode] = useState<'feed' | 'grid'>('grid')
   const [selectedPostId, setSelectedPostId] = useState<string | null>(null)
+
+  const effectiveProfile = activeSubProfile || userProfile
+  const profilePhotos = React.useMemo(() => {
+    return extractProfilePhotos(myPosts, effectiveProfile, activeProfileId)
+  }, [myPosts, effectiveProfile, activeProfileId])
+
+  const filteredPhotos = React.useMemo(() => {
+    if (photosFilter === 'posts') {
+      return profilePhotos.filter((p) => p.type === 'post')
+    }
+    if (photosFilter === 'profile') {
+      return profilePhotos.filter((p) => p.type === 'profile' || p.type === 'cover')
+    }
+    return profilePhotos
+  }, [profilePhotos, photosFilter])
 
   const [isEditOpen, setIsEditOpen] = useState(false)
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
@@ -66,74 +95,146 @@ export default function ProfilePage() {
   }, [viewMode])
 
   useEffect(() => {
-    setActiveProfileId(getActiveProfileId())
-    if (userProfile) {
-      setName(userProfile.name || '')
-      setUsername(userProfile.username || '')
-      setBio(userProfile.bio || '')
-      setArea(userProfile.area || '')
-      setPhone(userProfile.phone || '')
-      setPhotoURL(userProfile.photoURL || userProfile.profileImage || '')
-      setIsPrivateAccount(Boolean(userProfile.isPrivate || (userProfile as any).accountPrivacy === 'private'))
+    const currentId = getActiveProfileId() || 'default'
+    setActiveProfileIdState(currentId)
+
+    if (user) {
+      getUserProfiles(user.uid).then((profs) => {
+        const found = profs.find((p) => p.id === currentId) || null
+        setActiveSubProfile(found)
+        if (found) {
+          setName(found.name || '')
+          setUsername(found.handle || (found as any).username || '')
+          setBio(found.bio || '')
+          setArea(found.area || '')
+          setPhone(found.phone || '')
+          setPhotoURL(found.avatarUrl || (found as any).avatar || '')
+          setIsPrivateAccount(Boolean(found.isPrivate))
+        } else if (userProfile) {
+          setName(userProfile.name || '')
+          setUsername(userProfile.username || '')
+          setBio(userProfile.bio || '')
+          setArea(userProfile.area || '')
+          setPhone(userProfile.phone || '')
+          setPhotoURL(userProfile.photoURL || userProfile.profileImage || '')
+          setIsPrivateAccount(Boolean(userProfile.isPrivate || (userProfile as any).accountPrivacy === 'private'))
+        }
+      })
     }
-  }, [userProfile])
+  }, [user, userProfile])
+
+  const loadUserContent = async (overrideProfileId?: string) => {
+    if (!user) return
+    const pid = overrideProfileId !== undefined ? overrideProfileId : (activeProfileId || 'default')
+    try {
+      // Fetch my posts
+      const pSnap = await get(query(ref(db, 'posts'), orderByChild('userId'), equalTo(user.uid))).catch(() => null)
+      if (pSnap && pSnap.exists()) {
+        const list: Post[] = []
+        pSnap.forEach((c) => {
+          list.push({ id: c.key as string, ...c.val() })
+        })
+        setMyPosts(
+          list
+            .filter((post) => isPostBelongingToProfile(post, pid, user.uid))
+            .sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0))
+        )
+      } else {
+        setMyPosts([])
+      }
+
+      // Fetch my businesses
+      const bSnap = await get(query(ref(db, 'businessProfiles'), orderByChild('userId'), equalTo(user.uid))).catch(() => null)
+      if (bSnap && bSnap.exists()) {
+        const list: BusinessProfile[] = []
+        bSnap.forEach((c) => {
+          list.push({ id: c.key as string, ...c.val() })
+        })
+        setMyBusinesses(list)
+      }
+    } catch (e) {
+      console.error('Error fetching user content:', e)
+    }
+  }
+
+  useEffect(() => {
+    const unsub = onActiveProfileChanged(async (newId) => {
+      setActiveProfileIdState(newId)
+      if (user) {
+        const profs = await getUserProfiles(user.uid)
+        const found = profs.find((p) => p.id === newId) || null
+        setActiveSubProfile(found)
+      }
+      loadUserContent(newId)
+    })
+    return () => unsub()
+  }, [user])
 
   const handleTogglePrivacy = async () => {
     if (!user) return
     const nextVal = !isPrivateAccount
     setIsPrivateAccount(nextVal)
     try {
-      await update(ref(db, `users/${user.uid}`), {
-        isPrivate: nextVal,
-        accountPrivacy: nextVal ? 'private' : 'everyone',
-      })
-      await update(ref(db, `publicProfiles/${user.uid}`), {
-        isPrivate: nextVal,
-        accountPrivacy: nextVal ? 'private' : 'everyone',
-      })
-      await refreshProfile()
+      if (activeSubProfile && activeProfileId !== 'default') {
+        const subId = activeSubProfile.id
+        await update(ref(db), {
+          [`userSubProfiles/${user.uid}/${subId}/isPrivate`]: nextVal,
+          [`users/${user.uid}/subProfiles/${subId}/isPrivate`]: nextVal,
+          [`publicProfiles/${subId}/isPrivate`]: nextVal,
+          [`publicProfiles/${subId}/accountPrivacy`]: nextVal ? 'private' : 'everyone',
+        })
+        setActiveSubProfile((prev) => prev ? { ...prev, isPrivate: nextVal } : null)
+      } else {
+        await update(ref(db, `users/${user.uid}`), {
+          isPrivate: nextVal,
+          accountPrivacy: nextVal ? 'private' : 'everyone',
+        })
+        await update(ref(db, `publicProfiles/${user.uid}`), {
+          isPrivate: nextVal,
+          accountPrivacy: nextVal ? 'private' : 'everyone',
+        })
+        await refreshProfile()
+      }
     } catch (err) {
       console.error('Failed to update account privacy:', err)
     }
   }
 
-
   useEffect(() => {
     if (!user) return
 
     // Followers / Following counts
-    const unsubFollowers = onValue(ref(db, `followers/${user.uid}`), (snap) => {
-      setFollowersCount(snap.exists() ? Object.keys(snap.val()).length : 0)
-    })
-    const unsubFollowing = onValue(ref(db, `following/${user.uid}`), (snap) => {
-      setFollowingCount(snap.exists() ? Object.keys(snap.val()).length : 0)
-    })
+    const followersPath =
+      !activeProfileId || activeProfileId === 'default'
+        ? `followers/${user.uid}`
+        : `subProfileFollowers/${user.uid}/${activeProfileId}`
 
-    const loadUserContent = async () => {
-      try {
-        // Fetch my posts
-        const pSnap = await get(query(ref(db, 'posts'), orderByChild('userId'), equalTo(user.uid))).catch(() => null)
-        if (pSnap && pSnap.exists()) {
-          const list: Post[] = []
-          pSnap.forEach((c) => {
-            list.push({ id: c.key as string, ...c.val() })
-          })
-          setMyPosts(list.sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0)))
-        }
-
-        // Fetch my businesses
-        const bSnap = await get(query(ref(db, 'businessProfiles'), orderByChild('userId'), equalTo(user.uid))).catch(() => null)
-        if (bSnap && bSnap.exists()) {
-          const list: BusinessProfile[] = []
-          bSnap.forEach((c) => {
-            list.push({ id: c.key as string, ...c.val() })
-          })
-          setMyBusinesses(list)
-        }
-      } catch (e) {
-        console.error('Error fetching user content:', e)
+    const unsubFollowers = onValue(ref(db, followersPath), async (snap) => {
+      if (snap.exists()) {
+        setFollowersCount(Object.keys(snap.val()).length)
+      } else if (activeProfileId && activeProfileId !== 'default') {
+        const altSnap = await get(ref(db, `followers/${activeProfileId}`))
+        setFollowersCount(altSnap.exists() ? Object.keys(altSnap.val()).length : 0)
+      } else {
+        setFollowersCount(0)
       }
-    }
+    })
+
+    const followingPath =
+      !activeProfileId || activeProfileId === 'default'
+        ? `following/${user.uid}`
+        : `subProfileFollowing/${user.uid}/${activeProfileId}`
+
+    const unsubFollowing = onValue(ref(db, followingPath), async (snap) => {
+      if (snap.exists()) {
+        setFollowingCount(Object.keys(snap.val()).length)
+      } else if (activeProfileId && activeProfileId !== 'default') {
+        const altSnap = await get(ref(db, `following/${activeProfileId}`))
+        setFollowingCount(altSnap.exists() ? Object.keys(altSnap.val()).length : 0)
+      } else {
+        setFollowingCount(0)
+      }
+    })
 
     loadUserContent()
 
@@ -141,7 +242,7 @@ export default function ProfilePage() {
       unsubFollowers()
       unsubFollowing()
     }
-  }, [user])
+  }, [user, activeProfileId])
 
   const handleSaveProfile = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -149,18 +250,73 @@ export default function ProfilePage() {
 
     setSaving(true)
     try {
-      const updatedData = {
-        name: name.trim(),
-        username: username.trim().toLowerCase(),
-        bio: bio.trim(),
-        area: area.trim(),
-        phone: phone.trim(),
-        photoURL: photoURL.trim(),
-        profileImage: photoURL.trim(),
+      const isSub = Boolean(activeSubProfile && activeProfileId !== 'default')
+
+      if (isSub && activeSubProfile) {
+        const subId = activeSubProfile.id
+        const subData = {
+          ...activeSubProfile,
+          id: subId,
+          uid: subId,
+          ownerUid: user.uid,
+          isSubProfile: true,
+          name: name.trim(),
+          publicName: name.trim(),
+          handle: username.trim().toLowerCase(),
+          username: username.trim().toLowerCase(),
+          bio: bio.trim(),
+          area: area.trim(),
+          phone: phone.trim(),
+          avatarUrl: photoURL.trim() || activeSubProfile.avatarUrl || '',
+          avatar: photoURL.trim() || (activeSubProfile as any).avatar || '',
+          updatedAt: Date.now(),
+        }
+
+        await update(ref(db), {
+          [`userSubProfiles/${user.uid}/${subId}`]: subData,
+          [`users/${user.uid}/subProfiles/${subId}`]: subData,
+          [`publicProfiles/${subId}`]: {
+            uid: subId,
+            id: subId,
+            ownerUid: user.uid,
+            isSubProfile: true,
+            name: name.trim(),
+            publicName: name.trim(),
+            username: username.trim().toLowerCase(),
+            bio: bio.trim(),
+            profileImage: photoURL.trim() || activeSubProfile.avatarUrl || '',
+            area: area.trim(),
+            phone: phone.trim(),
+            updatedAt: Date.now(),
+          },
+          [`publicSubProfiles/${subId}`]: {
+            uid: subId,
+            id: subId,
+            ownerUid: user.uid,
+            isSubProfile: true,
+            name: name.trim(),
+            username: username.trim().toLowerCase(),
+            profileImage: photoURL.trim() || activeSubProfile.avatarUrl || '',
+            bio: bio.trim(),
+            updatedAt: Date.now(),
+          },
+        })
+
+        setActiveSubProfile(subData as any)
+      } else {
+        const updatedData = {
+          name: name.trim(),
+          username: username.trim().toLowerCase(),
+          bio: bio.trim(),
+          area: area.trim(),
+          phone: phone.trim(),
+          photoURL: photoURL.trim(),
+          profileImage: photoURL.trim(),
+        }
+        await update(ref(db, `users/${user.uid}`), updatedData)
+        await update(ref(db, `publicProfiles/${user.uid}`), updatedData)
+        await refreshProfile()
       }
-      await update(ref(db, `users/${user.uid}`), updatedData)
-      await update(ref(db, `publicProfiles/${user.uid}`), updatedData)
-      await refreshProfile()
       setIsEditOpen(false)
     } catch (e) {
       console.error(e)
@@ -171,7 +327,8 @@ export default function ProfilePage() {
 
   const handleShareProfile = async () => {
     if (!user) return
-    const canonicalUrl = `https://circularapp.in/user/${user.uid}`
+    const shareId = activeSubProfile?.id || user.uid
+    const canonicalUrl = `https://circularapp.in/user/${shareId}`
     try {
       if (navigator.clipboard) {
         await navigator.clipboard.writeText(canonicalUrl)
@@ -197,6 +354,10 @@ export default function ProfilePage() {
 
   const avatarUrl = getUserAvatar(userProfile, publicProfiles) || '/circular-logo.png'
   const displayLocality = getUserCommunityLocation(userProfile)
+  const displayName = activeSubProfile?.name || userProfile?.name || 'Circular Member'
+  const displayHandle = activeSubProfile?.handle || userProfile?.username || 'member'
+  const displayBio = activeSubProfile?.bio || userProfile?.bio || ''
+  const displayAvatar = activeSubProfile?.avatarUrl || avatarUrl
 
   return (
     <AppShell currentArea={displayLocality}>
@@ -210,20 +371,20 @@ export default function ProfilePage() {
             <div className="flex items-end gap-4">
               <button
                 type="button"
-                onClick={() => setImageViewerSrc(avatarUrl)}
+                onClick={() => setImageViewerSrc(displayAvatar)}
                 className="group relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-2xl sm:rounded-3xl bg-purple-500/10 ring-4 ring-card shadow-lg focus:outline-none"
                 title="View profile photo"
               >
                 <Image
-                  src={avatarUrl}
-                  alt={userProfile?.name || 'Profile Avatar'}
+                  src={displayAvatar}
+                  alt={displayName}
                   fill
                   className="object-cover transition-transform duration-300 group-hover:scale-105"
                 />
               </button>
               <div className="min-w-0">
                 <div className="flex items-center gap-2">
-                  <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white truncate">{userProfile?.name || 'Circular Member'}</h1>
+                  <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-white truncate">{displayName}</h1>
                   {isAdmin && (
                     <span className="flex items-center gap-1 rounded-full bg-purple-500/10 px-2 py-0.5 text-[10px] font-bold text-purple-600 dark:text-purple-400">
                       <Shield className="size-3" />
@@ -231,7 +392,7 @@ export default function ProfilePage() {
                     </span>
                   )}
                 </div>
-                <p className="text-xs font-semibold text-muted-foreground">@{userProfile?.username || 'member'}</p>
+                <p className="text-xs font-semibold text-muted-foreground">@{displayHandle}</p>
                 <div className="mt-1 flex items-center gap-1 text-xs text-muted-foreground">
                   <MapPin className="size-3.5 text-teal-600 dark:text-teal-400 shrink-0" />
                   <span className="truncate">{displayLocality}</span>
@@ -263,7 +424,24 @@ export default function ProfilePage() {
               </button>
               <button
                 type="button"
-                onClick={() => setIsEditOpen(true)}
+                onClick={() => {
+                  if (activeSubProfile && activeProfileId !== 'default') {
+                    setName(activeSubProfile.name || '')
+                    setUsername(activeSubProfile.handle || (activeSubProfile as any).username || '')
+                    setBio(activeSubProfile.bio || '')
+                    setArea(activeSubProfile.area || '')
+                    setPhone(activeSubProfile.phone || '')
+                    setPhotoURL(activeSubProfile.avatarUrl || (activeSubProfile as any).avatar || '')
+                  } else if (userProfile) {
+                    setName(userProfile.name || '')
+                    setUsername(userProfile.username || '')
+                    setBio(userProfile.bio || '')
+                    setArea(userProfile.area || '')
+                    setPhone(userProfile.phone || '')
+                    setPhotoURL(userProfile.photoURL || userProfile.profileImage || '')
+                  }
+                  setIsEditOpen(true)
+                }}
                 className="flex items-center gap-1.5 rounded-xl border border-border bg-muted/60 px-3.5 py-2 text-xs font-bold text-foreground hover:bg-muted transition-all"
               >
                 <Edit3 className="size-3.5" />
@@ -287,9 +465,9 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          {userProfile?.bio && (
+          {displayBio && (
             <p className="mt-4 text-xs leading-relaxed text-slate-700 dark:text-slate-300 whitespace-pre-line border-t border-border/60 pt-3">
-              {userProfile.bio}
+              {displayBio}
             </p>
           )}
 
@@ -350,6 +528,17 @@ export default function ProfilePage() {
             }`}
           >
             My Posts ({myPosts.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('photos')}
+            className={`border-b-2 px-6 py-3 text-xs font-bold transition-colors ${
+              activeTab === 'photos'
+                ? 'border-blue-600 text-blue-600 dark:border-blue-400 dark:text-blue-400'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t.photos || 'Photos'} ({profilePhotos.length})
           </button>
           <button
             type="button"
@@ -444,6 +633,108 @@ export default function ProfilePage() {
                 )}
               </>
             )
+
+          ) : activeTab === 'photos' ? (
+            /* Photos Tab */
+            <div className="space-y-4">
+              {/* Sub-Filters: All Photos | Timeline Photos | Profile Pictures */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  onClick={() => setPhotosFilter('all')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                    photosFilter === 'all'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  {t.allPhotos || 'All Photos'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotosFilter('posts')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                    photosFilter === 'posts'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  {t.postPhotos || 'Timeline Photos'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotosFilter('profile')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                    photosFilter === 'profile'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  {t.profilePictures || 'Profile Pictures'}
+                </button>
+              </div>
+
+              {filteredPhotos.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center space-y-3">
+                  <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <ImageIcon className="size-6" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    {t.noPhotosYet || 'No photos yet'}
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                    Photos you post or upload to this profile will appear here in your gallery.
+                  </p>
+                  <div>
+                    <Link
+                      href="/"
+                      className="inline-flex items-center gap-1.5 px-4 py-2 bg-primary hover:bg-primary/90 text-white rounded-full text-xs font-semibold shadow transition-colors"
+                    >
+                      <span>{t.uploadPhoto || 'Upload Photo'}</span>
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                  {filteredPhotos.map((photo, idx) => (
+                    <div
+                      key={photo.id || `photo_${idx}`}
+                      onClick={() => {
+                        setSelectedPhotoIndex(idx)
+                        setLightboxOpen(true)
+                      }}
+                      className="relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-muted group shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <img
+                        src={photo.thumbnailUrl || photo.imageUrl}
+                        alt={photo.caption || 'Profile photo'}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 text-white text-xs font-bold">
+                        {Boolean(photo.likesCount) && (
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3.5 h-3.5 fill-white text-white" />
+                            {photo.likesCount}
+                          </span>
+                        )}
+                        {Boolean(photo.commentsCount) && (
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="w-3.5 h-3.5 fill-white text-white" />
+                            {photo.commentsCount}
+                          </span>
+                        )}
+                      </div>
+                      {photo.type === 'profile' && (
+                        <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-blue-600/90 text-white text-[10px] font-bold shadow-sm">
+                          DP
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
           ) : myBusinesses.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center text-xs text-muted-foreground">
@@ -556,13 +847,26 @@ export default function ProfilePage() {
       <ProfileSwitcherModal
         isOpen={isProfileSwitcherOpen}
         onClose={() => setIsProfileSwitcherOpen(false)}
-        onProfileSwitched={(p) => setActiveProfileId(p?.id || null)}
+        onProfileSwitched={(p) => {
+          const newId = p?.id || 'default'
+          setActiveProfileId(newId)
+          setActiveProfileIdState(newId)
+          setActiveSubProfile(p || null)
+          loadUserContent(newId)
+        }}
       />
 
       <ImageViewerModal
         isOpen={Boolean(imageViewerSrc)}
         images={imageViewerSrc ? [imageViewerSrc] : []}
         onClose={() => setImageViewerSrc(null)}
+      />
+
+      <ProfilePhotoLightbox
+        isOpen={lightboxOpen}
+        photos={filteredPhotos}
+        initialIndex={selectedPhotoIndex}
+        onClose={() => setLightboxOpen(false)}
       />
     </AppShell>
   )

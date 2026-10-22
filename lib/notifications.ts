@@ -21,6 +21,7 @@ export type CreateNotificationInput = {
   targetUserId?: string
   screen?: string
   params?: Record<string, any>
+  sendPush?: boolean
 }
 
 const cleanText = (value: string | undefined, fallback: string) => {
@@ -140,6 +141,7 @@ export const createUserNotification = async (input: CreateNotificationInput) => 
       'post_comment',
       'post_comment_reply',
       'business_review',
+      'job_application',
     ])
 
     if (peerPushTypes.has(input.type)) {
@@ -344,5 +346,112 @@ export const notifyBusinessReview = async ({
     businessName: finalBusinessName,
     screen: 'BusinessProfile',
     params: { businessId },
+  })
+}
+
+export const notifyChatMessage = async ({
+  recipientId,
+  senderId,
+  senderName,
+  senderAvatar,
+  messageText,
+  conversationId,
+  messageId,
+}: {
+  recipientId: string
+  senderId: string
+  senderName?: string
+  senderAvatar?: string
+  messageText: string
+  conversationId: string
+  messageId?: string
+}) => {
+  if (!recipientId || recipientId === senderId) return
+
+  const name = cleanText(senderName, 'Someone')
+  const preview = truncateText(messageText, 100)
+  const dedupKey = messageId ? `chat_${senderId}_${messageId}` : undefined
+
+  await createUserNotification({
+    userId: recipientId,
+    type: 'chat_message',
+    dedupKey,
+    title: `Message from ${name}`,
+    body: preview,
+    actorId: senderId,
+    actorName: name,
+    senderAvatar: senderAvatar || '',
+    screen: 'Chat',
+    params: {
+      conversationId,
+      otherUserId: senderId,
+      otherUserName: name,
+      otherUserAvatar: senderAvatar || '',
+    },
+    sendPush: true,
+  })
+}
+
+export const notifyPostCommentReply = async ({
+  commentAuthorId,
+  actorId,
+  actorName,
+  postId,
+  replyText,
+}: {
+  commentAuthorId: string
+  actorId: string
+  actorName?: string
+  postId: string
+  replyText: string
+}) => {
+  if (!commentAuthorId || commentAuthorId === actorId) return
+
+  const finalActorName = actorName || (await getProfileName(actorId))
+  const shortReply = truncateText(replyText, 60)
+
+  await createUserNotification({
+    userId: commentAuthorId,
+    type: 'post_comment_reply',
+    title: 'New reply to your comment',
+    body: `${finalActorName} replied: "${shortReply}"`,
+    actorId,
+    actorName: finalActorName,
+    postId,
+    screen: 'Comments',
+    params: { postId, focusInput: false },
+    sendPush: true,
+  })
+}
+
+export const notifyJobApplication = async ({
+  jobPosterId,
+  applicantId,
+  applicantName,
+  jobId,
+  jobTitle,
+}: {
+  jobPosterId: string
+  applicantId: string
+  applicantName?: string
+  jobId: string
+  jobTitle?: string
+}) => {
+  if (!jobPosterId || jobPosterId === applicantId) return
+
+  const finalApplicantName = applicantName || (await getProfileName(applicantId))
+  const cleanJobTitle = cleanText(jobTitle, 'your job opening')
+
+  await createUserNotification({
+    userId: jobPosterId,
+    type: 'job_application',
+    title: 'New Job Application',
+    body: `${finalApplicantName} applied for ${cleanJobTitle}`,
+    actorId: applicantId,
+    actorName: finalApplicantName,
+    jobId,
+    screen: 'JobDetail',
+    params: { jobId },
+    sendPush: true,
   })
 }

@@ -11,6 +11,7 @@ import {
   revokeResumeAccess,
   updateCandidateStatus,
   isApplicationAccessValid,
+  getApplicationsForJob,
   JobApplicationRecord,
   ApplicationStatus,
 } from '@/lib/jobApplicationService'
@@ -62,43 +63,39 @@ export default function JobApplicationsPage() {
   const loadEmployerData = useCallback(async () => {
     if (!user) return
     try {
-      // Find jobs posted by current user
-      const jobsSnap = await get(
-        query(ref(db, 'jobs'), orderByChild('createdBy'), equalTo(user.uid))
-      ).catch(() => null)
+      // Find jobs posted by current user in both localJobs and jobs
+      const [localJobsSnap, jobsSnap] = await Promise.all([
+        get(query(ref(db, 'localJobs'), orderByChild('createdBy'), equalTo(user.uid))).catch(() => null),
+        get(query(ref(db, 'jobs'), orderByChild('createdBy'), equalTo(user.uid))).catch(() => null),
+      ])
 
-      if (jobsSnap && jobsSnap.exists()) {
-        const jobsList: any[] = []
-        jobsSnap.forEach((child) => {
-          jobsList.push({ id: child.key, ...child.val() })
+      const jobsMap = new Map<string, any>()
+      if (localJobsSnap && localJobsSnap.exists()) {
+        localJobsSnap.forEach((child) => {
+          jobsMap.set(child.key as string, { id: child.key, ...child.val() })
         })
-        setMyPostedJobs(jobsList)
-
-        // For each job, check candidates
-        // Candidates submit under users/${applicantId}/myApplications/${jobId}
-        // In RTDB, employers store status updates at users/${employerId}/candidateStatuses/${applicationId}
-        const candidatesByJob: Record<string, JobApplicationRecord[]> = {}
-
-        // Query all candidate applications for these jobs
-        const usersSnap = await get(ref(db, 'users')).catch(() => null)
-        if (usersSnap && usersSnap.exists()) {
-          const allUsers = usersSnap.val()
-          Object.keys(allUsers).forEach((uid) => {
-            const userApps = allUsers[uid]?.myApplications
-            if (userApps) {
-              Object.keys(userApps).forEach((jId) => {
-                const appRecord: JobApplicationRecord = userApps[jId]
-                if (appRecord.employerId === user.uid) {
-                  if (!candidatesByJob[jId]) candidatesByJob[jId] = []
-                  candidatesByJob[jId].push(appRecord)
-                }
-              })
-            }
-          })
-        }
-
-        setEmployerCandidates(candidatesByJob)
       }
+      if (jobsSnap && jobsSnap.exists()) {
+        jobsSnap.forEach((child) => {
+          if (!jobsMap.has(child.key as string)) {
+            jobsMap.set(child.key as string, { id: child.key, ...child.val() })
+          }
+        })
+      }
+
+      const jobsList = Array.from(jobsMap.values())
+      setMyPostedJobs(jobsList)
+
+      // For each job, fetch candidate applications securely via dedicated jobApplications node
+      const candidatesByJob: Record<string, JobApplicationRecord[]> = {}
+      for (const job of jobsList) {
+        const apps = await getApplicationsForJob(job.id, user.uid)
+        if (apps.length > 0) {
+          candidatesByJob[job.id] = apps
+        }
+      }
+
+      setEmployerCandidates(candidatesByJob)
     } catch (err) {
       console.error('Error loading employer data:', err)
     }
@@ -139,7 +136,8 @@ export default function JobApplicationsPage() {
         application.applicantId,
         application.id,
         application.jobTitle,
-        newStatus
+        newStatus,
+        application.jobId
       )
       setActionSuccess(`Candidate status updated to "${newStatus}".`)
       setTimeout(() => setActionSuccess(null), 3000)
@@ -153,7 +151,11 @@ export default function JobApplicationsPage() {
   const handleCloseVacancy = async (jobId: string) => {
     if (!confirm('Close this vacancy? It will no longer accept new applications.')) return
     try {
-      await update(ref(db, `jobs/${jobId}`), { status: 'closed' })
+      await update(ref(db), {
+        [`jobs/${jobId}/status`]: 'closed',
+        [`localJobs/${jobId}/status`]: 'closed',
+        [`localJobs/${jobId}/updatedAt`]: Date.now(),
+      })
       setActionSuccess('Vacancy marked as closed.')
       setTimeout(() => setActionSuccess(null), 3000)
       loadEmployerData()

@@ -12,6 +12,7 @@ import { PostCard } from '@/components/feed/PostCard'
 import { PostComposerModal } from '@/components/feed/PostComposerModal'
 import { PostCommentsDrawer } from '@/components/feed/PostCommentsDrawer'
 import { StoriesBar } from '@/components/feed/StoriesBar'
+import { onActiveProfileChanged, getEffectiveUid, useActiveActor } from '@/lib/profileService'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { Users, Sparkles, PlusCircle, Loader2, ArrowDown, Store, Compass } from 'lucide-react'
 
@@ -39,20 +40,42 @@ export default function FollowingFeedPage() {
     setFeedLoading(true)
 
     try {
+      const effectiveId = getEffectiveUid(user.uid)
+      const isSub = effectiveId !== user.uid
+
       // Step A: Load all followed account IDs (people + businesses)
       const uidsSet = new Set<string>()
 
       // 1. user following
-      const fSnap = await get(ref(db, `following/${user.uid}`)).catch(() => null)
-      if (fSnap && fSnap.exists()) {
-        const val = fSnap.val()
-        Object.keys(val).forEach((k) => {
-          if (val[k]) uidsSet.add(k)
-        })
+      if (isSub) {
+        const [fSnap, spfSnap] = await Promise.all([
+          get(ref(db, `following/${effectiveId}`)).catch(() => null),
+          get(ref(db, `subProfileFollowing/${user.uid}/${effectiveId}`)).catch(() => null),
+        ])
+        if (fSnap && fSnap.exists()) {
+          const val = fSnap.val()
+          Object.keys(val).forEach((k) => {
+            if (val[k]) uidsSet.add(k)
+          })
+        }
+        if (spfSnap && spfSnap.exists()) {
+          const val = spfSnap.val()
+          Object.keys(val).forEach((k) => {
+            if (val[k]) uidsSet.add(k)
+          })
+        }
+      } else {
+        const fSnap = await get(ref(db, `following/${user.uid}`)).catch(() => null)
+        if (fSnap && fSnap.exists()) {
+          const val = fSnap.val()
+          Object.keys(val).forEach((k) => {
+            if (val[k]) uidsSet.add(k)
+          })
+        }
       }
 
       // 2. business following if separate node
-      const bfSnap = await get(ref(db, `businessFollowing/${user.uid}`)).catch(() => null)
+      const bfSnap = await get(ref(db, `businessFollowing/${effectiveId}`)).catch(() => null)
       if (bfSnap && bfSnap.exists()) {
         const val = bfSnap.val()
         Object.keys(val).forEach((k) => {
@@ -216,6 +239,13 @@ export default function FollowingFeedPage() {
 
   useEffect(() => {
     loadInitialFollowingPosts()
+  }, [loadInitialFollowingPosts])
+
+  useEffect(() => {
+    const unsub = onActiveProfileChanged(() => {
+      loadInitialFollowingPosts()
+    })
+    return () => unsub()
   }, [loadInitialFollowingPosts])
 
   // 3. Infinite scroll observer

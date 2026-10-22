@@ -6,7 +6,10 @@ import { ref, onValue, off, push, set, runTransaction, get } from 'firebase/data
 import { db } from '@/lib/firebase'
 import { PostComment } from '@/lib/types'
 import { useAuth } from '@/context/AuthContext'
+import { resolveActiveAuthorIdentity } from '@/lib/profileService'
 import { notifyPostComment } from '@/lib/notifications'
+import { InlineTranslationAction } from '@/components/feed/InlineTranslationAction'
+import { getAvatarColorInfo } from '@/lib/themeColors'
 import { X, Send, MessageSquare } from 'lucide-react'
 
 interface PostCommentsDrawerProps {
@@ -46,13 +49,22 @@ export function PostCommentsDrawer({ postId, onClose }: PostCommentsDrawerProps)
 
     setSubmitting(true)
     try {
+      const authorIdentity = await resolveActiveAuthorIdentity(user.uid)
+      const isSub = Boolean(authorIdentity.profileId && authorIdentity.profileId !== 'default')
+      const commentUserId = isSub ? authorIdentity.profileId : user.uid
+      const uName = authorIdentity.authorName || userProfile?.name || user.displayName || 'Circular Member'
+      const uAvatar = authorIdentity.authorAvatar || undefined
+
       const commentRef = push(ref(db, `postComments/${postId}`))
       const commentData: PostComment = {
         id: commentRef.key as string,
         postId,
-        userId: user.uid,
-        userName: userProfile?.name || user.displayName || 'Circular Member',
-        userAvatar: userProfile?.photoURL || user.photoURL || undefined,
+        userId: commentUserId,
+        ownerUid: user.uid,
+        userName: uName,
+        userAvatar: uAvatar,
+        profileId: authorIdentity.profileId,
+        authorProfileId: authorIdentity.authorProfileId,
         text: newComment.trim(),
         createdAt: Date.now(),
       }
@@ -62,12 +74,12 @@ export function PostCommentsDrawer({ postId, onClose }: PostCommentsDrawerProps)
 
       get(ref(db, `posts/${postId}`)).then((snap) => {
         const postVal = snap.val()
-        if (postVal?.userId && postVal.userId !== user.uid) {
+        if (postVal?.userId && postVal.userId !== commentUserId) {
           notifyPostComment({
             postId,
             postOwnerId: postVal.userId,
-            actorId: user.uid,
-            actorName: userProfile?.name || user.displayName || 'Circular Member',
+            actorId: commentUserId,
+            actorName: uName,
             commentText: commentData.text,
             commentId: commentData.id,
             postText: postVal.text,
@@ -113,16 +125,27 @@ export function PostCommentsDrawer({ postId, onClose }: PostCommentsDrawerProps)
               No comments yet. Be the first to start the conversation!
             </div>
           ) : (
-            comments.map((c) => (
-              <div key={c.id} className="flex items-start gap-3">
-                <div className="relative size-8 shrink-0 overflow-hidden rounded-full bg-primary/10 ring-1 ring-border">
-                  <Image
-                    src={c.userAvatar || '/circular-logo.png'}
-                    alt={c.userName}
-                    fill
-                    className="object-cover"
-                  />
-                </div>
+            comments.map((c) => {
+              const avatarInfo = getAvatarColorInfo(c.userName || c.userId || c.id)
+              return (
+                <div key={c.id} className="flex items-start gap-3">
+                  <div className="relative size-8 shrink-0 overflow-hidden rounded-full ring-1 ring-border">
+                    {c.userAvatar ? (
+                      <Image
+                        src={c.userAvatar}
+                        alt={c.userName}
+                        fill
+                        className="object-cover"
+                      />
+                    ) : (
+                      <div
+                        className="flex size-full items-center justify-center text-white font-bold text-xs select-none"
+                        style={{ background: `linear-gradient(135deg, ${avatarInfo.gradient[0]}, ${avatarInfo.gradient[1]})` }}
+                      >
+                        {(c.userName || 'C').charAt(0).toUpperCase()}
+                      </div>
+                    )}
+                  </div>
                 <div className="flex-1 rounded-2xl bg-muted/50 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-bold text-slate-900 dark:text-white">{c.userName}</span>
@@ -130,10 +153,10 @@ export function PostCommentsDrawer({ postId, onClose }: PostCommentsDrawerProps)
                       {new Date(c.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </span>
                   </div>
-                  <p className="mt-1 text-xs leading-relaxed text-foreground">{c.text}</p>
+                  <InlineTranslationAction text={c.text} compact className="mt-1" />
                 </div>
               </div>
-            ))
+            )})
           )}
         </div>
 

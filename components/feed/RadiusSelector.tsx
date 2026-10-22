@@ -4,7 +4,7 @@ import React, { useState, useRef, useEffect } from 'react'
 import { CircularRadiusOption, DEFAULT_RADIUS_KM } from '@/lib/locationUtils'
 import { Navigation, ChevronDown, Check, MapPinOff } from 'lucide-react'
 
-const EXACT_RADIUS_OPTIONS: CircularRadiusOption[] = [1, 3, 5, 10, 25]
+const EXACT_RADIUS_OPTIONS: CircularRadiusOption[] = [1, 3, 5, 10, 25, 50]
 
 interface RadiusSelectorProps {
   selectedRadius: CircularRadiusOption

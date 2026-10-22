@@ -6,6 +6,7 @@ import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { useAuth } from '@/context/AuthContext'
+import { useActiveActor, onActiveProfileChanged } from '@/lib/profileService'
 import { AuthPortal } from '@/components/auth/AuthPortal'
 import { AppShell } from '@/components/layout/AppShell'
 import { ref, onValue, off, get, query, limitToLast } from 'firebase/database'
@@ -15,15 +16,17 @@ import { MessageSquare, Search, PlusCircle, User, Sparkles } from 'lucide-react'
 
 export default function MessagesPage() {
   const { user, userProfile, loading } = useAuth()
+  const { actorId, actor } = useActiveActor()
+  const effectiveId = actorId || user?.uid
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [searchQuery, setSearchQuery] = useState('')
   const [isNewChatOpen, setIsNewChatOpen] = useState(false)
   const [usersList, setUsersList] = useState<UserProfile[]>([])
 
   useEffect(() => {
-    if (!user) return
+    if (!effectiveId) return
 
-    const convRef = ref(db, `userConversations/${user.uid}`)
+    const convRef = ref(db, `userConversations/${effectiveId}`)
     const cb = (snap: any) => {
       if (snap.exists()) {
         const list: ChatConversation[] = []
@@ -38,7 +41,7 @@ export default function MessagesPage() {
 
     onValue(convRef, cb)
     return () => off(convRef)
-  }, [user])
+  }, [effectiveId])
 
   const openNewChatDialog = async () => {
     setIsNewChatOpen(true)
@@ -47,7 +50,7 @@ export default function MessagesPage() {
       if (snap.exists()) {
         const list: UserProfile[] = []
         snap.forEach((c) => {
-          if (c.key !== user?.uid) {
+          if (c.key !== effectiveId && c.key !== user?.uid) {
             list.push({ uid: c.key as string, ...c.val() })
           }
         })
@@ -181,7 +184,7 @@ export default function MessagesPage() {
             <h2 className="text-base font-bold text-slate-900 dark:text-white border-b border-border pb-3">Start a Conversation</h2>
             <div className="mt-3 max-h-80 overflow-y-auto space-y-2">
               {usersList.map((u) => {
-                const convId = [user.uid, u.uid].sort().join('_')
+                const convId = [effectiveId, u.uid].sort().join('_')
                 return (
                   <Link
                     key={u.uid}

@@ -17,6 +17,10 @@ import { getUserAvatar } from '@/lib/imageUtils'
 import { notifyFollow } from '@/lib/notifications'
 import { getMutualConnections, MutualConnectionsResult } from '@/lib/peopleDiscoveryService'
 import { getDistanceKm, formatDistanceKm } from '@/lib/locationUtils'
+import { getAvatarColorInfo, FOLLOW_BUTTON_CLASS } from '@/lib/themeColors'
+import { useActiveActor, extractProfilePhotos, ProfilePhotoItem } from '@/lib/profileService'
+import { useTranslation } from '@/lib/i18n'
+import ProfilePhotoLightbox from '@/components/profile/ProfilePhotoLightbox'
 import {
   User,
   MapPin,
@@ -35,6 +39,9 @@ import {
   Users,
   ChevronRight,
   X,
+  Lock,
+  Heart,
+  Image as ImageIcon,
 } from 'lucide-react'
 
 const VIEW_PREF_KEY = 'circular_profile_view'
@@ -49,10 +56,16 @@ export default function UserProfilePage({ params }: PageProps) {
   const router = useRouter()
 
   const { user: currentUser, userProfile, publicProfiles } = useAuth()
-  const isOwnProfile = Boolean(currentUser && currentUser.uid === targetUserId)
+  const { actorId, actor } = useActiveActor()
+  const effectiveFollowerId = actorId || currentUser?.uid
 
   // State
   const [profile, setProfile] = useState<UserProfile | null>(null)
+  const isOwnProfile = Boolean(
+    (currentUser && currentUser.uid === targetUserId) ||
+    (actorId && actorId === targetUserId) ||
+    (profile?.ownerUid && currentUser && profile.ownerUid === currentUser.uid)
+  )
   const [loading, setLoading] = useState(true)
   const [notFound, setNotFound] = useState(false)
 
@@ -63,10 +76,43 @@ export default function UserProfilePage({ params }: PageProps) {
   const [followingCount, setFollowingCount] = useState(0)
 
   // Content State
-  const [activeTab, setActiveTab] = useState<'posts' | 'businesses'>('posts')
+  const { t } = useTranslation()
+  const [activeTab, setActiveTab] = useState<'posts' | 'photos' | 'businesses'>('posts')
+  const [photosFilter, setPhotosFilter] = useState<'all' | 'posts' | 'profile'>('all')
+  const [lightboxOpen, setLightboxOpen] = useState(false)
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState(0)
   const [userPosts, setUserPosts] = useState<Post[]>([])
   const [userBusinesses, setUserBusinesses] = useState<BusinessProfile[]>([])
   const [postsLoading, setPostsLoading] = useState(true)
+
+  const isPrivateAccount = profile?.isPrivate === true
+  const canViewPrivateContent = isOwnProfile || isFollowing
+
+  const visiblePosts = React.useMemo(() => {
+    if (isPrivateAccount && !canViewPrivateContent) return []
+    return userPosts.filter((post) => {
+      if (isOwnProfile) return true
+      if (post.isPrivate === true || post.audience === 'followers') {
+        return isFollowing
+      }
+      return true
+    })
+  }, [userPosts, isOwnProfile, isPrivateAccount, canViewPrivateContent, isFollowing])
+
+  const profilePhotos = React.useMemo(() => {
+    if (isPrivateAccount && !canViewPrivateContent) return []
+    return extractProfilePhotos(userPosts, profile, targetUserId)
+  }, [userPosts, profile, targetUserId, isPrivateAccount, canViewPrivateContent])
+
+  const filteredPhotos = React.useMemo(() => {
+    if (photosFilter === 'posts') {
+      return profilePhotos.filter((p) => p.type === 'post')
+    }
+    if (photosFilter === 'profile') {
+      return profilePhotos.filter((p) => p.type === 'profile' || p.type === 'cover')
+    }
+    return profilePhotos
+  }, [profilePhotos, photosFilter])
 
   // Modals & Drawers
   const [activeCommentsPostId, setActiveCommentsPostId] = useState<string | null>(null)
@@ -100,13 +146,13 @@ export default function UserProfilePage({ params }: PageProps) {
   }, [])
 
   useEffect(() => {
-    if (!currentUser?.uid || !targetUserId || currentUser.uid === targetUserId) {
+    if (!effectiveFollowerId || !targetUserId || effectiveFollowerId === targetUserId) {
       setMutualInfo(null)
       return
     }
 
     let isMounted = true
-    getMutualConnections(currentUser.uid, targetUserId)
+    getMutualConnections(effectiveFollowerId, targetUserId)
       .then((res) => {
         if (isMounted) setMutualInfo(res)
       })
@@ -115,7 +161,7 @@ export default function UserProfilePage({ params }: PageProps) {
     return () => {
       isMounted = false
     }
-  }, [currentUser?.uid, targetUserId])
+  }, [effectiveFollowerId, targetUserId])
 
   const handleOpenMutuals = async () => {
     if (!mutualInfo || mutualInfo.count === 0) return
@@ -227,18 +273,18 @@ export default function UserProfilePage({ params }: PageProps) {
 
   // 3. Real-time Follow Status
   useEffect(() => {
-    if (!currentUser || !targetUserId || isOwnProfile) {
+    if (!effectiveFollowerId || !targetUserId || isOwnProfile) {
       setIsFollowing(false)
       return
     }
 
-    const followStatusRef = ref(db, `followers/${targetUserId}/${currentUser.uid}`)
+    const followStatusRef = ref(db, `followers/${targetUserId}/${effectiveFollowerId}`)
     const unsubStatus = onValue(followStatusRef, (snap) => {
       setIsFollowing(snap.exists() && Boolean(snap.val()))
     })
 
     return () => unsubStatus()
-  }, [currentUser, targetUserId, isOwnProfile])
+  }, [effectiveFollowerId, targetUserId, isOwnProfile])
 
   // 4. Load Public Posts and Businesses created by this user
   useEffect(() => {
@@ -304,7 +350,7 @@ export default function UserProfilePage({ params }: PageProps) {
 
   // 5. Follow Toggle Handler
   const handleFollowToggle = async () => {
-    if (!currentUser) {
+    if (!currentUser || !effectiveFollowerId) {
       router.push('/login')
       return
     }
@@ -314,19 +360,19 @@ export default function UserProfilePage({ params }: PageProps) {
     try {
       const updates: Record<string, boolean | null> = {}
       if (isFollowing) {
-        updates[`followers/${targetUserId}/${currentUser.uid}`] = null
-        updates[`following/${currentUser.uid}/${targetUserId}`] = null
+        updates[`followers/${targetUserId}/${effectiveFollowerId}`] = null
+        updates[`following/${effectiveFollowerId}/${targetUserId}`] = null
       } else {
-        updates[`followers/${targetUserId}/${currentUser.uid}`] = true
-        updates[`following/${currentUser.uid}/${targetUserId}`] = true
+        updates[`followers/${targetUserId}/${effectiveFollowerId}`] = true
+        updates[`following/${effectiveFollowerId}/${targetUserId}`] = true
       }
       await update(ref(db), updates)
 
       if (!isFollowing) {
         notifyFollow({
           targetUserId,
-          actorId: currentUser.uid,
-          actorName: userProfile?.name || currentUser.displayName || 'Circular Member',
+          actorId: effectiveFollowerId,
+          actorName: actor?.name || userProfile?.name || currentUser.displayName || 'Circular Member',
         }).catch((err) => console.error('Error notifying follow:', err))
       }
     } catch (err) {
@@ -342,7 +388,7 @@ export default function UserProfilePage({ params }: PageProps) {
       router.push('/login')
       return
     }
-    const conversationId = [currentUser.uid, targetUserId].sort().join('_')
+    const conversationId = [effectiveFollowerId || currentUser.uid, targetUserId].sort().join('_')
     router.push(`/chat/${conversationId}`)
   }
 
@@ -360,8 +406,12 @@ export default function UserProfilePage({ params }: PageProps) {
     }
   }
 
-  const avatarUrl = getUserAvatar(profile, publicProfiles) || '/circular-logo.png'
+  const customAvatar = getUserAvatar(profile, publicProfiles)
+  const hasCustomAvatar = Boolean(customAvatar)
+  const avatarUrl = customAvatar || '/circular-logo.png'
   const displayName = profile?.name || profile?.businessName || 'Circular Member'
+  const avatarColorInfo = getAvatarColorInfo(displayName || targetUserId)
+  const initial = (displayName?.trim()?.[0] || 'C').toUpperCase()
   const username = profile?.username ? `@${profile.username}` : `@user_${targetUserId.substring(0, 6)}`
   const locality = profile?.area || profile?.areaName || profile?.city || 'Local Member'
   const userBio = profile?.bio || ''
@@ -427,20 +477,31 @@ export default function UserProfilePage({ params }: PageProps) {
         <div className="relative -mt-12 rounded-3xl border border-border bg-card p-5 sm:p-6 shadow-md">
           <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
             <div className="flex items-end gap-4">
-              {/* Profile Avatar (Clickable to Lightbox) */}
-              <button
-                type="button"
-                onClick={() => setImageViewerSrc(avatarUrl)}
-                className="group relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-2xl sm:rounded-3xl bg-primary/10 ring-4 ring-card shadow-lg focus:outline-none"
-                title="View profile photo"
-              >
-                <Image
-                  src={avatarUrl}
-                  alt={displayName}
-                  fill
-                  className="object-cover transition-transform duration-300 group-hover:scale-105"
-                />
-              </button>
+              {/* Profile Avatar (Clickable to Lightbox if has image) */}
+              {hasCustomAvatar ? (
+                <button
+                  type="button"
+                  onClick={() => setImageViewerSrc(avatarUrl)}
+                  className="group relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-2xl sm:rounded-3xl bg-primary/10 ring-4 ring-card shadow-lg focus:outline-none"
+                  title="View profile photo"
+                >
+                  <Image
+                    src={avatarUrl}
+                    alt={displayName}
+                    fill
+                    className="object-cover transition-transform duration-300 group-hover:scale-105"
+                  />
+                </button>
+              ) : (
+                <div
+                  className="relative size-20 sm:size-24 shrink-0 overflow-hidden rounded-2xl sm:rounded-3xl ring-4 ring-card shadow-lg flex items-center justify-center select-none"
+                  style={{ background: `linear-gradient(135deg, ${avatarColorInfo.gradient[0]}, ${avatarColorInfo.gradient[1]})` }}
+                >
+                  <span className="text-2xl sm:text-3xl font-black text-white">
+                    {initial}
+                  </span>
+                </div>
+              )}
 
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
@@ -503,7 +564,7 @@ export default function UserProfilePage({ params }: PageProps) {
                     className={`flex items-center gap-1.5 rounded-xl px-4 py-2 text-xs font-bold transition-all shadow-sm active:scale-95 ${
                       isFollowing
                         ? 'border border-border bg-card text-foreground hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200'
-                        : 'bg-blue-600 text-white hover:bg-blue-700'
+                        : FOLLOW_BUTTON_CLASS
                     }`}
                   >
                     {followLoading ? (
@@ -581,7 +642,18 @@ export default function UserProfilePage({ params }: PageProps) {
                 : 'border-transparent text-muted-foreground hover:text-foreground'
             }`}
           >
-            Public Posts ({userPosts.length})
+            Public Posts ({visiblePosts.length})
+          </button>
+          <button
+            type="button"
+            onClick={() => setActiveTab('photos')}
+            className={`border-b-2 px-6 py-3 text-xs font-bold transition-colors ${
+              activeTab === 'photos'
+                ? 'border-primary text-primary'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {t.photos || 'Photos'} ({profilePhotos.length})
           </button>
           {userBusinesses.length > 0 && (
             <button
@@ -600,13 +672,40 @@ export default function UserProfilePage({ params }: PageProps) {
 
         {/* Tab Content */}
         <div className="py-6 space-y-4">
-          {activeTab === 'posts' ? (
+          {isPrivateAccount && !canViewPrivateContent ? (
+            <div className="rounded-3xl border border-dashed border-border bg-card p-12 text-center space-y-3">
+              <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                <Lock className="size-7" />
+              </div>
+              <h3 className="text-base font-bold text-slate-900 dark:text-white">This Account is Private</h3>
+              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                Follow {displayName} to see their photos, posts, and community updates.
+              </p>
+              {!isFollowing && (
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleFollowToggle}
+                    disabled={followLoading}
+                    className={`inline-flex items-center gap-1.5 px-5 py-2.5 rounded-full text-xs font-bold text-white shadow-md transition-all ${FOLLOW_BUTTON_CLASS}`}
+                  >
+                    {followLoading ? (
+                      <Loader2 className="size-4 animate-spin" />
+                    ) : (
+                      <UserPlus className="size-4" />
+                    )}
+                    <span>Follow to See Posts &amp; Photos</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : activeTab === 'posts' ? (
             postsLoading ? (
               <div className="flex flex-col items-center justify-center py-12 gap-2 text-xs text-muted-foreground">
                 <Loader2 className="size-6 animate-spin text-primary" />
                 <p>Loading posts...</p>
               </div>
-            ) : userPosts.length === 0 ? (
+            ) : visiblePosts.length === 0 ? (
               <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center space-y-2">
                 <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
                   <Sparkles className="size-6" />
@@ -621,7 +720,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 {/* Grid/Feed Toggle */}
                 <div className="flex items-center justify-between">
                   <span className="text-xs font-semibold text-muted-foreground">
-                    {userPosts.length} {userPosts.length === 1 ? 'post' : 'posts'}
+                    {visiblePosts.length} {visiblePosts.length === 1 ? 'post' : 'posts'}
                   </span>
                   <div className="flex overflow-hidden rounded-xl border border-border">
                     <button
@@ -656,7 +755,7 @@ export default function UserProfilePage({ params }: PageProps) {
                 {viewMode === 'grid' ? (
                   <>
                     <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
-                      {userPosts.map((post) => (
+                      {visiblePosts.map((post) => (
                         <PostGridTile
                           key={post.id}
                           post={post}
@@ -666,7 +765,7 @@ export default function UserProfilePage({ params }: PageProps) {
                     </div>
                     {/* Expanded post card below grid */}
                     {selectedPostId && (() => {
-                      const expandedPost = userPosts.find((p) => p.id === selectedPostId)
+                      const expandedPost = visiblePosts.find((p) => p.id === selectedPostId)
                       if (!expandedPost) return null
                       return (
                         <div className="mt-2 rounded-3xl border border-primary/30 bg-card shadow-md transition-all">
@@ -679,7 +778,7 @@ export default function UserProfilePage({ params }: PageProps) {
                     })()}
                   </>
                 ) : (
-                  userPosts.map((post) => (
+                  visiblePosts.map((post) => (
                     <PostCard
                       key={post.id}
                       post={post}
@@ -689,6 +788,100 @@ export default function UserProfilePage({ params }: PageProps) {
                 )}
               </>
             )
+
+          ) : activeTab === 'photos' ? (
+            /* Photos Tab */
+            <div className="space-y-4">
+              {/* Sub-Filters: All Photos | Timeline Photos | Profile Pictures */}
+              <div className="flex items-center gap-2 overflow-x-auto pb-1">
+                <button
+                  type="button"
+                  onClick={() => setPhotosFilter('all')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                    photosFilter === 'all'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  {t.allPhotos || 'All Photos'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotosFilter('posts')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                    photosFilter === 'posts'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  {t.postPhotos || 'Timeline Photos'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setPhotosFilter('profile')}
+                  className={`px-3.5 py-1.5 rounded-full text-xs font-semibold transition-all border ${
+                    photosFilter === 'profile'
+                      ? 'bg-primary text-white border-primary'
+                      : 'bg-card text-muted-foreground border-border hover:bg-muted'
+                  }`}
+                >
+                  {t.profilePictures || 'Profile Pictures'}
+                </button>
+              </div>
+
+              {filteredPhotos.length === 0 ? (
+                <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center space-y-3">
+                  <div className="mx-auto flex size-12 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+                    <ImageIcon className="size-6" />
+                  </div>
+                  <h3 className="text-sm font-bold text-slate-900 dark:text-white">
+                    {t.noPhotosYet || 'No photos yet'}
+                  </h3>
+                  <p className="text-xs text-muted-foreground max-w-sm mx-auto">
+                    {displayName} hasn&apos;t shared any photos yet.
+                  </p>
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-1.5 sm:gap-2">
+                  {filteredPhotos.map((photo, idx) => (
+                    <div
+                      key={photo.id || `photo_${idx}`}
+                      onClick={() => {
+                        setSelectedPhotoIndex(idx)
+                        setLightboxOpen(true)
+                      }}
+                      className="relative aspect-square cursor-pointer overflow-hidden rounded-lg bg-muted group shadow-sm hover:shadow-md transition-shadow"
+                    >
+                      <img
+                        src={photo.thumbnailUrl || photo.imageUrl}
+                        alt={photo.caption || `${displayName}'s photo`}
+                        className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                        loading="lazy"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-3 text-white text-xs font-bold">
+                        {Boolean(photo.likesCount) && (
+                          <span className="flex items-center gap-1">
+                            <Heart className="w-3.5 h-3.5 fill-white text-white" />
+                            {photo.likesCount}
+                          </span>
+                        )}
+                        {Boolean(photo.commentsCount) && (
+                          <span className="flex items-center gap-1">
+                            <MessageCircle className="w-3.5 h-3.5 fill-white text-white" />
+                            {photo.commentsCount}
+                          </span>
+                        )}
+                      </div>
+                      {photo.type === 'profile' && (
+                        <span className="absolute top-1.5 left-1.5 px-1.5 py-0.5 rounded bg-blue-600/90 text-white text-[10px] font-bold shadow-sm">
+                          DP
+                        </span>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
 
           ) : userBusinesses.length === 0 ? (
             <div className="rounded-3xl border border-dashed border-border bg-card p-10 text-center text-xs text-muted-foreground">
@@ -790,6 +983,13 @@ export default function UserProfilePage({ params }: PageProps) {
           </div>
         </div>
       )}
+      {/* Profile Photo Lightbox Modal */}
+      <ProfilePhotoLightbox
+        isOpen={lightboxOpen}
+        photos={filteredPhotos}
+        initialIndex={selectedPhotoIndex}
+        onClose={() => setLightboxOpen(false)}
+      />
     </AppShell>
   )
 }

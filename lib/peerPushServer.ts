@@ -7,6 +7,7 @@ export type PeerNotificationType =
   | 'post_comment'
   | 'post_comment_reply'
   | 'business_review'
+  | 'job_application'
 
 export interface PeerPushDispatchInput {
   callerUid: string
@@ -37,6 +38,7 @@ const ALLOWED_PEER_TYPES: Set<string> = new Set([
   'post_comment',
   'post_comment_reply',
   'business_review',
+  'job_application',
 ])
 
 const isValidExpoPushToken = (token: string): boolean => {
@@ -166,9 +168,39 @@ export async function dispatchPeerPushServer(
       return { success: true, dispatched: false, reason: 'Recipient is currently in quiet hours' }
     }
 
-    // 4. Retrieve active push tokens from Admin SDK
-    const tokensSnap = await adminDb.ref(`pushTokens/${recipientId}`).once('value')
-    const tokensData = tokensSnap.val() || {}
+    // 4. Retrieve active push tokens from Admin SDK (Checking userPushTokens, sub-profile ownerUid, and pushTokens)
+    let targetOwnerUid = recipientId
+    const [subProfSnap, userPushTokenSnap] = await Promise.all([
+      adminDb.ref(`publicProfiles/${recipientId}/pushTokenOwnerUid`).once('value').catch(() => null),
+      adminDb.ref(`userPushTokens/${recipientId}`).once('value').catch(() => null),
+    ])
+
+    if (subProfSnap && subProfSnap.exists()) {
+      targetOwnerUid = subProfSnap.val()
+    }
+
+    const [tokensSnap, ownerTokensSnap, userRecordSnap] = await Promise.all([
+      adminDb.ref(`pushTokens/${recipientId}`).once('value').catch(() => null),
+      targetOwnerUid !== recipientId ? adminDb.ref(`pushTokens/${targetOwnerUid}`).once('value').catch(() => null) : null,
+      adminDb.ref(`users/${targetOwnerUid}`).once('value').catch(() => null),
+    ])
+
+    const tokensData: Record<string, any> = {
+      ...(tokensSnap && tokensSnap.exists() ? tokensSnap.val() : {}),
+      ...(ownerTokensSnap && ownerTokensSnap.exists() ? ownerTokensSnap.val() : {}),
+    }
+
+    if (userPushTokenSnap && userPushTokenSnap.exists()) {
+      const upt = userPushTokenSnap.val()
+      if (upt?.token) {
+        tokensData['user_push_token'] = upt.token
+      }
+    }
+    if (userRecordSnap && userRecordSnap.exists()) {
+      const uRec = userRecordSnap.val()
+      if (uRec?.expoPushToken) tokensData['user_expo_token'] = uRec.expoPushToken
+      if (uRec?.fcmToken) tokensData['user_fcm_token'] = uRec.fcmToken
+    }
 
     const expoTokenEntries: { token: string; key: string }[] = []
     const webTokenEntries: { token: string; key: string }[] = []
@@ -205,7 +237,7 @@ export async function dispatchPeerPushServer(
 
     // 5. Send Expo push messages (Android mobile reference)
     if (expoTokenEntries.length > 0) {
-      const channelId = type === 'chat_message' ? 'circular_chat_messages' : 'default'
+      const channelId = 'circular_high_importance_channel'
       const expoMessages = expoTokenEntries.map(({ token }) => ({
         to: token,
         sound: settings.sound ? 'default' : null,

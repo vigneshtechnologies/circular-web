@@ -18,6 +18,7 @@ interface AuthContextType {
   user: User | null
   userProfile: UserProfile | null
   publicProfiles: Record<string, any>
+  publicSubProfiles: Record<string, any>
   isAdmin: boolean
   loading: boolean
   login: (email: string, pass: string) => Promise<void>
@@ -31,6 +32,7 @@ const AuthContext = createContext<AuthContextType>({
   user: null,
   userProfile: null,
   publicProfiles: {},
+  publicSubProfiles: {},
   isAdmin: false,
   loading: true,
   login: async () => {},
@@ -46,6 +48,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
   const [publicProfiles, setPublicProfiles] = useState<Record<string, any>>({})
+  const [publicSubProfiles, setPublicSubProfiles] = useState<Record<string, any>>({})
   const [isAdmin, setIsAdmin] = useState<boolean>(false)
   const [loading, setLoading] = useState<boolean>(true)
 
@@ -55,15 +58,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const adminSnap = await get(ref(db, `admins/${uid}`))
       setIsAdmin(adminSnap.exists() && adminSnap.val() === true)
 
-      // 2. Fetch both users and publicProfiles in parallel to get full data and avatar
-      const [userSnap, publicSnap, allPublicSnap] = await Promise.all([
+      // 2. Fetch both users, publicProfiles, and publicSubProfiles in parallel
+      const [userSnap, publicSnap, allPublicSnap, allSubProfilesSnap] = await Promise.all([
         get(ref(db, `users/${uid}`)),
         get(ref(db, `publicProfiles/${uid}`)),
         get(ref(db, 'publicProfiles')),
+        get(ref(db, 'publicSubProfiles')),
       ])
 
       if (allPublicSnap.exists()) {
         setPublicProfiles(allPublicSnap.val() || {})
+      }
+      if (allSubProfilesSnap.exists()) {
+        setPublicSubProfiles(allSubProfilesSnap.val() || {})
       }
 
       const userData = userSnap.val() || {}
@@ -190,6 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         user,
         userProfile,
         publicProfiles,
+        publicSubProfiles,
         isAdmin,
         loading,
         login,

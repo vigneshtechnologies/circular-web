@@ -6,6 +6,7 @@ import { ref, get, query, limitToLast, push, set, update } from 'firebase/databa
 import { db } from '@/lib/firebase'
 import { useAuth } from '@/context/AuthContext'
 import { getUserAvatar } from '@/lib/imageUtils'
+import { resolveActiveAuthorIdentity, useActiveActor, getEffectiveUid, onActiveProfileChanged } from '@/lib/profileService'
 import { Plus, X, BarChart2, Globe, Users, Lock, Check } from 'lucide-react'
 
 interface UserStatus {
@@ -13,6 +14,8 @@ interface UserStatus {
   userId: string
   userName: string
   userAvatar?: string
+  profileId?: string
+  authorProfileId?: string
   mediaUrl?: string
   text?: string
   createdAt: number
@@ -28,6 +31,8 @@ interface UserStatus {
 
 export function StoriesBar() {
   const { user, userProfile, publicProfiles } = useAuth()
+  const { actorId, actor } = useActiveActor()
+  const effectiveActorId = actorId || user?.uid
   const [statuses, setStatuses] = useState<UserStatus[]>([])
   const [activeStory, setActiveStory] = useState<UserStatus | null>(null)
   const [isCreateOpen, setIsCreateOpen] = useState(false)
@@ -51,6 +56,25 @@ export function StoriesBar() {
   )
 
   useEffect(() => {
+    if (!effectiveActorId || !activeStory || !activeStory.poll) return
+    const storyId = activeStory.id
+    if (userVotes[storyId]) return
+
+    get(ref(db, `statusVotes/${storyId}/${effectiveActorId}`))
+      .then((snap) => {
+        if (snap.exists()) {
+          const val = snap.val()
+          if (val === 1 || val === 2) {
+            setUserVotes((prev) => ({ ...prev, [storyId]: val }))
+          }
+        }
+      })
+      .catch((err) => {
+        console.warn('Error fetching story poll vote status:', err)
+      })
+  }, [effectiveActorId, activeStory, userVotes])
+
+  useEffect(() => {
     if (isUserPrivate) {
       setAudience('followers')
     }
@@ -58,7 +82,18 @@ export function StoriesBar() {
 
   const fetchStatuses = async () => {
     try {
-      const snap = await get(query(ref(db, 'statuses'), limitToLast(30)))
+      const isSub = Boolean(actorId && actorId !== user?.uid)
+      const followingPath = isSub ? `following/${effectiveActorId}` : `following/${user?.uid}`
+
+      const [snap, followingSnap] = await Promise.all([
+        get(query(ref(db, 'statuses'), limitToLast(30))),
+        user ? get(ref(db, followingPath)).catch(() => null) : null,
+      ])
+
+      const followingUids = followingSnap && followingSnap.exists()
+        ? Object.keys(followingSnap.val() || {})
+        : []
+
       if (snap.exists()) {
         const list: UserStatus[] = []
         const now = Date.now()
@@ -66,6 +101,25 @@ export function StoriesBar() {
         snap.forEach((child) => {
           const val = child.val()
           if (val.createdAt && val.createdAt > oneDayAgo) {
+            const isOwn = Boolean(
+              effectiveActorId && (
+                val.userId === effectiveActorId ||
+                val.profileId === effectiveActorId ||
+                val.authorProfileId === effectiveActorId ||
+                (user && val.userId === user.uid && (!val.profileId || val.profileId === 'default') && !isSub)
+              )
+            )
+            const isFollowing = val.userId ? followingUids.includes(val.userId) : false
+            const authorProfile = val.userId ? publicProfiles[val.userId] : null
+            const isAuthorPrivate =
+              authorProfile?.isPrivate === true ||
+              (authorProfile as any)?.accountPrivacy === 'private'
+            const isFollowersOnly = val.audience === 'followers' || isAuthorPrivate
+
+            if (isFollowersOnly && !isOwn && !isFollowing) {
+              return
+            }
+
             list.push({ id: child.key as string, ...val })
           }
         })
@@ -78,6 +132,13 @@ export function StoriesBar() {
 
   useEffect(() => {
     fetchStatuses()
+  }, [user, effectiveActorId])
+
+  useEffect(() => {
+    const unsub = onActiveProfileChanged(() => {
+      fetchStatuses()
+    })
+    return () => unsub()
   }, [])
 
   const handleCreateStatus = async (e: React.FormEvent) => {
@@ -90,10 +151,20 @@ export function StoriesBar() {
       const newStatusRef = push(ref(db, 'statuses'))
       const now = Date.now()
 
+      const authorIdentity = await resolveActiveAuthorIdentity(user.uid)
+      const effectiveUserId = (authorIdentity.profileId && authorIdentity.profileId !== 'default')
+        ? authorIdentity.profileId
+        : user.uid
+
       const statusData: any = {
         id: newStatusRef.key,
-        userId: user.uid,
-        userName: userProfile?.name || user.displayName || 'Member',
+        userId: effectiveUserId,
+        ownerUid: user.uid,
+        userName: authorIdentity.authorName || userProfile?.name || user.displayName || 'Member',
+        userAvatar: authorIdentity.authorAvatar || undefined,
+        profileImage: authorIdentity.authorAvatar || undefined,
+        profileId: authorIdentity.profileId,
+        authorProfileId: authorIdentity.authorProfileId,
         text: storyText.trim() || undefined,
         mediaUrl: storyImageUrl.trim() || undefined,
         createdAt: now,
@@ -126,7 +197,7 @@ export function StoriesBar() {
   }
 
   const handleVote = async (story: UserStatus, option: 1 | 2) => {
-    if (!user || !story.poll) return
+    if (!user || !effectiveActorId || !story.poll) return
     if (userVotes[story.id]) return
 
     setUserVotes((prev) => ({ ...prev, [story.id]: option }))
@@ -136,7 +207,8 @@ export function StoriesBar() {
       const currentOp2 = story.poll.option2Votes || 0
 
       const updates: Record<string, any> = {
-        [`statusVotes/${story.id}/${user.uid}`]: option,
+        [`statusVotes/${story.id}/${effectiveActorId}`]: option,
+        [`users/${effectiveActorId}/storyPollVotes/${story.id}`]: option,
       }
 
       if (option === 1) {
@@ -176,7 +248,7 @@ export function StoriesBar() {
         >
           <div className="relative size-9 rounded-full p-0.5 bg-gradient-to-tr from-blue-600 via-purple-600 via-pink-500 to-orange-500 shrink-0 shadow-sm">
             <div className="relative size-full rounded-full overflow-hidden bg-card">
-              <Image src={avatar} alt="Your Status" fill className="object-cover" />
+              <Image src={actor?.avatar || avatar} alt="Your Status" fill className="object-cover" />
             </div>
             <div className="absolute -bottom-0.5 -right-0.5 flex size-4 items-center justify-center rounded-full bg-gradient-to-r from-blue-600 via-purple-600 to-pink-500 text-white shadow ring-2 ring-card">
               <Plus className="size-2.5 stroke-[3]" />
@@ -184,7 +256,7 @@ export function StoriesBar() {
           </div>
           <div className="flex flex-col text-left">
             <span className="text-[11px] font-bold text-slate-800 dark:text-slate-200 group-hover:text-purple-600 dark:group-hover:text-purple-400">
-              Your Status
+              {actor?.isSubProfile ? actor.name : 'Your Status'}
             </span>
             <span className="text-[9px] text-muted-foreground font-medium">Add Update</span>
           </div>
@@ -192,11 +264,11 @@ export function StoriesBar() {
 
         {/* Community Statuses if active */}
         {statuses.map((item, idx) => {
+          const isSub = Boolean(item.profileId && item.profileId !== 'default')
           const itemAvatar =
-            getUserAvatar(item, publicProfiles) || item.mediaUrl || '/circular-logo.png'
+            getUserAvatar(item, isSub ? undefined : publicProfiles) || item.mediaUrl || '/circular-logo.png'
           const displayName =
-            publicProfiles?.[item.userId]?.name?.split(' ')[0] ||
-            item.userName?.split(' ')[0] ||
+            (isSub ? item.userName : (publicProfiles?.[item.userId]?.name || item.userName))?.split(' ')[0] ||
             'Member'
 
           const ringGradients = [

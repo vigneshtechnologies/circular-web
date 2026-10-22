@@ -38,20 +38,27 @@ export const metadata: Metadata = {
 
 export default async function SearchPage() {
   const [
-    initialBusinesses,
-    initialPeople,
-    initialPosts,
-    initialJobs,
-    initialNeeds,
-    initialEvents,
-  ] = await Promise.all([
+    bizResult,
+    peopleResult,
+    postsResult,
+    jobsResult,
+    needsResult,
+    eventsResult,
+  ] = await Promise.allSettled([
     getPublicBusinessesList(100),
-    getPublicUsersList(100),
+    getPublicUsersList(200),
     getPublicPostsList(60),
     getPublicJobsList(60),
     getPublicNeedsList(60),
     getPublicEventsList(60),
   ])
+
+  const initialBusinesses = bizResult.status === 'fulfilled' ? bizResult.value : []
+  const initialPeople = peopleResult.status === 'fulfilled' ? peopleResult.value : []
+  const initialPosts = postsResult.status === 'fulfilled' ? postsResult.value : []
+  const initialJobs = jobsResult.status === 'fulfilled' ? jobsResult.value : []
+  const initialNeeds = needsResult.status === 'fulfilled' ? needsResult.value : []
+  const initialEvents = eventsResult.status === 'fulfilled' ? eventsResult.value : []
 
   return (
     <SearchClientContainer

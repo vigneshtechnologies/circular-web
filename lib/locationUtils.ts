@@ -3,10 +3,10 @@
  * Reuses the official Haversine distance formula from locationUtils.ts in Android app.
  */
 
-export const CIRCULAR_RADIUS_OPTIONS = [1, 3, 5, 10, 25] as const
+export const CIRCULAR_RADIUS_OPTIONS = [1, 3, 5, 10, 25, 50] as const
 export type CircularRadiusOption = (typeof CIRCULAR_RADIUS_OPTIONS)[number]
 export const DEFAULT_RADIUS_KM: CircularRadiusOption = 25
-export const MAX_RADIUS_KM: CircularRadiusOption = 25
+export const MAX_RADIUS_KM: CircularRadiusOption = 50
 
 /**
  * Returns clean user locality name, never returning 'Unknown', 'null', or hardcoded fallbacks.

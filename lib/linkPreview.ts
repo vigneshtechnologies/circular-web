@@ -119,17 +119,36 @@ export const buildWebLinkPreview = (
 
   const igInfo = getInstagramMediaInfo(fullUrl)
 
+  const isHttpError = (str?: string) => {
+    if (!str) return false
+    return (
+      /website returned http/i.test(str) ||
+      /\bHTTP\s+[45]\d{2}\b/i.test(str) ||
+      /failed to fetch/i.test(str)
+    )
+  }
+
+  const rawTitle = overrides?.title || cleanUrl
+  const cleanTitle = isHttpError(rawTitle)
+    ? (overrides?.siteName || overrides?.domain || hostname)
+    : rawTitle
+
+  const rawDesc = overrides?.description || ''
+  const cleanDesc = isHttpError(rawDesc)
+    ? 'Open this link to view the shared content.'
+    : (rawDesc || 'Open this link to view the shared content.')
+
   if (!igInfo.isInstagram) {
     return {
       originalUrl: cleanUrl,
       canonicalUrl: overrides?.canonicalUrl || fullUrl,
-      title: overrides?.title || cleanUrl,
-      description: overrides?.description || '',
       imageUrl: overrides?.imageUrl || undefined,
       domain: overrides?.domain || hostname,
       siteName: overrides?.siteName || hostname,
-      previewStatus: overrides?.imageUrl ? 'ready' : 'fallback',
+      previewStatus: overrides?.imageUrl && !isHttpError(rawTitle) && !isHttpError(rawDesc) ? 'ready' : 'fallback',
       ...overrides,
+      title: cleanTitle,
+      description: cleanDesc,
     }
   }
 

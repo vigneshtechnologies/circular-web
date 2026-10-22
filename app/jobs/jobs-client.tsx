@@ -9,7 +9,7 @@ import { CircularHeader } from '@/components/circular-header'
 import { CircularFooter } from '@/components/circular-footer'
 import { getUserCommunityLocation } from '@/lib/locationUtils'
 import { PublicJobData } from '@/lib/serverPublicData'
-import { ref, push, set, get } from 'firebase/database'
+import { ref, push, set, get, update } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import {
   getUserResume,
@@ -52,6 +52,15 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
   const [nearMeOnly, setNearMeOnly] = useState(false)
   const [appliedJobIds, setAppliedJobIds] = useState<Set<string>>(new Set())
 
+  // Advanced Filters
+  const [selectedExperience, setSelectedExperience] = useState('All')
+  const [selectedSalary, setSelectedSalary] = useState('All')
+  const [selectedDatePosted, setSelectedDatePosted] = useState('All')
+  const [selectedEducation, setSelectedEducation] = useState('All')
+  const [companyQuery, setCompanyQuery] = useState('')
+  const [skillsQuery, setSkillsQuery] = useState('')
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState(false)
+
   // Modal states
   const [isPostJobOpen, setIsPostJobOpen] = useState(false)
   const [applyModalJob, setApplyModalJob] = useState<any | null>(null)
@@ -76,6 +85,10 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
 
   const jobTypes = ['All', 'Full-time', 'Part-time', 'Freelance', 'Internship']
   const workModes: ('All' | 'On-site' | 'Hybrid' | 'Remote')[] = ['All', 'On-site', 'Hybrid', 'Remote']
+  const experienceOptions = ['All', 'Fresher', '1-3 years', '3-5 years', '5+ years']
+  const salaryOptions = ['All', '₹10k+', '₹25k+', '₹50k+', '₹1L+']
+  const datePostedOptions = ['All', 'Past 24h', 'Past 7 days', 'Past 30 days']
+  const educationOptions = ['All', '10th/12th', 'Graduate', 'Post Graduate']
   const durationOptions = [7, 15, 30, 60, 90]
 
   // Load applicant's already applied jobs
@@ -87,6 +100,38 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
       })
       .catch(() => {})
   }, [user])
+
+  // Cross-load jobs from both localJobs and jobs nodes
+  useEffect(() => {
+    const loadAllJobs = async () => {
+      try {
+        const [localJobsSnap, jobsSnap] = await Promise.all([
+          get(ref(db, 'localJobs')).catch(() => null),
+          get(ref(db, 'jobs')).catch(() => null),
+        ])
+        const map = new Map<string, any>()
+        if (localJobsSnap && localJobsSnap.exists()) {
+          const data = localJobsSnap.val()
+          Object.keys(data).forEach((k) => map.set(k, { id: k, ...data[k] }))
+        }
+        if (jobsSnap && jobsSnap.exists()) {
+          const data = jobsSnap.val()
+          Object.keys(data).forEach((k) => {
+            if (!map.has(k)) map.set(k, { id: k, ...data[k] })
+          })
+        }
+        if (map.size > 0) {
+          const list = Array.from(map.values()).sort(
+            (a, b) => (b.createdAt || 0) - (a.createdAt || 0)
+          )
+          setJobs(list)
+        }
+      } catch (err) {
+        console.error('Error fetching jobs:', err)
+      }
+    }
+    loadAllJobs()
+  }, [])
 
   // Open apply modal
   const handleOpenApplyModal = async (job: any) => {
@@ -150,8 +195,9 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
 
     setSubmitting(true)
     try {
-      const newJobRef = push(ref(db, 'jobs'))
+      const newJobRef = push(ref(db, 'localJobs'))
       const now = Date.now()
+      const expiresAt = now + 30 * 24 * 60 * 60 * 1000
       const jobData = {
         id: newJobRef.key,
         title: title.trim(),
@@ -166,10 +212,15 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
         description: description.trim(),
         createdBy: user.uid,
         createdAt: now,
+        updatedAt: now,
+        expiresAt,
         status: 'active',
       }
 
-      await set(newJobRef, jobData)
+      await update(ref(db), {
+        [`localJobs/${newJobRef.key}`]: jobData,
+        [`jobs/${newJobRef.key}`]: jobData,
+      })
       setJobs((prev) => [jobData, ...prev])
       setIsPostJobOpen(false)
       setTitle('')
@@ -187,22 +238,169 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
 
   const displayArea = getUserCommunityLocation(userProfile)
 
-  // Filter jobs by search, jobType, workMode, and nearMeOnly
+  // Filter jobs by all 10 requested criteria: keywords, location, work mode, employment type, experience, salary, date posted, education, company, and skills
   const q = searchQuery.toLowerCase().trim()
+  const compQ = companyQuery.toLowerCase().trim()
+  const skillQ = skillsQuery.toLowerCase().trim()
+  const now = Date.now()
+
   const filtered = jobs.filter((j) => {
-    const matchesType = selectedType === 'All' || j.jobType === selectedType
+    // 1. Employment Type
+    const matchesType =
+      selectedType === 'All' ||
+      j.jobType === selectedType ||
+      (selectedType === 'Full-time' && (j.jobType === 'full_time' || j.jobType === 'Full-time')) ||
+      (selectedType === 'Part-time' && (j.jobType === 'part_time' || j.jobType === 'Part-time')) ||
+      (selectedType === 'Freelance' && (j.jobType === 'freelance' || j.jobType === 'contract')) ||
+      (selectedType === 'Internship' && (j.jobType === 'internship' || j.jobType === 'Internship'))
+
+    // 2. Work Mode
     const matchesWorkMode =
       selectedWorkMode === 'All' ||
       j.workMode === selectedWorkMode ||
       (!j.workMode && selectedWorkMode === 'On-site')
-    const matchesNearMe = !nearMeOnly || (j.area && displayArea && j.area.toLowerCase().includes(displayArea.toLowerCase()))
 
-    const titleMatch = (j.title || '').toLowerCase().includes(q)
-    const bizMatch = (j.businessName || '').toLowerCase().includes(q)
-    const areaMatch = (j.area || '').toLowerCase().includes(q)
-    const descMatch = (j.description || '').toLowerCase().includes(q)
+    // 3. Near Me / Location
+    const matchesNearMe =
+      !nearMeOnly ||
+      (j.area && displayArea && j.area.toLowerCase().includes(displayArea.toLowerCase()))
 
-    return matchesType && matchesWorkMode && matchesNearMe && (!q || titleMatch || bizMatch || areaMatch || descMatch)
+    // 4. Experience
+    let matchesExp = true
+    if (selectedExperience !== 'All') {
+      const text = `${j.title || ''} ${j.description || ''} ${j.experience || ''}`.toLowerCase()
+      if (selectedExperience === 'Fresher') {
+        matchesExp =
+          text.includes('fresher') ||
+          text.includes('entry') ||
+          text.includes('0 year') ||
+          text.includes('trainee') ||
+          text.includes('no experience')
+      } else if (selectedExperience === '1-3 years') {
+        matchesExp =
+          text.includes('1-3') ||
+          text.includes('1 to 3') ||
+          text.includes('1 year') ||
+          text.includes('2 year') ||
+          text.includes('3 year')
+      } else if (selectedExperience === '3-5 years') {
+        matchesExp =
+          text.includes('3-5') ||
+          text.includes('3 to 5') ||
+          text.includes('4 year') ||
+          text.includes('5 year')
+      } else if (selectedExperience === '5+ years') {
+        matchesExp =
+          text.includes('5+') ||
+          text.includes('5+ year') ||
+          text.includes('senior') ||
+          text.includes('lead') ||
+          text.includes('manager')
+      }
+    }
+    if (!matchesExp) return false
+
+    // 5. Salary
+    let matchesSalary = true
+    if (selectedSalary !== 'All') {
+      const salText = `${j.salary || ''} ${j.description || ''}`.toLowerCase()
+      const salNum = parseInt(salText.replace(/[^0-9]/g, ''), 10) || 0
+      if (selectedSalary === '₹10k+') {
+        matchesSalary =
+          salNum >= 10000 ||
+          salText.includes('10k') ||
+          salText.includes('15k') ||
+          salText.includes('20k') ||
+          salText.includes('25k') ||
+          salText.includes('50k') ||
+          salText.includes('1l')
+      } else if (selectedSalary === '₹25k+') {
+        matchesSalary =
+          salNum >= 25000 ||
+          salText.includes('25k') ||
+          salText.includes('30k') ||
+          salText.includes('40k') ||
+          salText.includes('50k') ||
+          salText.includes('1l')
+      } else if (selectedSalary === '₹50k+') {
+        matchesSalary =
+          salNum >= 50000 ||
+          salText.includes('50k') ||
+          salText.includes('60k') ||
+          salText.includes('75k') ||
+          salText.includes('1l')
+      } else if (selectedSalary === '₹1L+') {
+        matchesSalary =
+          salNum >= 100000 ||
+          salText.includes('1l') ||
+          salText.includes('1 lakh') ||
+          salText.includes('100k')
+      }
+    }
+    if (!matchesSalary) return false
+
+    // 6. Date Posted
+    let matchesDate = true
+    if (selectedDatePosted !== 'All') {
+      const createdAt = Number(j.createdAt || 0)
+      if (selectedDatePosted === 'Past 24h' && now - createdAt > 24 * 60 * 60 * 1000) matchesDate = false
+      if (selectedDatePosted === 'Past 7 days' && now - createdAt > 7 * 24 * 60 * 60 * 1000) matchesDate = false
+      if (selectedDatePosted === 'Past 30 days' && now - createdAt > 30 * 24 * 60 * 60 * 1000) matchesDate = false
+    }
+    if (!matchesDate) return false
+
+    // 7. Education
+    let matchesEdu = true
+    if (selectedEducation !== 'All') {
+      const text = `${j.title || ''} ${j.description || ''} ${j.education || ''}`.toLowerCase()
+      if (selectedEducation === '10th/12th') {
+        matchesEdu =
+          text.includes('10th') ||
+          text.includes('12th') ||
+          text.includes('school') ||
+          text.includes('sslc') ||
+          text.includes('hsc')
+      } else if (selectedEducation === 'Graduate') {
+        matchesEdu =
+          text.includes('graduate') ||
+          text.includes('degree') ||
+          text.includes('bachelor') ||
+          text.includes('b.tech') ||
+          text.includes('b.e') ||
+          text.includes('b.com') ||
+          text.includes('b.sc')
+      } else if (selectedEducation === 'Post Graduate') {
+        matchesEdu =
+          text.includes('post graduate') ||
+          text.includes('master') ||
+          text.includes('m.tech') ||
+          text.includes('mba') ||
+          text.includes('m.sc') ||
+          text.includes('m.e')
+      }
+    }
+    if (!matchesEdu) return false
+
+    // 8. Company
+    if (compQ && !(j.businessName || '').toLowerCase().includes(compQ)) return false
+
+    // 9. Skills
+    if (skillQ) {
+      const text = `${j.title || ''} ${j.description || ''} ${j.skills || ''}`.toLowerCase()
+      if (!text.includes(skillQ)) return false
+    }
+
+    // 10. Keywords search
+    if (q) {
+      const titleMatch = (j.title || '').toLowerCase().includes(q)
+      const bizMatch = (j.businessName || '').toLowerCase().includes(q)
+      const areaMatch = (j.area || '').toLowerCase().includes(q)
+      const descMatch = (j.description || '').toLowerCase().includes(q)
+      const skillsMatch = (j.skills || '').toLowerCase().includes(q)
+      if (!titleMatch && !bizMatch && !areaMatch && !descMatch && !skillsMatch) return false
+    }
+
+    return matchesType && matchesWorkMode && matchesNearMe
   })
 
   return (
@@ -290,6 +488,32 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
             <span>Near me</span>
           </button>
 
+          {/* Filters Toggle Button */}
+          <button
+            type="button"
+            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-xs font-bold transition-all ${
+              showAdvancedFilters || (selectedExperience !== 'All' || selectedSalary !== 'All' || selectedDatePosted !== 'All' || selectedEducation !== 'All' || companyQuery || skillsQuery)
+                ? 'bg-emerald-500/15 border border-emerald-500 text-emerald-700 dark:text-emerald-400'
+                : 'border border-border bg-card text-muted-foreground hover:bg-muted'
+            }`}
+          >
+            <Filter className="size-3" />
+            <span>Filters</span>
+            {(selectedExperience !== 'All' || selectedSalary !== 'All' || selectedDatePosted !== 'All' || selectedEducation !== 'All' || companyQuery || skillsQuery) && (
+              <span className="flex size-4 items-center justify-center rounded-full bg-emerald-600 text-[9px] font-black text-white">
+                {[
+                  selectedExperience !== 'All',
+                  selectedSalary !== 'All',
+                  selectedDatePosted !== 'All',
+                  selectedEducation !== 'All',
+                  Boolean(companyQuery),
+                  Boolean(skillsQuery),
+                ].filter(Boolean).length}
+              </span>
+            )}
+          </button>
+
           {/* Work Mode Selectors */}
           {workModes.map((mode) => (
             <button
@@ -324,6 +548,152 @@ export default function JobsClientContainer({ initialJobs }: JobsClientProps) {
             ))}
           </div>
         </div>
+
+        {/* Expandable Advanced Filters Tray */}
+        {showAdvancedFilters && (
+          <div className="mt-3 rounded-2xl border border-border bg-card/95 p-3.5 shadow-sm space-y-3 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-center justify-between border-b border-border pb-2">
+              <span className="text-xs font-extrabold text-foreground">Advanced Job Filters</span>
+              <button
+                type="button"
+                onClick={() => {
+                  setSelectedExperience('All')
+                  setSelectedSalary('All')
+                  setSelectedDatePosted('All')
+                  setSelectedEducation('All')
+                  setCompanyQuery('')
+                  setSkillsQuery('')
+                }}
+                className="text-[11px] font-bold text-muted-foreground hover:text-foreground underline"
+              >
+                Reset All
+              </button>
+            </div>
+
+            {/* Experience & Salary Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground mb-1.5 block">
+                  Experience Level
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {experienceOptions.map((exp) => (
+                    <button
+                      key={exp}
+                      type="button"
+                      onClick={() => setSelectedExperience(exp)}
+                      className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+                        selectedExperience === exp
+                          ? 'bg-primary text-primary-foreground'
+                          : 'bg-muted/70 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {exp}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground mb-1.5 block">
+                  Minimum Salary
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {salaryOptions.map((sal) => (
+                    <button
+                      key={sal}
+                      type="button"
+                      onClick={() => setSelectedSalary(sal)}
+                      className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+                        selectedSalary === sal
+                          ? 'bg-emerald-600 text-white'
+                          : 'bg-muted/70 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {sal}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Date Posted & Education Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground mb-1.5 block">
+                  Date Posted
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {datePostedOptions.map((dp) => (
+                    <button
+                      key={dp}
+                      type="button"
+                      onClick={() => setSelectedDatePosted(dp)}
+                      className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+                        selectedDatePosted === dp
+                          ? 'bg-indigo-600 text-white'
+                          : 'bg-muted/70 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {dp}
+                    </button>
+                  ))}
+                </div>
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground mb-1.5 block">
+                  Education
+                </label>
+                <div className="flex flex-wrap gap-1">
+                  {educationOptions.map((edu) => (
+                    <button
+                      key={edu}
+                      type="button"
+                      onClick={() => setSelectedEducation(edu)}
+                      className={`rounded-lg px-2 py-1 text-[11px] font-bold transition ${
+                        selectedEducation === edu
+                          ? 'bg-purple-600 text-white'
+                          : 'bg-muted/70 text-muted-foreground hover:bg-muted'
+                      }`}
+                    >
+                      {edu}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            {/* Company & Skills Inputs */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground mb-1 block">
+                  Company / Employer
+                </label>
+                <input
+                  type="text"
+                  value={companyQuery}
+                  onChange={(e) => setCompanyQuery(e.target.value)}
+                  placeholder="e.g. Acme Tech, Metro..."
+                  className="w-full rounded-xl border border-border bg-muted/60 px-2.5 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
+                />
+              </div>
+
+              <div>
+                <label className="text-[11px] font-bold text-muted-foreground mb-1 block">
+                  Specific Skills
+                </label>
+                <input
+                  type="text"
+                  value={skillsQuery}
+                  onChange={(e) => setSkillsQuery(e.target.value)}
+                  placeholder="e.g. React, Accounting, Sales..."
+                  className="w-full rounded-xl border border-border bg-muted/60 px-2.5 py-1.5 text-xs text-foreground placeholder-muted-foreground focus:outline-none focus:border-primary"
+                />
+              </div>
+            </div>
+          </div>
+        )}
       </header>
 
       {/* Main Container */}

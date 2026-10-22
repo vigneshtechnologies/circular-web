@@ -5,13 +5,18 @@ import type { ApplicationStatus, JobApplicationRecord, UserResume } from './type
 export { type ApplicationStatus, type JobApplicationRecord, type UserResume }
 
 /**
- * Gets the current user's private resume.
+ * Gets the current user's private resume from the dedicated secure userResumes node.
  */
 export async function getUserResume(uid: string): Promise<UserResume | null> {
   try {
-    const snap = await get(ref(db, `users/${uid}/resume`))
+    const snap = await get(ref(db, `userResumes/${uid}`))
     if (snap.exists()) {
       return snap.val() as UserResume
+    }
+    // Fallback check on legacy path
+    const legacySnap = await get(ref(db, `users/${uid}/resume`))
+    if (legacySnap.exists()) {
+      return legacySnap.val() as UserResume
     }
     return null
   } catch (err) {
@@ -21,22 +26,27 @@ export async function getUserResume(uid: string): Promise<UserResume | null> {
 }
 
 /**
- * Saves or updates the user's private resume.
+ * Saves or updates the user's private resume in the dedicated secure userResumes node.
  */
 export async function saveUserResume(
   uid: string,
   resume: Omit<UserResume, 'updatedAt'>
 ): Promise<void> {
+  const updatedResume: UserResume = {
+    ...resume,
+    updatedAt: Date.now(),
+  }
+
   await update(ref(db), {
-    [`users/${uid}/resume`]: {
-      ...resume,
-      updatedAt: Date.now(),
-    },
+    [`userResumes/${uid}`]: updatedResume,
+    [`users/${uid}/resume`]: updatedResume,
   })
 }
 
 /**
  * Submits an in-app job application with a granted access duration.
+ * Writes to both the employer-accessible jobApplications/${jobId}/${applicantId} node
+ * and indexes under the applicant's users/${applicantId}/myApplications/${jobId} node.
  */
 export async function submitJobApplication({
   jobId,
@@ -58,7 +68,7 @@ export async function submitJobApplication({
     throw new Error('Must be signed in to apply.')
   }
 
-  const appRef = push(ref(db, `users/${currentUser.uid}/myApplications`))
+  const appRef = push(ref(db, `jobApplications/${jobId}`))
   const applicationId = appRef.key || `app_${Date.now()}`
 
   const appliedAt = Date.now()
@@ -86,6 +96,7 @@ export async function submitJobApplication({
   }
 
   const updates: Record<string, any> = {
+    [`jobApplications/${jobId}/${currentUser.uid}`]: applicationRecord,
     [`users/${currentUser.uid}/myApplications/${jobId}`]: applicationRecord,
   }
 
@@ -132,11 +143,18 @@ export async function getMyApplications(uid: string): Promise<JobApplicationReco
       const app = data[key] as JobApplicationRecord
       if (app && app.id) {
         try {
-          const statusSnap = await get(
-            ref(db, `users/${app.employerId}/candidateStatuses/${app.id}`)
+          const appDirectSnap = await get(
+            ref(db, `jobApplications/${app.jobId}/${uid}/status`)
           )
-          if (statusSnap.exists()) {
-            app.status = statusSnap.val() as ApplicationStatus
+          if (appDirectSnap.exists()) {
+            app.status = appDirectSnap.val() as ApplicationStatus
+          } else {
+            const statusSnap = await get(
+              ref(db, `users/${app.employerId}/candidateStatuses/${app.id}`)
+            )
+            if (statusSnap.exists()) {
+              app.status = statusSnap.val() as ApplicationStatus
+            }
           }
         } catch {}
         apps.push(app)
@@ -152,11 +170,18 @@ export async function getMyApplications(uid: string): Promise<JobApplicationReco
 
 /**
  * Revokes employer access to a resume for a specific application.
+ * Redacts personal contact data immediately on the employer's node and sets revoked: true.
  */
 export async function revokeResumeAccess(uid: string, jobId: string): Promise<void> {
-  await update(ref(db), {
+  const updates: Record<string, any> = {
     [`users/${uid}/myApplications/${jobId}/revoked`]: true,
-  })
+    [`jobApplications/${jobId}/${uid}/revoked`]: true,
+    [`jobApplications/${jobId}/${uid}/applicantPhone`]: '[Revoked by applicant]',
+    [`jobApplications/${jobId}/${uid}/applicantEmail`]: '[Revoked by applicant]',
+    [`jobApplications/${jobId}/${uid}/summary`]: '[Access revoked by applicant]',
+  }
+
+  await update(ref(db), updates)
 }
 
 /**
@@ -167,11 +192,19 @@ export async function updateCandidateStatus(
   applicantUid: string,
   applicationId: string,
   jobTitle: string,
-  newStatus: ApplicationStatus
+  newStatus: ApplicationStatus,
+  jobId?: string
 ): Promise<void> {
-  await update(ref(db), {
+  const updates: Record<string, any> = {
     [`users/${employerUid}/candidateStatuses/${applicationId}`]: newStatus,
-  })
+  }
+
+  if (jobId) {
+    updates[`jobApplications/${jobId}/${applicantUid}/status`] = newStatus
+    updates[`users/${applicantUid}/myApplications/${jobId}/status`] = newStatus
+  }
+
+  await update(ref(db), updates)
 
   try {
     const notifRef = push(ref(db, `notifications/${applicantUid}`))
@@ -198,18 +231,36 @@ export async function updateCandidateStatus(
  * Checks whether an employer currently has valid access to a candidate's resume.
  */
 export function isApplicationAccessValid(app: JobApplicationRecord): boolean {
-  if (app.revoked) return false
+  if (app.revoked === true) return false
   return Date.now() <= app.accessExpiresAt
 }
 
 /**
  * Fetches all candidate applications for a specific job posted by the employer.
+ * Reads directly from the dedicated jobApplications/${jobId} node.
  */
 export async function getApplicationsForJob(
   jobId: string,
   employerUid: string
 ): Promise<JobApplicationRecord[]> {
   try {
+    // 1. Direct fetch from dedicated jobApplications/${jobId} node
+    const appsSnap = await get(ref(db, `jobApplications/${jobId}`))
+    if (appsSnap.exists()) {
+      const data = appsSnap.val()
+      const apps: JobApplicationRecord[] = []
+      for (const applicantId of Object.keys(data)) {
+        const app = data[applicantId] as JobApplicationRecord
+        if (app && app.id) {
+          apps.push(app)
+        }
+      }
+      if (apps.length > 0) {
+        return apps.sort((a, b) => b.appliedAt - a.appliedAt)
+      }
+    }
+
+    // 2. Fallback for legacy applications: check employer notifications
     const notifsSnap = await get(ref(db, `notifications/${employerUid}`))
     if (!notifsSnap.exists()) return []
 

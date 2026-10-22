@@ -1,18 +1,21 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import Image from 'next/image'
 import Link from 'next/link'
 import { Post } from '@/lib/types'
 import { useAuth } from '@/context/AuthContext'
-import { ref, update, push, set } from 'firebase/database'
+import { ref, update, push, set, onValue } from 'firebase/database'
 import { db } from '@/lib/firebase'
 import { getUserAvatar, getPostLocation } from '@/lib/imageUtils'
+import { resolvePostAuthor, useActiveActor } from '@/lib/profileService'
+import { getAvatarColorInfo } from '@/lib/themeColors'
 import { ImageViewerModal } from '@/components/ui/ImageViewerModal'
 import { SmartPostRenderer } from '@/components/smartPosts/SmartPostRenderer'
 import { LinkPreviewCard } from '@/components/links/LinkPreviewCard'
 import { getCategoryBadgeClass } from '@/lib/categoryColors'
 import { notifyPostLike } from '@/lib/notifications'
+import { InlineTranslationAction } from '@/components/feed/InlineTranslationAction'
 import {
   Heart,
   MessageCircle,
@@ -33,7 +36,9 @@ interface PostCardProps {
 }
 
 export function PostCard({ post, onOpenComments }: PostCardProps) {
-  const { user, userProfile, publicProfiles } = useAuth()
+  const { user, userProfile, publicProfiles, publicSubProfiles } = useAuth()
+  const { actorId, actor } = useActiveActor()
+  const effectiveId = actorId || user?.uid
   const [liked, setLiked] = useState(false)
   const [likesCount, setLikesCount] = useState(post.likesCount || 0)
   const [sharedToast, setSharedToast] = useState(false)
@@ -46,24 +51,34 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
   const [selectedPollOption, setSelectedPollOption] = useState<string | null>(null)
   const [hasVoted, setHasVoted] = useState(false)
 
+  useEffect(() => {
+    if (!effectiveId || !post.id) return
+    const likeRef = ref(db, `postLikes/${post.id}/${effectiveId}`)
+    const unsub = onValue(likeRef, (snap) => {
+      setLiked(snap.exists() && Boolean(snap.val()))
+    })
+    return () => unsub()
+  }, [effectiveId, post.id])
+
   const handleLike = async () => {
-    if (!user) return
+    if (!user || !effectiveId) return
     const newLiked = !liked
     setLiked(newLiked)
     const newCount = newLiked ? likesCount + 1 : Math.max(0, likesCount - 1)
     setLikesCount(newCount)
 
     try {
-      await update(ref(db, `posts/${post.id}`), {
-        likesCount: newCount,
+      await update(ref(db), {
+        [`postLikes/${post.id}/${effectiveId}`]: newLiked ? true : null,
+        [`posts/${post.id}/likesCount`]: newCount,
       })
 
-      if (newLiked && post.userId && post.userId !== user.uid) {
+      if (newLiked && post.userId && post.userId !== effectiveId) {
         notifyPostLike({
           postId: post.id,
           postOwnerId: post.userId,
-          actorId: user.uid,
-          actorName: userProfile?.name || user.displayName || 'Circular Member',
+          actorId: effectiveId,
+          actorName: actor?.name || userProfile?.name || user.displayName || 'Circular Member',
           postText: post.text,
         }).catch((err) => console.error('Error notifying post like:', err))
       }
@@ -72,12 +87,19 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
     }
   }
 
+  // Author details
+  const authorInfo = resolvePostAuthor(post, publicProfiles, publicSubProfiles)
+  const authorAvatar = authorInfo.avatar || getUserAvatar(post, publicProfiles, publicSubProfiles)
+  const authorName = post.businessName || authorInfo.name || post.userName || 'Circular Member'
+  const authorInitial = authorInfo.initial || (authorName.charAt(0) || 'C').toUpperCase()
+  const avatarColorInfo = getAvatarColorInfo(authorName || post.userId || post.id)
+
   const handleShare = async () => {
     const shareUrl = `https://circularapp.in/post/${post.id}`
     if (typeof navigator !== 'undefined' && navigator.share) {
       try {
         await navigator.share({
-          title: post.userName ? `Post by ${post.userName} on Circular` : 'Circular Post',
+          title: authorName ? `Post by ${authorName} on Circular` : 'Circular Post',
           text: post.text?.substring(0, 100) || 'Check out this post on Circular',
           url: shareUrl,
         })
@@ -99,9 +121,6 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
     day: 'numeric',
   })
 
-  // Author details
-  const authorAvatar = getUserAvatar(post, publicProfiles) || '/circular-logo.png'
-  const authorName = post.businessName || post.userName || 'Circular Member'
   const locationName = getPostLocation(post)
 
   // Image list
@@ -119,22 +138,39 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
 
   // Category badge class imported from centralized @/lib/categoryColors
 
+  const effectiveAuthorTargetId = (post.authorProfileId && post.authorProfileId !== 'default')
+    ? post.authorProfileId
+    : (authorInfo.actorId || post.userId)
+
   const authorHref = post.hasBusinessProfile && post.businessId
     ? `/business/${post.businessId}`
-    : `/user/${post.userId}`
+    : `/user/${effectiveAuthorTargetId}`
 
   return (
     <article className="rounded-3xl border border-border bg-card p-4 md:p-5 shadow-sm transition-all hover:border-purple-500/30">
       {/* Top Author Row */}
       <div className="flex items-center justify-between">
         <Link href={authorHref} className="flex items-center gap-3 group min-w-0">
-          <div className="relative size-10 shrink-0 overflow-hidden rounded-full bg-purple-500/10 ring-1 ring-border group-hover:ring-purple-500">
-            <Image
-              src={authorAvatar}
-              alt={authorName}
-              fill
-              className="object-cover"
-            />
+          <div
+            className="relative size-10 shrink-0 overflow-hidden rounded-full ring-1 ring-border group-hover:ring-purple-500 flex items-center justify-center text-white font-bold text-sm shadow-xs"
+            style={
+              !authorAvatar
+                ? {
+                    background: `linear-gradient(135deg, ${avatarColorInfo.gradient[0]}, ${avatarColorInfo.gradient[1]})`,
+                  }
+                : undefined
+            }
+          >
+            {authorAvatar ? (
+              <Image
+                src={authorAvatar}
+                alt={authorName}
+                fill
+                className="object-cover"
+              />
+            ) : (
+              <span>{authorInitial}</span>
+            )}
           </div>
           <div className="min-w-0">
             <div className="flex items-center gap-1.5">
@@ -169,13 +205,11 @@ export function PostCard({ post, onOpenComments }: PostCardProps) {
         )}
       </div>
 
-      {/* Main Text Body (Clickable to /post/{id}) */}
+      {/* Main Text Body with Inline Translation */}
       {post.text && (
-        <Link href={`/post/${post.id}`} className="block mt-3 group/post">
-          <p className="text-xs sm:text-sm text-slate-800 dark:text-slate-200 leading-relaxed whitespace-pre-line break-words group-hover/post:text-primary transition-colors cursor-pointer">
-            {post.text}
-          </p>
-        </Link>
+        <div className="mt-3">
+          <InlineTranslationAction text={post.text} />
+        </div>
       )}
 
       {/* Image Grid with Clickable Lightbox */}
