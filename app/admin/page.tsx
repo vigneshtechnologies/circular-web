@@ -57,7 +57,7 @@ export default function AdminPage() {
 
     const loadAdminData = async () => {
       try {
-        const [pSnap, bSnap, uSnap, rSnap, sSnap, jSnap, aSnap, logs] = await Promise.all([
+        const results = await Promise.allSettled([
           get(query(ref(db, 'posts'), limitToLast(30))),
           get(query(ref(db, 'businessProfiles'), limitToLast(30))),
           get(query(ref(db, 'users'), limitToLast(30))),
@@ -68,9 +68,18 @@ export default function AdminPage() {
           getRecentAdminActivity(20),
         ])
 
+        const pSnap = results[0].status === 'fulfilled' ? results[0].value : null
+        const bSnap = results[1].status === 'fulfilled' ? results[1].value : null
+        const uSnap = results[2].status === 'fulfilled' ? results[2].value : null
+        const rSnap = results[3].status === 'fulfilled' ? results[3].value : null
+        const sSnap = results[4].status === 'fulfilled' ? results[4].value : null
+        const jSnap = results[5].status === 'fulfilled' ? results[5].value : null
+        const aSnap = results[6].status === 'fulfilled' ? results[6].value : null
+        const logs = results[7].status === 'fulfilled' ? results[7].value : []
+
         const pList: Post[] = []
         const distinctAreas = new Set<string>()
-        if (pSnap.exists()) {
+        if (pSnap && pSnap.exists()) {
           pSnap.forEach((c) => {
             const p = c.val()
             pList.push({ id: c.key as string, ...p })
@@ -83,13 +92,13 @@ export default function AdminPage() {
         }
 
         const bList: BusinessProfile[] = []
-        if (bSnap.exists()) {
+        if (bSnap && bSnap.exists()) {
           bSnap.forEach((c) => { bList.push({ id: c.key as string, ...c.val() }) })
           setRecentBusinesses(bList.reverse())
         }
 
         let totalApps = 0
-        if (aSnap.exists()) {
+        if (aSnap && aSnap.exists()) {
           const aVal = aSnap.val() || {}
           Object.values(aVal).forEach((sub: any) => {
             if (sub && typeof sub === 'object') {
@@ -99,13 +108,13 @@ export default function AdminPage() {
         }
 
         setStats({
-          posts: pSnap.exists() ? Object.keys(pSnap.val()).length : 0,
-          businesses: bSnap.exists() ? Object.keys(bSnap.val()).length : 0,
-          users: uSnap.exists() ? Object.keys(uSnap.val()).length : 0,
-          reports: rSnap.exists() ? Object.keys(rSnap.val()).length : 0,
-          stories: sSnap.exists() ? Object.keys(sSnap.val()).length : 0,
+          posts: pSnap && pSnap.exists() ? Object.keys(pSnap.val()).length : 0,
+          businesses: bSnap && bSnap.exists() ? Object.keys(bSnap.val()).length : 0,
+          users: uSnap && uSnap.exists() ? Object.keys(uSnap.val()).length : 0,
+          reports: rSnap && rSnap.exists() ? Object.keys(rSnap.val()).length : 0,
+          stories: sSnap && sSnap.exists() ? Object.keys(sSnap.val()).length : 0,
           locations: Math.max(1, distinctAreas.size),
-          jobs: jSnap.exists() ? Object.keys(jSnap.val()).length : 0,
+          jobs: jSnap && jSnap.exists() ? Object.keys(jSnap.val()).length : 0,
           applications: totalApps,
         })
 
